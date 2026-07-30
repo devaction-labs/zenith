@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Contracts\Bus\Dispatcher;
 use Illuminate\Contracts\Queue\Queue;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
@@ -20,6 +21,7 @@ use Laravel\Horizon\Jobs\RetryFailedJob as HorizonRetryFailedJob;
 use NckRtl\HorizonNewDawn\Assets\AssetManifest;
 use NckRtl\HorizonNewDawn\BulkOperations\Jobs\ClearFailedJobsJob;
 use NckRtl\HorizonNewDawn\BulkOperations\Jobs\RetryAllFailedJobsJob;
+use NckRtl\HorizonNewDawn\FailedJobs\Actions\RetryFailedJob;
 use NckRtl\HorizonNewDawn\FailedJobs\FailedJobRetryEligibility;
 use NckRtl\HorizonNewDawn\FailedJobs\FailedJobsData;
 use NckRtl\HorizonNewDawn\Jobs\JobsData;
@@ -36,6 +38,24 @@ use function Pest\Laravel\get;
 use function Pest\Laravel\getJson;
 use function Pest\Laravel\post;
 use function Pest\Laravel\withoutMiddleware;
+
+/**
+ * Single-job retries take a Redis lock. Package tests must not require live Redis;
+ * FailedJobRetryLock is final, so skip the lock via RetryFailedJob's optional null.
+ * Bind lazily so JobRepository mocks registered after this helper still resolve.
+ */
+function bindFailedJobRetryLockWithoutRedis(): void
+{
+    app()->bind(
+        RetryFailedJob::class,
+        static fn (): RetryFailedJob => new RetryFailedJob(
+            app(Dispatcher::class),
+            app(JobRepository::class),
+            app(FailedJobRetryEligibility::class),
+            null,
+        ),
+    );
+}
 
 function bindFailedJobsAsyncBulkQueue(): void
 {
@@ -364,6 +384,7 @@ describe('failed job pages', function (): void {
 
     it('retries one failed job and redirects with feedback', function (): void {
         Bus::fake();
+        bindFailedJobRetryLockWithoutRedis();
 
         $job = horizonJob(0, 'failed-1');
         $repository = mockDashboardContract(JobRepository::class);
@@ -382,6 +403,7 @@ describe('failed job pages', function (): void {
 
     it('reports when one failed job is no longer eligible for retry', function (): void {
         Bus::fake();
+        bindFailedJobRetryLockWithoutRedis();
 
         $job = horizonJob(0, 'failed-1');
         $job->retried_by = json_encode([

@@ -95,6 +95,17 @@ final class RetainedJobIndex
     /** @var array<string, string> */
     private array $workingGenerations = [];
 
+    /**
+     * Generation ids resolved before MULTI/pipeline so key helpers never GET
+     * on the shared connection while commands are queued. Nested depth tracks
+     * re-entrant pipeline/transaction calls; cleared when the outer scope ends.
+     *
+     * @var array<string, string>|null
+     */
+    private ?array $atomicGenerationSnapshot = null;
+
+    private int $atomicGenerationDepth = 0;
+
     private ?Connection $connection = null;
 
     private ?string $namespace = null;
@@ -2263,6 +2274,36 @@ final class RetainedJobIndex
         ));
         $affectedFacets = [];
 
+        $facetKeys = [];
+
+        foreach ($metadataById as $metadata) {
+            foreach ($this->facetValues($type, $metadata) as $dimension => $values) {
+                foreach ($values as $value) {
+                    $facetKey = $this->facetKey($type, $dimension, $value);
+                    $facetKeys[$facetKey] = [$dimension, $value];
+                }
+            }
+        }
+
+        // Snapshot counts before MULTI so catalog cleanup only runs when this
+        // removal emptied a live facet — not when the facet was already missing.
+        $facetCountsBefore = [];
+
+        if ($facetKeys !== []) {
+            $keys = array_keys($facetKeys);
+            $counts = $this->pipeline(function (mixed $pipeline) use ($keys): void {
+                foreach ($keys as $facetKey) {
+                    $pipeline->zcard($facetKey);
+                }
+            });
+
+            foreach ($keys as $offset => $facetKey) {
+                $facetCountsBefore[$facetKey] = is_numeric($counts[$offset] ?? null)
+                    ? (int) $counts[$offset]
+                    : 0;
+            }
+        }
+
         $this->transaction(function (mixed $transaction) use (
             $type,
             $ids,
@@ -2297,6 +2338,12 @@ final class RetainedJobIndex
 
         foreach ($affectedFacets as $facetKey => [$dimension, $value]) {
             if ($this->sortedSetCount($facetKey) !== 0) {
+                continue;
+            }
+
+            if (($facetCountsBefore[$facetKey] ?? 0) === 0) {
+                // Facet was already absent (e.g. external delete). Catalog may
+                // still describe projection members; do not truncate it here.
                 continue;
             }
 
@@ -2756,15 +2803,15 @@ final class RetainedJobIndex
         string $dimension,
         array $values,
     ): array {
-        $counts = $this->pipeline(function (mixed $pipeline) use (
-            $type,
-            $dimension,
-            $values,
-        ): void {
-            foreach ($values as $value) {
-                $pipeline->zcard(
-                    $this->facetKey($type, $dimension, $value),
-                );
+        $facetKeys = [];
+
+        foreach ($values as $value) {
+            $facetKeys[] = $this->facetKey($type, $dimension, $value);
+        }
+
+        $counts = $this->pipeline(function (mixed $pipeline) use ($facetKeys): void {
+            foreach ($facetKeys as $facetKey) {
+                $pipeline->zcard($facetKey);
             }
         });
 
@@ -3815,6 +3862,13 @@ final class RetainedJobIndex
             return $workingGeneration;
         }
 
+        if (
+            $this->atomicGenerationSnapshot !== null
+            && isset($this->atomicGenerationSnapshot[$type->value])
+        ) {
+            return $this->atomicGenerationSnapshot[$type->value];
+        }
+
         $publishedState = $this->publishedState($type);
 
         return $publishedState === null
@@ -4078,25 +4132,63 @@ final class RetainedJobIndex
     /** @return array<int, mixed> */
     private function pipeline(Closure $callback): array
     {
-        $connection = $this->connection();
-        $results = $connection instanceof PhpRedisConnection
-            ? $connection->pipeline($callback)
-            : $connection->client()->pipeline($callback);
+        return $this->withAtomicGenerationSnapshot(function () use ($callback): array {
+            $connection = $this->connection();
+            $results = $connection instanceof PhpRedisConnection
+                ? $connection->pipeline($callback)
+                : $connection->client()->pipeline($callback);
 
-        return is_array($results) ? array_values($results) : [];
+            return is_array($results) ? array_values($results) : [];
+        });
     }
 
     private function transaction(Closure $callback): void
     {
-        $connection = $this->connection();
+        // MULTI/EXEC shares the connection. Any connection()->get() inside the
+        // callback is queued by Redis but not tracked by Predis MultiExec, which
+        // desynchronizes EXEC response counts. Snapshot generation keys first.
+        $this->withAtomicGenerationSnapshot(function () use ($callback): null {
+            $connection = $this->connection();
 
-        if ($connection instanceof PhpRedisConnection) {
-            $connection->transaction($callback);
+            if ($connection instanceof PhpRedisConnection) {
+                $connection->transaction($callback);
+            } else {
+                $connection->client()->transaction($callback);
+            }
 
-            return;
+            return null;
+        });
+    }
+
+    /**
+     * @template T
+     *
+     * @param  Closure(): T  $callback
+     * @return T
+     */
+    private function withAtomicGenerationSnapshot(Closure $callback): mixed
+    {
+        $this->atomicGenerationDepth++;
+
+        if ($this->atomicGenerationDepth === 1) {
+            $snapshot = [];
+
+            foreach (RetainedJobType::cases() as $type) {
+                $snapshot[$type->value] = $this->currentGeneration($type);
+            }
+
+            $this->atomicGenerationSnapshot = $snapshot;
         }
 
-        $connection->client()->transaction($callback);
+        try {
+            return $callback();
+        } finally {
+            $this->atomicGenerationDepth--;
+
+            if ($this->atomicGenerationDepth === 0) {
+                $this->atomicGenerationSnapshot = null;
+            }
+        }
     }
 
     private function deleteQuietly(string $key): void

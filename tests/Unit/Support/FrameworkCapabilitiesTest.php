@@ -18,8 +18,21 @@ describe('FrameworkCapabilities', function (): void {
     });
 
     it('disables both pause capabilities when worker pause polling is inactive', function (): void {
-        $original = Worker::$pausable;
-        Worker::$pausable = false;
+        $reflection = new ReflectionClass(Worker::class);
+
+        if (! $reflection->hasProperty('pausable')) {
+            // Older Laravel releases have no separate worker pause-polling flag.
+            $capabilities = FrameworkCapabilities::detect();
+
+            expect($capabilities->queuePausing)->toBe(queuePausingIsSupported())
+                ->and($capabilities->timedQueuePausing)->toBe(timedQueuePausingIsSupported());
+
+            return;
+        }
+
+        $property = $reflection->getProperty('pausable');
+        $original = $property->getValue();
+        $property->setValue(null, false);
 
         try {
             $capabilities = FrameworkCapabilities::detect();
@@ -27,7 +40,7 @@ describe('FrameworkCapabilities', function (): void {
             expect($capabilities->queuePausing)->toBeFalse()
                 ->and($capabilities->timedQueuePausing)->toBeFalse();
         } finally {
-            Worker::$pausable = $original;
+            $property->setValue(null, $original);
         }
     });
 

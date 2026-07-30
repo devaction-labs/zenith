@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Exceptions;
 use Laravel\Horizon\Contracts\JobRepository;
 use Laravel\Horizon\Contracts\TagRepository;
 use NckRtl\HorizonNewDawn\Jobs\JobsData;
@@ -141,6 +142,19 @@ describe('MonitoringData', function (): void {
 
         expect((new MonitoringData($tags, $jobs, new JobsData($jobs)))->monitoredTags())
             ->toBe(['alpha', 'zeta']);
+    });
+
+    it('returns an empty shell tag list without reporting when monitoring storage is unavailable', function (): void {
+        $tags = mockDashboardContract(TagRepository::class);
+        dashboardThrows($tags, 'monitoring', new RuntimeException('Connection refused'));
+        $jobs = mockDashboardContract(JobRepository::class);
+
+        Exceptions::fake();
+
+        expect((new MonitoringData($tags, $jobs, new JobsData($jobs)))->monitoredTags())
+            ->toBe([]);
+
+        Exceptions::assertNothingReported();
     });
 
     it('does not expose a next page when exactly one full page remains', function (): void {

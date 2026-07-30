@@ -228,11 +228,18 @@ it('queries retained jobs through the configured real Redis client', function ()
         );
         $firstPageIds = $firstPage->jobs->pluck('id')->all();
 
+        // A missing facet forces a generation publish; resolve the live key after page.
+        $rebuiltJobFacet = $index->facetKey(
+            RetainedJobType::Completed,
+            'job',
+            'App\Jobs\GenerateCompatibilityReport',
+        );
+
         expect($firstPage->total)->toBe(75)
             ->and($firstPageIds)->toBe(array_slice($matchingIds, 0, 50))
             ->and($firstPage->next)->toBeString()
             ->and($firstPage->next)->toContain('.')
-            ->and($horizonRedis->zcard($matchingJobFacet))->toBe(75);
+            ->and($horizonRedis->zcard($rebuiltJobFacet))->toBe(75);
 
         $cursor = $firstPage->next;
 
@@ -981,9 +988,12 @@ function seedRetainedJobCompatibilityJobs(Connection $redis): array
         $queue = $matches ? 'retained-reports' : 'maintenance';
         $connection = $matches ? 'redis-analytics' : 'redis';
 
+        // Horizon completed_jobs scores are -timestamp: lower scores are newer and
+        // appear first via zrange. Keep lower positions newest so matchingIds order
+        // matches first-page results after filters.
         $redis->zadd(
             RetainedJobType::Completed->sourceKey(),
-            -($retainedAt - ((121 - $position) / 1000)),
+            -($retainedAt + ((121 - $position) / 1000)),
             $id,
         );
         $redis->hmset($id, [

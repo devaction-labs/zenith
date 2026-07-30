@@ -41,10 +41,23 @@ final class FrameworkCapabilities extends Data
 
     private static function workerPausePollingEnabled(): bool
     {
-        if (! property_exists(Worker::class, 'pausable')) {
+        $reflection = new ReflectionClass(Worker::class);
+
+        // Worker::$pausable exists only on Laravel versions that separate worker
+        // pause polling from queue manager pause APIs.
+        if (! $reflection->hasProperty('pausable')) {
             return true;
         }
 
-        return Worker::$pausable;
+        $property = $reflection->getProperty('pausable');
+
+        if (! $property->isStatic()) {
+            return true;
+        }
+
+        /** @var mixed $pausable */
+        $pausable = $property->getValue();
+
+        return $pausable !== false;
     }
 }

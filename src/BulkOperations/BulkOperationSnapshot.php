@@ -44,7 +44,28 @@ final class BulkOperationSnapshot
         $connection = $this->connection();
         $targetsKey = $this->targetsKey($operationId);
 
-        $connection->command('zrangestore', [$targetsKey, $sourceKey, 0, -1]);
+        // Prefer prefix-aware commands. Raw zrangestore bypasses Predis/PhpRedis
+        // key prefixes, so Horizon-prefixed sources like failed_jobs copy empty.
+        $members = $connection->zrange($sourceKey, 0, -1, ['withscores' => true]);
+
+        if (is_array($members) && $members !== []) {
+            $pairs = [];
+
+            foreach ($members as $member => $score) {
+                if (! is_string($member) || ! is_numeric($score)) {
+                    continue;
+                }
+
+                $pairs[$member] = (float) $score;
+            }
+
+            foreach (array_chunk($pairs, self::CHUNK_SIZE, true) as $chunk) {
+                foreach ($chunk as $member => $score) {
+                    $connection->zadd($targetsKey, $score, $member);
+                }
+            }
+        }
+
         $this->initializeMeta($connection, $operationId);
         $this->renew($operationId);
 
