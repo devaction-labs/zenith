@@ -146,16 +146,18 @@ export function OverviewStatLink({
   title,
   value,
   unit,
+  preserveScroll,
   children,
 }: {
   href: string;
   title: string;
   value: React.ReactNode;
   unit?: React.ReactNode;
+  preserveScroll?: boolean;
   children: React.ReactNode;
 }) {
   return (
-    <StatisticLink href={href} prefetch>
+    <StatisticLink href={href} prefetch preserveScroll={preserveScroll}>
       <StatisticLabel>{title}</StatisticLabel>
       <StatisticValue>
         {typeof value === "number" ? numberFormatter.format(value) : value}

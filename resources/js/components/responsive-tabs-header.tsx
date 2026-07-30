@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import {
@@ -22,6 +22,13 @@ export type ResponsiveTabItem<Value extends string> = {
   disabled?: boolean;
 };
 
+/**
+ * Compact (select) + desktop (line tabs) header for every panel-level tab set.
+ *
+ * Tab selection may activate the tab and sync URL-backed state, but must never
+ * move the document viewport. Mobile Select restores pre-selection scroll after
+ * popup close. Desktop tabs intentionally do not auto-scroll the strip.
+ */
 export function ResponsiveTabsHeader<Value extends string>({
   value,
   items,
@@ -45,26 +52,49 @@ export function ResponsiveTabsHeader<Value extends string>({
   tabsListClassName?: string;
   triggerClassName?: string;
 }) {
-  const tabsListRef = useRef<HTMLDivElement>(null);
+  const pendingSelectScroll = useRef<{ scrollX: number; scrollY: number } | null>(null);
+  const selectScrollRestoreFrame = useRef<number | null>(null);
   const selectedItem = items.find((item) => item.value === value);
 
-  useLayoutEffect(() => {
-    const list = tabsListRef.current;
-    const activeTab = list?.querySelector<HTMLElement>("[data-active]");
+  useEffect(() => {
+    return () => {
+      if (selectScrollRestoreFrame.current !== null) {
+        window.cancelAnimationFrame(selectScrollRestoreFrame.current);
+      }
+    };
+  }, []);
 
-    if (!list || !activeTab) {
+  const selectTab = (nextValue: Value | null) => {
+    // Capture before the tab switch; Base UI may still scroll to top while the
+    // popup closes after the value commit.
+    pendingSelectScroll.current = {
+      scrollX: window.scrollX,
+      scrollY: window.scrollY,
+    };
+    onValueChange(nextValue);
+  };
+
+  const restoreSelectScrollAfterClose = (open: boolean) => {
+    if (open) {
       return;
     }
 
-    const listBounds = list.getBoundingClientRect();
-    const tabBounds = activeTab.getBoundingClientRect();
+    const pending = pendingSelectScroll.current;
 
-    if (tabBounds.left < listBounds.left) {
-      list.scrollLeft -= listBounds.left - tabBounds.left;
-    } else if (tabBounds.right > listBounds.right) {
-      list.scrollLeft += tabBounds.right - listBounds.right;
+    if (pending === null) {
+      return;
     }
-  }, [value]);
+
+    if (selectScrollRestoreFrame.current !== null) {
+      window.cancelAnimationFrame(selectScrollRestoreFrame.current);
+    }
+
+    selectScrollRestoreFrame.current = window.requestAnimationFrame(() => {
+      selectScrollRestoreFrame.current = null;
+      pendingSelectScroll.current = null;
+      window.scrollTo(pending.scrollX, pending.scrollY);
+    });
+  };
 
   return (
     <div
@@ -80,7 +110,8 @@ export function ResponsiveTabsHeader<Value extends string>({
           value: item.value,
         }))}
         value={value}
-        onValueChange={(nextValue) => onValueChange(nextValue as Value | null)}
+        onValueChange={(nextValue) => selectTab(nextValue as Value | null)}
+        onOpenChangeComplete={restoreSelectScrollAfterClose}
       >
         <SelectTrigger
           aria-label={ariaLabel}
@@ -113,7 +144,6 @@ export function ResponsiveTabsHeader<Value extends string>({
       </Select>
 
       <TabsList
-        ref={tabsListRef}
         variant="line"
         aria-label={ariaLabel}
         className={cn(

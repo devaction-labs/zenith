@@ -27,18 +27,18 @@ export function MetricsTabs({
           {
             value: "jobs",
             label: "Jobs",
-            render: <Link href={route("jobs")} prefetch preserveState />,
+            render: <Link href={route("jobs")} prefetch preserveScroll preserveState />,
           },
           {
             value: "queues",
             label: "Queues",
-            render: <Link href={route("queues")} prefetch preserveState />,
+            render: <Link href={route("queues")} prefetch preserveScroll preserveState />,
           },
         ]}
         ariaLabel="Metrics type"
         onValueChange={(value) => {
           if (value !== null && value !== type) {
-            router.visit(route(value), { preserveState: true });
+            router.visit(route(value), { preserveScroll: true, preserveState: true });
           }
         }}
         className="w-full"

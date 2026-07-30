@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.1.5] - 2026-07-30
+
+### Fixed
+
+- Stop tab selection from deliberately moving the document viewport, scrolling the desktop tab strip, or following queue activity anchors; route-backed tabs preserve scroll, including mobile select-close handling.
+- Size each active job, queue, batch, metrics, and monitoring tab panel to its own content instead of retaining another tab's height.
+
 ## [0.1.4] - 2026-07-30
 
 ### Added
@@ -127,7 +134,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Backfill the worker option expected by newer Laravel releases when Horizon 5.46 does not register it, allowing real Horizon workers to boot normally.
 - Calculate dashboard queue runtime and throughput leaders from retained metric snapshots instead of relying on repository methods unavailable in Horizon 5.46.
 
-[Unreleased]: https://github.com/nckrtl/horizon-new-dawn/compare/0.1.4...HEAD
+[Unreleased]: https://github.com/nckrtl/horizon-new-dawn/compare/0.1.5...HEAD
+[0.1.5]: https://github.com/nckrtl/horizon-new-dawn/compare/0.1.4...0.1.5
 [0.1.4]: https://github.com/nckrtl/horizon-new-dawn/compare/0.1.3...0.1.4
 [0.1.3]: https://github.com/nckrtl/horizon-new-dawn/compare/0.1.2...0.1.3
 [0.1.2]: https://github.com/nckrtl/horizon-new-dawn/compare/0.1.1...0.1.2

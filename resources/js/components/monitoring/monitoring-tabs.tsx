@@ -49,20 +49,20 @@ export function MonitoringTabs({
             value: "jobs",
             label: "Recent Jobs",
             count: formatCount(trackedCount),
-            render: <Link href={route("jobs")} prefetch preserveState />,
+            render: <Link href={route("jobs")} prefetch preserveScroll preserveState />,
           },
           {
             value: "failed",
             label: "Failed Jobs",
             count: formatCount(failedCount),
-            render: <Link href={route("failed")} prefetch preserveState />,
+            render: <Link href={route("failed")} prefetch preserveScroll preserveState />,
           },
         ]}
         ariaLabel="Monitored tag job status"
         separatedFromHeader
         onValueChange={(value) => {
           if (value !== null && value !== status) {
-            router.visit(route(value), { preserveState: true });
+            router.visit(route(value), { preserveScroll: true, preserveState: true });
           }
         }}
         className="w-full"

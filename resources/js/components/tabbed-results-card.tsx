@@ -103,6 +103,7 @@ export function TabbedResultsLayout<Tab extends string>({
                 <Link
                   href={tab.href}
                   prefetch
+                  preserveScroll
                   preserveState={tab.preserveState}
                   aria-current={tab.value === activeTab ? "page" : undefined}
                 />
@@ -118,6 +119,7 @@ export function TabbedResultsLayout<Tab extends string>({
               }
 
               router.visit(tab.href, {
+                preserveScroll: true,
                 preserveState: tab.preserveState,
               });
             }}

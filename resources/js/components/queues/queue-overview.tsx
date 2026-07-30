@@ -67,7 +67,7 @@ function retainedValue(value: number | null, complete: boolean) {
 function activityUrl(queue: string, tab: QueueActivityTab, horizonBaseUrl: string) {
   const route = queueShow(encodeURIComponent(queue), { query: { tab } });
 
-  return `${resolveHorizonRoute(route, horizonBaseUrl).url}#queue-activity`;
+  return resolveHorizonRoute(route, horizonBaseUrl).url;
 }
 
 export function QueueOverview({
@@ -114,7 +114,15 @@ export function QueueOverview({
     {
       value: "overview",
       label: "Overview",
-      render: <Link href={viewUrl("overview")} only={["view", "preview"]} prefetch preserveState />,
+      render: (
+        <Link
+          href={viewUrl("overview")}
+          only={["view", "preview"]}
+          prefetch
+          preserveScroll
+          preserveState
+        />
+      ),
     },
     {
       value: "metrics",
@@ -124,6 +132,7 @@ export function QueueOverview({
           href={viewUrl("metrics")}
           only={["view", "preview"]}
           prefetch
+          preserveScroll
           preserveState
           onFocus={() => void loadMetricChart()}
           onMouseEnter={() => void loadMetricChart()}
@@ -137,6 +146,7 @@ export function QueueOverview({
             void loadMetricChart().then(() => {
               router.visit(viewUrl("metrics"), {
                 only: ["view", "preview"],
+                preserveScroll: true,
                 preserveState: true,
               });
             });
@@ -153,6 +163,7 @@ export function QueueOverview({
     const visit = () => {
       router.visit(viewUrl(nextView), {
         only: ["view", "preview"],
+        preserveScroll: true,
         preserveState: true,
       });
     };
@@ -255,6 +266,7 @@ function QueueStatistics({
           href={activityUrl(summary.name, "pending", horizonBaseUrl)}
           title="Pending Jobs"
           value={pendingTotal === null ? "—" : pendingTotal}
+          preserveScroll
         >
           <OverviewDetail
             label="Reserved"
@@ -276,6 +288,7 @@ function QueueStatistics({
           href={activityUrl(summary.name, "failed", horizonBaseUrl)}
           title="Failed Jobs"
           value={retainedValue(summary.failedJobs, summary.failedComplete)}
+          preserveScroll
         >
           <OverviewDetail
             label="Past hour"
@@ -303,6 +316,7 @@ function QueueStatistics({
               />
             )
           }
+          preserveScroll
         >
           <OverviewDetail label="Jobs per minute" value={summary.jobsPerMinute} />
           <OverviewDetail
@@ -321,6 +335,7 @@ function QueueStatistics({
             href={activityUrl(summary.name, "batches", horizonBaseUrl)}
             title="Batches in progress"
             value={retainedValue(summary.activeBatches, summary.batchesComplete)}
+            preserveScroll
           >
             {summary.batchPreviews.slice(0, 3).map((batch) => (
               <div

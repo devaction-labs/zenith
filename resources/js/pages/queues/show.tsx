@@ -104,7 +104,6 @@ function QueueActivityPanel({
   batchAttributionAvailable,
   autoLoad,
 }: ResolvedQueueActivityProps & { autoLoad: boolean }) {
-  const focusedUrl = useRef<string | null>(null);
   const effectiveSummary = useLastKnownCompletedSummary(queue, summary);
   const stoppedQueue =
     summary !== undefined && horizon.status === "inactive" && !effectiveSummary.available;
@@ -119,35 +118,6 @@ function QueueActivityPanel({
     includeSharedProps: false,
     loadedItemCount: activity.data.length,
   });
-
-  useEffect(() => {
-    if (window.location.hash !== "#queue-activity") {
-      return;
-    }
-
-    const url = `${window.location.pathname}${window.location.search}${window.location.hash}`;
-
-    if (focusedUrl.current === url) {
-      return;
-    }
-
-    focusedUrl.current = url;
-    const frame = window.requestAnimationFrame(() => {
-      const target = document.getElementById("queue-activity");
-
-      if (!target) {
-        return;
-      }
-
-      target.focus({ preventScroll: true });
-      target.scrollIntoView({
-        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
-        block: "start",
-      });
-    });
-
-    return () => window.cancelAnimationFrame(frame);
-  }, [activity.data.length, tab]);
 
   return (
     <>

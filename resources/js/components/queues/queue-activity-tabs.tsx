@@ -209,7 +209,7 @@ export function QueueActivityTabs({
   ) : null;
 
   return (
-    <Card id="queue-activity" tabIndex={-1} className="scroll-mt-3.5 outline-none">
+    <Card>
       <CardContent className="p-0">
         <Tabs
           value={tab}
