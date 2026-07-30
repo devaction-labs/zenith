@@ -1,10 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 
-import {
-  emptyJobFilterValues,
-  jobFilterKeys,
-  matchesJobFilters,
-} from "@/components/jobs/job-filters";
+import { pendingJobState } from "@/lib/pending-job-state";
 import type { JobRow } from "@/types/jobs";
 
 const scheduledJob: JobRow = {
@@ -34,26 +30,10 @@ const scheduledJob: JobRow = {
   retryEligible: false,
 };
 
-describe("pending job state filters", () => {
+describe("pendingJobState", () => {
   it("distinguishes delayed, released, and never-scheduled ready jobs", () => {
-    const delayed = {
-      ...emptyJobFilterValues,
-      state: "delayed",
-    };
-    const released = {
-      ...emptyJobFilterValues,
-      state: "released",
-    };
-
-    expect(matchesJobFilters(scheduledJob, jobFilterKeys("pending"), delayed, 1_099)).toBe(true);
-    expect(matchesJobFilters(scheduledJob, jobFilterKeys("pending"), released, 1_100)).toBe(true);
-    expect(
-      matchesJobFilters(
-        { ...scheduledJob, scheduledAt: null },
-        jobFilterKeys("pending"),
-        { ...emptyJobFilterValues, state: "ready" },
-        1_100,
-      ),
-    ).toBe(true);
+    expect(pendingJobState(scheduledJob, 1_099)).toBe("delayed");
+    expect(pendingJobState(scheduledJob, 1_100)).toBe("released");
+    expect(pendingJobState({ ...scheduledJob, scheduledAt: null }, 1_100)).toBe("ready");
   });
 });

@@ -14,5 +14,7 @@ final class BatchClearCountsData extends Data
         public readonly int $finished,
         public readonly int $cancelled,
         public readonly bool $available,
+        public readonly bool $completeScan,
+        public readonly ?string $message,
     ) {}
 }

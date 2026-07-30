@@ -3,7 +3,11 @@
 declare(strict_types=1);
 
 return [
-    'assets_path' => 'vendor/horizon-new-dawn/build',
     'poll_interval' => 5000,
-    'recent_failures_limit' => 5,
+    'job_navigation_breakdown' => false,
+    'job_payload_allowed_classes' => [],
+    'bulk_operations' => [
+        'connection' => null,
+        'queue' => null,
+    ],
 ];

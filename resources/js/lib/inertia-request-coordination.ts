@@ -1,6 +1,8 @@
 import type { VisitOptions } from "@inertiajs/core";
 import { router } from "@inertiajs/react";
 
+const activePollRequests = new Set<VoidFunction>();
+
 export function backgroundVisitOptions(_href: string, options: VisitOptions): VisitOptions {
   const isBackgroundGet =
     options.async === true &&
@@ -8,42 +10,48 @@ export function backgroundVisitOptions(_href: string, options: VisitOptions): Vi
     options.prefetch !== true &&
     options.component == null;
 
-  if (!isBackgroundGet || "preserveUrl" in options) {
-    return options;
+  const resolved =
+    !isBackgroundGet || "preserveUrl" in options ? options : { ...options, preserveUrl: true };
+
+  if ((options as VisitOptions & { poll?: boolean }).poll !== true) {
+    return resolved;
   }
 
-  return { ...options, preserveUrl: true };
+  const onCancelToken = resolved.onCancelToken;
+  const onFinish = resolved.onFinish;
+  let cancelRequest: VoidFunction | null = null;
+
+  return {
+    ...resolved,
+    onCancelToken: (token) => {
+      cancelRequest = token.cancel;
+      activePollRequests.add(cancelRequest);
+      onCancelToken?.(token);
+    },
+    onFinish: (visit) => {
+      if (cancelRequest !== null) {
+        activePollRequests.delete(cancelRequest);
+        cancelRequest = null;
+      }
+
+      onFinish?.(visit);
+    },
+  };
 }
 
-export function registerLatestInertiaVisitWins() {
-  let foregroundVisitInFlight = false;
+export function registerForegroundVisitCancellation() {
   const removeBeforeListener = router.on("before", (event) => {
-    const visit = event.detail.visit as typeof event.detail.visit & { deferredProps?: boolean };
+    const visit = event.detail.visit;
 
-    if (visit.prefetch) {
+    if (visit.prefetch || visit.async) {
       return;
     }
 
-    if (visit.async && foregroundVisitInFlight && !visit.deferredProps) {
-      return false;
-    }
+    const requests = Array.from(activePollRequests);
+    activePollRequests.clear();
 
-    router.cancelAll({ async: true, prefetch: false, sync: false });
-  });
-  const removeStartListener = router.on("start", (event) => {
-    if (!event.detail.visit.async) {
-      foregroundVisitInFlight = true;
-    }
-  });
-  const removeFinishListener = router.on("finish", (event) => {
-    if (!event.detail.visit.async) {
-      foregroundVisitInFlight = false;
-    }
+    requests.forEach((cancel) => cancel());
   });
 
-  return () => {
-    removeBeforeListener();
-    removeStartListener();
-    removeFinishListener();
-  };
+  return removeBeforeListener;
 }

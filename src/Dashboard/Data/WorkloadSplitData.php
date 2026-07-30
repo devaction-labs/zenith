@@ -15,6 +15,7 @@ final class WorkloadSplitData extends Data
         public readonly int|float $wait,
         public readonly bool $paused,
         public readonly ?int $pausedUntil,
+        public readonly ?int $throughput,
         public readonly QueueWaitThresholdData $waitThreshold,
     ) {}
 }

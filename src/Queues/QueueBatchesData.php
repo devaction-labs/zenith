@@ -8,9 +8,14 @@ use Illuminate\Bus\Batch;
 use Illuminate\Bus\BatchRepository;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use NckRtl\HorizonNewDawn\Batches\BatchesData;
+use NckRtl\HorizonNewDawn\Batches\BatchSort;
+use NckRtl\HorizonNewDawn\Batches\BatchSortDirection;
+use NckRtl\HorizonNewDawn\Batches\Data\BatchIndexFiltersData;
+use NckRtl\HorizonNewDawn\Batches\DatabaseBatchQuery;
 use NckRtl\HorizonNewDawn\Dashboard\Data\DashboardBatchPreviewData;
 use NckRtl\HorizonNewDawn\Queues\Data\QueueActivityPageData;
 use NckRtl\HorizonNewDawn\Queues\Data\QueueRetainedBatchesData;
+use NckRtl\HorizonNewDawn\Support\PollInterval;
 use Throwable;
 
 final readonly class QueueBatchesData
@@ -25,11 +30,44 @@ final readonly class QueueBatchesData
         private BatchRepository $repository,
         private BatchesData $batches,
         private CacheFactory $cache,
+        private ?DatabaseBatchQuery $databaseQuery = null,
     ) {}
 
     public function page(string $queue, ?string $beforeId): QueueActivityPageData
     {
         try {
+            if ($this->databaseQuery !== null) {
+                if (! $this->databaseQuery->attributionSupported()) {
+                    return QueueActivityPageData::unavailable(
+                        'before_id',
+                        $this->databaseQuery->attributionMessage()
+                            ?? 'Batch queue attribution is unavailable.',
+                    );
+                }
+
+                $filters = new BatchIndexFiltersData(
+                    query: null,
+                    queue: $queue,
+                    connection: null,
+                    created: null,
+                    status: null,
+                    sort: BatchSort::QueueActivity,
+                    direction: BatchSortDirection::Descending,
+                );
+                $page = $this->databaseQuery->page($filters, $beforeId);
+
+                return new QueueActivityPageData(
+                    available: $page->available,
+                    rows: $page->batches,
+                    total: $this->databaseQuery->statusCounts($filters)->all,
+                    complete: $page->complete,
+                    pageName: 'before_id',
+                    current: $page->current,
+                    next: $page->next,
+                    message: $page->message,
+                );
+            }
+
             $cursor = $beforeId;
             $inspected = 0;
             $rows = [];
@@ -108,13 +146,7 @@ final readonly class QueueBatchesData
 
     public function summary(string $queue): QueueRetainedBatchesData
     {
-        $pollInterval = (int) config('horizon-new-dawn.poll_interval', 0);
-
-        if ($pollInterval <= 0) {
-            return $this->buildSummary($queue);
-        }
-
-        $cacheSeconds = intdiv($pollInterval, 1000);
+        $cacheSeconds = PollInterval::cacheSeconds();
 
         if ($cacheSeconds === 0) {
             return $this->buildSummary($queue);
@@ -164,6 +196,20 @@ final readonly class QueueBatchesData
     private function buildSummary(string $queue): QueueRetainedBatchesData
     {
         try {
+            if ($this->databaseQuery !== null) {
+                if (! $this->databaseQuery->attributionSupported()) {
+                    return new QueueRetainedBatchesData(
+                        total: 0,
+                        active: 0,
+                        previews: [],
+                        complete: false,
+                        message: null,
+                    );
+                }
+
+                return $this->databaseQuery->queueSummary($queue);
+            }
+
             $cursor = null;
             $inspected = 0;
             $total = 0;
@@ -204,15 +250,7 @@ final readonly class QueueBatchesData
                     }
 
                     $active++;
-
-                    if (count($previews) < 3) {
-                        $row = $this->batches->row($batch);
-                        $previews[] = new DashboardBatchPreviewData(
-                            id: $row->id,
-                            name: $row->displayName,
-                            progress: $row->progress,
-                        );
-                    }
+                    $this->considerPreview($previews, $batch);
                 }
 
                 $cursor = $nextCursor;
@@ -235,6 +273,38 @@ final readonly class QueueBatchesData
                 complete: false,
                 message: 'Retained batches are currently unavailable.',
             );
+        }
+    }
+
+    /**
+     * Keep at most the three best active previews (progress desc, then id desc).
+     *
+     * @param  list<DashboardBatchPreviewData>  $previews
+     */
+    private function considerPreview(array &$previews, Batch $batch): void
+    {
+        $row = $this->batches->row($batch);
+        $previews[] = new DashboardBatchPreviewData(
+            id: $row->id,
+            name: $row->displayName,
+            progress: $row->progress,
+        );
+
+        usort($previews, static function (
+            DashboardBatchPreviewData $left,
+            DashboardBatchPreviewData $right,
+        ): int {
+            $progress = $right->progress <=> $left->progress;
+
+            if ($progress !== 0) {
+                return $progress;
+            }
+
+            return $right->id <=> $left->id;
+        });
+
+        if (count($previews) > 3) {
+            array_pop($previews);
         }
     }
 

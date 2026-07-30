@@ -1,5 +1,11 @@
 import { Duration } from "@/components/duration";
 import { Badge } from "@/components/ui/badge";
+import {
+  Statistic,
+  StatisticDetail,
+  StatisticDetails,
+  StatisticLabel,
+} from "@/components/ui/statistic";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { QueueWaitThreshold, QueueWaitThresholdStatus } from "@/types/queues";
 
@@ -21,7 +27,14 @@ export const queueWaitThresholdSortRank = {
   within_bounds: 3,
 } satisfies Record<QueueWaitThresholdStatus, number>;
 
-export function QueueWaitThresholdBadge({ status }: { status: QueueWaitThresholdStatus }) {
+export function QueueWaitThresholdBadge({
+  status,
+  label,
+}: {
+  status: QueueWaitThresholdStatus;
+  /** Optional display override (e.g. shared-pool parent “2 exceeded”). */
+  label?: string;
+}) {
   if (status === "disabled" || status === "calculating") {
     const description =
       status === "disabled" ? "Wait monitoring disabled" : "Waiting for runtime data";
@@ -48,13 +61,19 @@ export function QueueWaitThresholdBadge({ status }: { status: QueueWaitThreshold
 
   return (
     <Badge variant={details.variant} data-status={status}>
-      {details.label}
+      {label ?? details.label}
     </Badge>
   );
 }
 
-export function QueueWaitThresholdCell({ waitThreshold }: { waitThreshold?: QueueWaitThreshold }) {
-  return <QueueWaitThresholdBadge status={waitThreshold?.status ?? "disabled"} />;
+export function QueueWaitThresholdCell({
+  waitThreshold,
+  label,
+}: {
+  waitThreshold?: QueueWaitThreshold;
+  label?: string;
+}) {
+  return <QueueWaitThresholdBadge status={waitThreshold?.status ?? "disabled"} label={label} />;
 }
 
 export function QueueWaitThresholdMetric({ waitThreshold }: { waitThreshold: QueueWaitThreshold }) {
@@ -68,12 +87,12 @@ export function QueueWaitThresholdMetric({ waitThreshold }: { waitThreshold: Que
       : "Oldest ready";
 
   return (
-    <div className="bg-card px-6 pt-4 pb-2.5">
+    <Statistic>
       <div className="flex items-center justify-between gap-3">
-        <p className="text-[13px] font-medium text-muted-foreground">Wait threshold</p>
+        <StatisticLabel>Wait Threshold</StatisticLabel>
         <QueueWaitThresholdBadge status={waitThreshold.status} />
       </div>
-      <div className="mt-3.5">
+      <StatisticDetails>
         <WaitThresholdDetail
           label={waitLabel}
           value={
@@ -104,16 +123,16 @@ export function QueueWaitThresholdMetric({ waitThreshold }: { waitThreshold: Que
             )
           }
         />
-      </div>
-    </div>
+      </StatisticDetails>
+    </Statistic>
   );
 }
 
 function WaitThresholdDetail({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="flex justify-between gap-3 border-t border-dashed border-separator py-[7px] text-[13px]">
+    <StatisticDetail>
       <span className="text-muted-foreground">{label}</span>
       <span className="font-normal text-muted-foreground">{value}</span>
-    </div>
+    </StatisticDetail>
   );
 }

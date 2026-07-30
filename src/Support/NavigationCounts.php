@@ -9,6 +9,7 @@ use Illuminate\Contracts\Redis\Factory as RedisFactory;
 use Laravel\Horizon\Contracts\JobRepository;
 use Laravel\Horizon\Contracts\MasterSupervisorRepository;
 use NckRtl\HorizonNewDawn\Batches\BatchRepositoryOverview;
+use NckRtl\HorizonNewDawn\Batches\DatabaseBatchCapability;
 use NckRtl\HorizonNewDawn\Queues\QueuesData;
 use NckRtl\HorizonNewDawn\Support\Data\NavigationCountsData;
 use Throwable;
@@ -21,6 +22,7 @@ final readonly class NavigationCounts
         private BatchRepositoryOverview $batches,
         private QueuesData $queues,
         private MasterSupervisorRepository $masters,
+        private DatabaseBatchCapability $batchCapability,
     ) {}
 
     public function get(): NavigationCountsData
@@ -43,15 +45,23 @@ final readonly class NavigationCounts
         return (int) $this->redis->connection('horizon')->scard($key);
     }
 
-    private function batchCount(): int
+    private function batchCount(): ?int
     {
-        return $this->batches->get()['total'];
+        if (! $this->batchCapability->available()) {
+            return null;
+        }
+
+        $overview = $this->batches->get();
+
+        return $overview['complete'] ? $overview['total'] : null;
     }
 
     private function safely(Closure $count): ?int
     {
         try {
-            return (int) $count();
+            $resolved = $count();
+
+            return $resolved === null ? null : (int) $resolved;
         } catch (Throwable $exception) {
             report($exception);
 

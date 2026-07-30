@@ -1,8 +1,12 @@
 import { Link, router } from "@inertiajs/react";
 import { TriangleAlertIcon } from "lucide-react";
-import { useEffect, useMemo, type Ref } from "react";
+import { useMemo, type Ref } from "react";
 
 import { SortableTableHead } from "@/components/data-table/sortable-table-head";
+import {
+  controlledSortHeader,
+  type ControlledTableSorting,
+} from "@/components/data-table/table-sorting";
 import { NewEntriesTableRow, TableNoticeRow } from "@/components/data-table/new-entries-alert";
 import { TableEmpty } from "@/components/data-table/table-empty";
 import { Duration } from "@/components/duration";
@@ -26,9 +30,8 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { show as failedJobShow } from "@/generated/routes/horizon-new-dawn/failed-jobs";
 import { show as jobShow } from "@/generated/routes/horizon-new-dawn/jobs";
-import { useSortableRows, type SortColumn } from "@/hooks/use-sortable-rows";
 import { useScheduledJobClock } from "@/hooks/use-scheduled-job-clock";
-import { formatDuration, lowercaseFirst } from "@/lib/format-duration";
+import { formatDuration } from "@/lib/format-duration";
 import { resolveHorizonRoute } from "@/lib/horizon-route";
 import { isInteractiveTarget } from "@/lib/interactive-target";
 import { pendingJobState, type PendingJobState } from "@/lib/pending-job-state";
@@ -72,20 +75,30 @@ function formatTimestamp(timestamp: number | null) {
   return timestamp === null ? "—" : dateFormatter.format(timestamp * 1000);
 }
 
-function directionFor(key: string, sort: { key: string; direction: "asc" | "desc" } | null) {
-  return sort?.key === key ? sort.direction : undefined;
-}
-
 function pendingStateDescription(job: JobRow, state: PendingJobState, now: number) {
   if (state === "delayed") {
     return job.scheduledAt === null
       ? "Scheduled to run later."
-      : `Scheduled to run in ${lowercaseFirst(
-          formatDuration(Math.max(0, Math.ceil(job.scheduledAt - now))),
-        )}.`;
+      : `Scheduled to run in ${formatDuration(Math.max(0, Math.ceil(job.scheduledAt - now)))}.`;
   }
 
   return pendingStates[state].description;
+}
+
+/** Keep reserved jobs in a stable lead group after client-side sorts of the loaded page. */
+function groupReservedPendingJobs(jobs: readonly JobRow[], now: number): JobRow[] {
+  const reserved: JobRow[] = [];
+  const other: JobRow[] = [];
+
+  for (const job of jobs) {
+    if (pendingJobState(job, now) === "reserved") {
+      reserved.push(job);
+    } else {
+      other.push(job);
+    }
+  }
+
+  return reserved.length === 0 ? [...jobs] : [...reserved, ...other];
 }
 
 export function JobTable({
@@ -99,9 +112,9 @@ export function JobTable({
   onLoadNewEntries,
   emptyTitle,
   emptyDescription,
-  visibleJobIds,
-  onSortedChange,
+  sorting,
   bodyRef,
+  showPendingActions = true,
 }: {
   jobs: readonly JobRow[];
   type: JobListType;
@@ -113,47 +126,46 @@ export function JobTable({
   onLoadNewEntries?: () => void;
   emptyTitle?: string;
   emptyDescription?: string;
-  visibleJobIds?: ReadonlySet<string>;
-  onSortedChange?: (sorted: boolean) => void;
+  sorting?: ControlledTableSorting;
   bodyRef?: Ref<HTMLTableSectionElement>;
+  /** Individual pending cancel/release actions. Batch tables keep batch-level management only. */
+  showPendingActions?: boolean;
 }) {
   const now = useScheduledJobClock(jobs);
-  const columns = useMemo<SortColumn<JobRow>[]>(
-    () => [
-      { key: "name", value: (job) => job.name },
-      { key: "status", value: (job) => pendingJobState(job, now) },
-      { key: "pushedAt", value: (job) => job.pushedAt },
-      { key: "completedAt", value: (job) => job.completedAt },
-      { key: "runtime", value: (job) => job.runtime },
-    ],
-    [now],
-  );
-  const sorted = useSortableRows(jobs, columns, { persist: true });
   const compact = type === "pending";
-  const isSorted = sorted.sort !== null;
-  const hasVisibleJobs =
-    visibleJobIds === undefined
-      ? sorted.rows.length > 0
-      : sorted.rows.some((job) => visibleJobIds.has(job.id));
-  const renderedRows =
-    visibleJobIds === undefined
-      ? sorted.rows
-      : [
-          ...sorted.rows.filter((job) => visibleJobIds.has(job.id)),
-          ...sorted.rows.filter((job) => !visibleJobIds.has(job.id)),
-        ];
-
-  useEffect(() => {
-    onSortedChange?.(isSorted);
-  }, [isSorted, onSortedChange]);
+  const pendingActions = compact && showPendingActions;
+  const columnCount = compact ? (pendingActions ? 4 : 3) : 4;
+  const displayJobs = useMemo(
+    () => (compact ? groupReservedPendingJobs(jobs, now) : jobs),
+    [compact, jobs, now],
+  );
+  const hasVisibleJobs = displayJobs.length > 0;
 
   if (!available) {
+    const unavailableCopy = {
+      pending: {
+        title: "Pending jobs couldn’t be loaded",
+        fallback: "Horizon could not read retained pending jobs. Refresh the page to try again.",
+      },
+      completed: {
+        title: "Completed jobs couldn’t be loaded",
+        fallback: "Horizon could not read retained completed jobs. Refresh the page to try again.",
+      },
+      silenced: {
+        title: "Silenced jobs couldn’t be loaded",
+        fallback: "Horizon could not read retained silenced jobs. Refresh the page to try again.",
+      },
+    } as const satisfies Record<JobListType, { title: string; fallback: string }>;
+    const copy = unavailableCopy[type];
+
     return (
-      <Alert variant="destructive" className="m-4">
-        <TriangleAlertIcon aria-hidden="true" />
-        <AlertTitle>Jobs unavailable</AlertTitle>
-        <AlertDescription>{message ?? "Horizon jobs are currently unavailable."}</AlertDescription>
-      </Alert>
+      <div className="box-border w-full min-w-0 p-4">
+        <Alert variant="destructive" className="max-w-full">
+          <TriangleAlertIcon aria-hidden="true" />
+          <AlertTitle>{copy.title}</AlertTitle>
+          <AlertDescription>{message ?? copy.fallback}</AlertDescription>
+        </Alert>
+      </div>
     );
   }
 
@@ -161,58 +173,48 @@ export function JobTable({
     <Table>
       <TableHeader className="sticky top-0 z-10">
         <TableRow>
-          <SortableTableHead
-            label="Job"
-            columnKey="name"
-            direction={directionFor("name", sorted.sort)}
-            onSort={sorted.toggle}
-            className="px-6"
-          />
+          <SortableTableHead label="Job" {...controlledSortHeader(sorting, "name")} />
           {compact ? (
             <SortableTableHead
               label="State"
-              columnKey="status"
-              direction={directionFor("status", sorted.sort)}
-              onSort={sorted.toggle}
-              className="w-[130px] px-6"
+              {...controlledSortHeader(sorting, "status")}
+              className="w-[130px]"
             />
           ) : null}
           <SortableTableHead
             label="Queued"
-            columnKey="pushedAt"
-            direction={directionFor("pushedAt", sorted.sort)}
-            onSort={sorted.toggle}
-            className={cn("w-[210px] px-6", compact && "text-right")}
+            {...controlledSortHeader(sorting, "pushedAt")}
+            className={cn("w-[210px]", compact && "text-right")}
           />
           {!compact ? (
             <SortableTableHead
               label="Completed"
-              columnKey="completedAt"
-              direction={directionFor("completedAt", sorted.sort)}
-              onSort={sorted.toggle}
-              className="w-[210px] px-6"
+              {...controlledSortHeader(sorting, "completedAt")}
+              className="w-[210px]"
             />
           ) : null}
           {!compact ? (
             <SortableTableHead
               label="Runtime"
-              columnKey="runtime"
-              direction={directionFor("runtime", sorted.sort)}
-              onSort={sorted.toggle}
-              className="w-[110px] px-6 text-right"
+              {...controlledSortHeader(sorting, "runtime")}
+              className="w-[110px] text-right"
             />
           ) : null}
-          {compact ? <TableHead className="w-[72px] px-6 text-right">Actions</TableHead> : null}
+          {pendingActions ? (
+            <TableHead className="w-[72px] pr-2.5 pl-3 text-right sm:pr-6">Actions</TableHead>
+          ) : null}
         </TableRow>
       </TableHeader>
       <TableBody role="presentation">
         {hasNewEntries && onLoadNewEntries ? (
-          <NewEntriesTableRow columns={4} onLoad={onLoadNewEntries} />
+          <NewEntriesTableRow columns={columnCount} onLoad={onLoadNewEntries} />
         ) : null}
-        {notice && hasVisibleJobs ? <TableNoticeRow columns={4}>{notice}</TableNoticeRow> : null}
+        {notice && hasVisibleJobs ? (
+          <TableNoticeRow columns={columnCount}>{notice}</TableNoticeRow>
+        ) : null}
         {!hasVisibleJobs ? (
           <TableEmpty
-            columns={4}
+            columns={columnCount}
             title={emptyTitle ?? `No ${type} jobs`}
             description={emptyDescription ?? `Horizon is not reporting any ${type} jobs.`}
             icon={emptyStateIcons[type]}
@@ -220,8 +222,11 @@ export function JobTable({
         ) : null}
       </TableBody>
       <TableBody ref={bodyRef}>
-        {renderedRows.map((job) => {
-          const detailUrl = resolveHorizonRoute(jobShow({ type, job: job.id }), horizonBaseUrl).url;
+        {displayJobs.map((job) => {
+          const inspectable = job.inspectable !== false;
+          const detailUrl = inspectable
+            ? resolveHorizonRoute(jobShow({ type, job: job.id }), horizonBaseUrl).url
+            : null;
           const retryOfUrl = job.retryOf
             ? resolveHorizonRoute(failedJobShow(job.retryOf), horizonBaseUrl).url
             : null;
@@ -230,17 +235,20 @@ export function JobTable({
 
           return (
             <TableRow
-              className="cursor-pointer"
+              className={detailUrl ? "cursor-pointer" : undefined}
               key={job.id}
-              hidden={visibleJobIds !== undefined && !visibleJobIds.has(job.id)}
-              onClick={(event) => {
-                if (isInteractiveTarget(event.target)) {
-                  return;
-                }
+              onClick={
+                detailUrl
+                  ? (event) => {
+                      if (isInteractiveTarget(event.target)) {
+                        return;
+                      }
 
-                router.visit(detailUrl);
-              }}
-              onMouseEnter={() => router.prefetch(detailUrl)}
+                      router.visit(detailUrl);
+                    }
+                  : undefined
+              }
+              onMouseEnter={detailUrl ? () => router.prefetch(detailUrl) : undefined}
             >
               <JobTablePrimaryCell
                 name={job.shortName}
@@ -262,10 +270,10 @@ export function JobTable({
                 }
               />
               {compact ? (
-                <TableCell className="px-6">
+                <TableCell>
                   <Tooltip>
                     <TooltipTrigger render={<span className="inline-flex" />}>
-                      <Badge variant={pendingStateDetails.variant}>
+                      <Badge className="transition-none" variant={pendingStateDetails.variant}>
                         {pendingStateDetails.label}
                       </Badge>
                     </TooltipTrigger>
@@ -273,11 +281,11 @@ export function JobTable({
                   </Tooltip>
                 </TableCell>
               ) : null}
-              <TableCell className={cn("px-6 text-muted-foreground", compact && "text-right")}>
+              <TableCell className={cn("text-muted-foreground", compact && "text-right")}>
                 {formatTimestamp(job.pushedAt)}
               </TableCell>
-              {compact ? (
-                <TableCell className="px-6 text-right">
+              {pendingActions ? (
+                <TableCell className="pr-2.5 pl-3 text-right sm:pr-6">
                   {state !== "reserved" ? (
                     <PendingJobActionsMenu
                       jobId={job.id}
@@ -288,12 +296,12 @@ export function JobTable({
                 </TableCell>
               ) : null}
               {!compact ? (
-                <TableCell className="px-6 text-muted-foreground">
+                <TableCell className="text-muted-foreground">
                   {formatTimestamp(job.completedAt)}
                 </TableCell>
               ) : null}
               {!compact ? (
-                <TableCell className="px-6 text-right tabular-nums text-muted-foreground">
+                <TableCell className="text-right tabular-nums text-muted-foreground">
                   {job.runtime === null ? "—" : <Duration seconds={job.runtime} format="precise" />}
                 </TableCell>
               ) : null}

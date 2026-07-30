@@ -80,14 +80,24 @@ describe('ClearQueueMetadata', function () use ($createRedisClient, $redisIsUnav
                     'status' => 'pending',
                     'queue' => $job['queue'],
                     'connection' => $job['connection'],
+                    'payload' => json_encode([
+                        'uuid' => $jobId,
+                        'tags' => ['tenant:42', 'reports'],
+                    ], JSON_THROW_ON_ERROR),
                 ]]);
             }
+            $redisConnection->command('zadd', ['tenant:42', 1, $targetId]);
+            $redisConnection->command('zadd', ['reports', 1, $targetId]);
+            $redisConnection->command('zadd', ['tenant:42', 1, $otherConnectionId]);
 
             $removed = (new ClearQueueMetadata($redis))->purgePending('redis', 'reports');
 
             expect($removed)->toBe(1)
                 ->and($redisConnection->command('zscore', ['pending_jobs', $targetId]))->toBeNull()
                 ->and($redisConnection->command('exists', [$targetId]))->toBe(0)
+                ->and($redisConnection->command('zscore', ['tenant:42', $targetId]))->toBeNull()
+                ->and($redisConnection->command('zscore', ['reports', $targetId]))->toBeNull()
+                ->and($redisConnection->command('zscore', ['tenant:42', $otherConnectionId]))->not->toBeNull()
                 ->and($redisConnection->command('zscore', ['pending_jobs', $otherConnectionId]))->not->toBeNull()
                 ->and($redisConnection->command('exists', [$otherConnectionId]))->toBe(1)
                 ->and($redisConnection->command('zscore', ['pending_jobs', $otherQueueId]))->not->toBeNull()
@@ -96,6 +106,8 @@ describe('ClearQueueMetadata', function () use ($createRedisClient, $redisIsUnav
             $redisConnection->command('del', [
                 'pending_jobs',
                 'recent_jobs',
+                'tenant:42',
+                'reports',
                 $targetId,
                 $otherConnectionId,
                 $otherQueueId,
@@ -118,6 +130,9 @@ describe('ClearQueueMetadata', function () use ($createRedisClient, $redisIsUnav
             ->and($command[0] ?? null)->toBe('eval')
             ->and($command[1][0] ?? '')->toContain('job[3] == ARGV[3]')
             ->and($command[1][0] ?? '')->toContain("job[1] == 'reserved' or job[1] == 'pending'")
+            ->and($command[1][0] ?? '')->toContain(
+                "redis.call('zscan', KEYS[1], cursor, 'COUNT', 1000)",
+            )
             ->and($command[1][1] ?? null)->toBe(2)
             ->and($command[1][2] ?? null)->toBe('pending_jobs')
             ->and($command[1][3] ?? null)->toBe('recent_jobs')

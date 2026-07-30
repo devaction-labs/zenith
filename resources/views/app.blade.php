@@ -4,9 +4,12 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
+        @if ($cspNonce = Vite::cspNonce())
+            <meta name="csp-nonce" content="{{ $cspNonce }}">
+        @endif
         <title>Horizon</title>
 
-        <script>
+        <script @if ($cspNonce !== null)nonce="{{ $cspNonce }}"@endif>
             (() => {
                 try {
                     const scheme = localStorage.getItem('horizonColorScheme') ?? 'system';
@@ -22,11 +25,8 @@
         </script>
 
         @inject('assets', 'NckRtl\HorizonNewDawn\Assets\AssetManifest')
-        <link rel="icon" href="{{ $assets->favicon() }}" type="image/svg+xml" sizes="any">
-        @foreach ($assets->styles() as $stylesheet)
-            <link rel="stylesheet" href="{{ $stylesheet }}">
-        @endforeach
-        <script type="module" src="{{ $assets->script() }}"></script>
+        <link rel="icon" href="{{ $assets->favicon() }}" type="image/svg+xml" sizes="any" data-horizon-favicon>
+        {!! $assets->tags() !!}
 
         @inertiaHead
     </head>

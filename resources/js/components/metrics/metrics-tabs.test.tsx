@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 
 import { MetricsTabs } from "@/components/metrics/metrics-tabs";
 
@@ -49,6 +49,6 @@ describe("MetricsTabs", () => {
       "before:h-px",
       "before:bg-separator",
     );
-    expect(screen.getByRole("tab", { name: "Jobs" })).toHaveClass("after:bg-primary");
+    expect(document.querySelector('[data-slot="tabs-indicator"]')).toHaveClass("bg-primary");
   });
 });

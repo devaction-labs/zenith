@@ -1,14 +1,25 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { render, screen } from "@testing-library/react";
+import type { ReactNode } from "react";
+import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
 import MonitoringShow from "@/pages/monitoring/show";
 import type { JobRow } from "@/types/jobs";
 import type { MonitoringTagPageProps } from "@/types/monitoring";
 
+const infiniteScrollProps = vi.hoisted(() => vi.fn());
+
 vi.mock("@inertiajs/react", async () => {
   const { inertiaTestMocks } = await import("@/test/inertia-mock");
+  const mocks = inertiaTestMocks();
 
-  return inertiaTestMocks();
+  return {
+    ...mocks,
+    InfiniteScroll: ({ children, ...props }: { children: ReactNode }) => {
+      infiniteScrollProps(props);
+
+      return children;
+    },
+  };
 });
 
 const job = (overrides: Partial<JobRow>): JobRow => ({
@@ -43,6 +54,7 @@ const props: MonitoringTagPageProps = {
   horizon: { baseUrl: "/horizon", pollInterval: 0, status: "running" },
   tag: "customer:42",
   status: "jobs",
+  listRevision: '[2,"job-1"]',
   summary: {
     tag: "customer:42",
     trackedCount: 2,
@@ -68,8 +80,9 @@ const props: MonitoringTagPageProps = {
   },
 };
 
-describe("Monitoring tag page filters", () => {
+describe("Monitoring tag page query controls", () => {
   beforeEach(() => {
+    infiniteScrollProps.mockReset();
     window.history.replaceState(
       {},
       "",
@@ -77,25 +90,19 @@ describe("Monitoring tag page filters", () => {
     );
   });
 
-  it("restores filters from the URL and removes them when cleared", async () => {
+  it("does not present loaded-row filters or sorting as global controls", () => {
     render(<MonitoringShow {...props} />);
 
-    expect(screen.getByRole("button", { name: "Filter jobs, 2 active" })).toBeVisible();
+    expect(screen.queryByRole("button", { name: /Filter jobs/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Sort by/ })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "DelayedExport" })).toBeVisible();
-    expect(screen.queryByRole("link", { name: "SendInvoice" })).not.toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole("button", { name: "Filter jobs, 2 active" }));
-    fireEvent.click(screen.getByRole("button", { name: "Clear filters" }));
-
-    await waitFor(() => {
-      expect(window.location.search).toBe("?starting_at=0&tab=jobs");
-    });
-    fireEvent.click(screen.getByRole("button", { name: "Done" }));
-    expect(screen.getByRole("button", { name: "Filter jobs" })).toBeVisible();
     expect(screen.getByRole("link", { name: "SendInvoice" })).toBeVisible();
+    expect(screen.getByText("Retention: 7d for recent jobs, 7d for failed jobs")).toBeVisible();
+    expect(infiniteScrollProps).toHaveBeenLastCalledWith(expect.objectContaining({ buffer: 600 }));
+    expect(infiniteScrollProps.mock.lastCall?.[0]).not.toHaveProperty("loading");
   });
 
-  it("keeps active filters clearable when the selected status has no jobs", () => {
+  it("does not expose stale query filters when the selected status has no jobs", () => {
     window.history.replaceState(
       {},
       "",
@@ -106,6 +113,7 @@ describe("Monitoring tag page filters", () => {
       <MonitoringShow {...props} status="failed" jobs={{ ...props.jobs, data: [], total: 0 }} />,
     );
 
-    expect(screen.getByRole("button", { name: "Filter jobs, 2 active" })).toBeEnabled();
+    expect(screen.queryByRole("button", { name: /Filter jobs/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("row", { name: "No jobs for this tag" })).toBeVisible();
   });
 });

@@ -46,13 +46,30 @@ describe('queue pause mutations', function (): void {
     });
 
     it('pauses a queue for a custom duration', function (): void {
-        requireQueuePausing();
+        requireTimedQueuePausing();
 
         $queues = app(QueueManager::class);
 
         post('/horizon/queues/redis/reports/pause', ['duration_minutes' => 30])
             ->assertRedirect()
             ->assertSessionHas('toast.success', 'Paused reports for 30 minutes.');
+
+        expect($queues->isPaused('redis', 'reports'))->toBeTrue();
+    });
+
+    it('pauses indefinitely when timed pausing is unavailable even if a duration is supplied', function (): void {
+        requireQueuePausing();
+
+        app()->instance(
+            FrameworkCapabilities::class,
+            new FrameworkCapabilities(queuePausing: true, timedQueuePausing: false),
+        );
+
+        $queues = app(QueueManager::class);
+
+        post('/horizon/queues/redis/reports/pause', ['duration_minutes' => 30])
+            ->assertRedirect()
+            ->assertSessionHas('toast.success', 'Paused reports indefinitely.');
 
         expect($queues->isPaused('redis', 'reports'))->toBeTrue();
     });
@@ -77,7 +94,7 @@ describe('queue pause mutations', function (): void {
 
         delete('/horizon/queues/redis/reports/pause')
             ->assertRedirect()
-            ->assertSessionHas('toast.success', 'Resumed reports.');
+            ->assertSessionHas('toast.success', 'The reports queue has been signaled to resume.');
 
         expect($queues->isPaused('redis', 'reports'))->toBeFalse();
     });

@@ -101,26 +101,26 @@ describe('JobsData', function (): void {
         expect($page->items)->toHaveCount(1)->and($page->total)->toBe(1);
     });
 
-    it('reads completed and silenced jobs from oldest to newest', function (
+    it('reads completed and silenced jobs from newest to oldest', function (
         JobListType $type,
         string $key,
         string $countMethod,
     ): void {
         $repository = mockDashboardContract(JobRepository::class);
-        dashboardReturnsFor($repository, 'getJobs', [['oldest', 'newest'], 0], new Collection([
-            horizonJob(0, 'oldest'),
+        dashboardReturnsFor($repository, 'getJobs', [['newest', 'oldest'], 0], new Collection([
             horizonJob(1, 'newest'),
+            horizonJob(0, 'oldest'),
         ]));
         dashboardReturns($repository, $countMethod, 2);
 
         $connection = mockDashboardContract(Connection::class);
-        dashboardReturnsFor($connection, 'zrevrange', [$key, 0, 50], ['oldest', 'newest']);
+        dashboardReturnsFor($connection, 'zrange', [$key, 0, 50], ['newest', 'oldest']);
         $redis = mockDashboardContract(RedisFactory::class);
         dashboardReturnsFor($redis, 'connection', ['horizon'], $connection);
 
         $page = (new JobsData($repository, $redis))->page($type, -1);
 
-        expect(array_column($page->items, 'id'))->toBe(['oldest', 'newest']);
+        expect(array_column($page->items, 'id'))->toBe(['newest', 'oldest']);
     })->with([
         'completed' => [JobListType::Completed, 'completed_jobs', 'countCompleted'],
         'silenced' => [JobListType::Silenced, 'silenced_jobs', 'countSilenced'],
@@ -154,7 +154,7 @@ describe('JobsData', function (): void {
         $connection = mockDashboardContract(Connection::class);
         dashboardReturnsUsing(
             $connection,
-            'zrevrange',
+            'zrange',
             static fn (string $key, int $start, int $stop): array => array_slice(
                 $ids,
                 $start,
@@ -195,7 +195,7 @@ describe('JobsData', function (): void {
         $connection = mockDashboardContract(Connection::class);
         dashboardReturnsUsing(
             $connection,
-            'zrevrange',
+            'zrange',
             static fn (string $key, int $start, int $stop): array => array_slice(
                 $ids,
                 $start,

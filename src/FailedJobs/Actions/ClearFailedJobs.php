@@ -6,41 +6,53 @@ namespace NckRtl\HorizonNewDawn\FailedJobs\Actions;
 
 use Illuminate\Queue\Failed\FailedJobProviderInterface;
 use Laravel\Horizon\Contracts\JobRepository;
+use NckRtl\HorizonNewDawn\BulkOperations\BulkOperationChunkResult;
+use NckRtl\HorizonNewDawn\BulkOperations\BulkOperationSnapshot;
+use Throwable;
 
 final readonly class ClearFailedJobs
 {
-    private const int PAGE_SIZE = 50;
-
     public function __construct(
         private JobRepository $jobs,
         private FailedJobProviderInterface $failedJobs,
+        private BulkOperationSnapshot $snapshots,
     ) {}
 
-    public function handle(): int
+    public function processChunk(?string $operationId = null): BulkOperationChunkResult
     {
-        $ids = [];
-        $sourceTotal = max(0, (int) $this->jobs->countFailed());
+        $operationId ??= $this->snapshots->createFromSortedSet('failed_jobs');
 
-        for ($inspected = 0; $inspected < $sourceTotal; $inspected += self::PAGE_SIZE) {
-            $rawPageSize = min(self::PAGE_SIZE, $sourceTotal - $inspected);
-            $chunk = $this->jobs->getFailed((string) ($inspected - 1));
+        $ids = $this->snapshots->nextChunk($operationId);
 
-            foreach ($chunk->take($rawPageSize) as $job) {
-                if (! is_object($job) || ! is_string($job->id ?? null) || $job->id === '') {
-                    continue;
-                }
-                $ids[$job->id] = $job->id;
+        if ($ids === []) {
+            return BulkOperationChunkResult::completed(
+                $operationId,
+                $this->snapshots->finish($operationId),
+            );
+        }
+
+        try {
+            foreach ($ids as $id) {
+                $this->jobs->deleteFailed($id);
+                $this->failedJobs->forget($id);
+                $this->snapshots->addAffected($operationId, 1);
+                $this->snapshots->acknowledge($operationId, $id);
             }
+        } catch (Throwable $exception) {
+            $this->snapshots->renew($operationId);
+
+            throw $exception;
         }
 
-        $removed = 0;
+        $totalAffected = $this->snapshots->totalAffected($operationId);
 
-        foreach ($ids as $id) {
-            $this->jobs->deleteFailed($id);
-            $this->failedJobs->forget($id);
-            $removed++;
+        if ($this->snapshots->hasMore($operationId)) {
+            return BulkOperationChunkResult::continuing($operationId, $totalAffected);
         }
 
-        return $removed;
+        return BulkOperationChunkResult::completed(
+            $operationId,
+            $this->snapshots->finish($operationId),
+        );
     }
 }

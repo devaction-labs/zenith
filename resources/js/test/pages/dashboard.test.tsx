@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 
 import Dashboard from "@/pages/dashboard";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -24,14 +24,17 @@ const summary: DashboardSummary = {
   pendingReserved: 0,
   pendingReadyNow: 0,
   pendingDelayed: 0,
-  failedJobsPerMinute: 0.02,
   failedJobsPastHour: 1,
   failedJobsPastDay: 1,
-  failedRetentionMinutes: 10_080,
-  completedJobsPerMinute: 0.18,
-  completedJobsPastHour: 11,
-  completedJobsPastDay: 11,
+  recentlyFailedJobs: 1,
+  recentlyFailedPeriodMinutes: 60,
+  jobsPerMinute: 0.18,
+  recentJobs: 11,
+  recentJobsPeriodMinutes: 60,
+  processedSinceSnapshot: 11,
+  silencedJobs: 0,
   completedRetentionMinutes: 60,
+  batchesAvailable: true,
   activeBatches: 0,
   batchPreviews: [],
   processes: 1,
@@ -55,6 +58,8 @@ const props: DashboardPageProps = {
         length: 2,
         wait: 1,
         processes: 1,
+        processesShared: false,
+        throughput: null,
         paused: false,
         pausedUntil: null,
         splitQueues: null,

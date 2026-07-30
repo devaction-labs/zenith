@@ -80,30 +80,28 @@ export function MonitoredTagsTable({
             columnKey="tag"
             direction={directionFor("tag", sorted.sort)}
             onSort={sorted.toggle}
-            className="px-6"
           />
           <SortableTableHead
             label="Tracked jobs"
             columnKey="trackedCount"
             direction={directionFor("trackedCount", sorted.sort)}
             onSort={sorted.toggle}
-            className="px-6 text-right"
+            className="text-right"
           />
           <SortableTableHead
             label="Failed"
             columnKey="failedCount"
             direction={directionFor("failedCount", sorted.sort)}
             onSort={sorted.toggle}
-            className="px-6 text-right"
+            className="text-right"
           />
           <SortableTableHead
             label="Last activity"
             columnKey="lastActivityAt"
             direction={directionFor("lastActivityAt", sorted.sort)}
             onSort={sorted.toggle}
-            className="px-6"
           />
-          <SortableTableHead label="Actions" className="px-6 text-right" />
+          <SortableTableHead label="Actions" className="pr-2.5 pl-3 text-right sm:pr-6" />
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -111,7 +109,7 @@ export function MonitoredTagsTable({
           <TableEmpty
             columns={5}
             title="No monitored tags"
-            description="exact tag matches"
+            description="Monitor exact tag matches to track recent and failed jobs."
             icon={MonitoringNavigationIcon}
           />
         ) : null}
@@ -132,7 +130,7 @@ export function MonitoredTagsTable({
               }}
               onMouseEnter={() => router.prefetch(jobsUrl)}
             >
-              <TableCell className="px-6">
+              <TableCell>
                 <div className="flex min-w-0 flex-wrap items-center gap-2">
                   <Link className="text-foreground" href={jobsUrl} prefetch>
                     {item.tag}
@@ -144,7 +142,7 @@ export function MonitoredTagsTable({
                   ) : null}
                 </div>
               </TableCell>
-              <TableCell className="px-6 text-right tabular-nums">
+              <TableCell className="text-right tabular-nums">
                 <Link
                   className="text-muted-foreground hover:text-foreground"
                   href={jobsUrl}
@@ -153,7 +151,7 @@ export function MonitoredTagsTable({
                   {numberFormatter.format(item.trackedCount)}
                 </Link>
               </TableCell>
-              <TableCell className="px-6 text-right tabular-nums">
+              <TableCell className="text-right tabular-nums">
                 <Link
                   className="text-muted-foreground hover:text-foreground"
                   href={failedUrl}
@@ -162,10 +160,10 @@ export function MonitoredTagsTable({
                   {numberFormatter.format(item.failedCount)}
                 </Link>
               </TableCell>
-              <TableCell className="px-6 text-muted-foreground">
+              <TableCell className="text-muted-foreground">
                 {formatTimestamp(item.lastActivityAt)}
               </TableCell>
-              <TableCell className="px-6 text-right">
+              <TableCell className="pr-2.5 pl-3 text-right sm:pr-6">
                 <MonitoringActionsMenu
                   tag={item.tag}
                   horizonBaseUrl={horizonBaseUrl}

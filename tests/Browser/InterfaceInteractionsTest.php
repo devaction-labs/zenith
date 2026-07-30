@@ -2,9 +2,18 @@
 
 declare(strict_types=1);
 
+require_once __DIR__.'/../Support/RetainedJobBrowserFixtures.php';
+
+use NckRtl\HorizonNewDawn\Jobs\RetainedJobType;
+use Pest\Browser\Api\AwaitableWebpage;
+use Pest\Browser\Api\Webpage;
+
+use function NckRtl\HorizonNewDawn\Tests\Support\bindBrowserFailedJobBulkLimitFixtures;
+use function NckRtl\HorizonNewDawn\Tests\Support\bindBrowserFailedJobIdentifierOverflowFixtures;
 use function NckRtl\HorizonNewDawn\Tests\Support\bindBrowserPageFixtures;
 use function NckRtl\HorizonNewDawn\Tests\Support\bindBrowserProcessTransitionFixtures;
 use function NckRtl\HorizonNewDawn\Tests\Support\bindBrowserSupervisorScalingFixtures;
+use function NckRtl\HorizonNewDawn\Tests\Support\bindRetainedJobBrowserFixtures;
 
 describe('Horizon interface interactions', function (): void {
     beforeEach(function (): void {
@@ -22,7 +31,7 @@ describe('Horizon interface interactions', function (): void {
             ->assertSee('Cancel all delayed jobs?')
             ->assertSee('Ready, reserved, and running jobs will not be affected.')
             ->click('[data-test="confirm-cancel-pending-jobs"]')
-            ->assertSee('Cancelled 0 delayed jobs.');
+            ->assertSee('Cancelling delayed jobs was queued.');
 
         visit('/horizon/failed')
             ->click('button[aria-label="Failed jobs actions"]')
@@ -33,6 +42,21 @@ describe('Horizon interface interactions', function (): void {
             ->assertMissing('button[aria-label="Completed jobs actions"]')
             ->assertNoJavaScriptErrors()
             ->assertNoConsoleLogs();
+    });
+
+    it('keeps global failed-job actions available for large retained sets', function (): void {
+        bindBrowserFailedJobBulkLimitFixtures();
+
+        visit('/horizon/failed')
+            ->click('button[aria-label="Failed jobs actions"]')
+            ->assertSee('Retry all')
+            ->assertSee('Clear all failed jobs')
+            ->assertDontSee('exceed the configured limit')
+            ->assertMissing('[data-test="retry-all-failed-jobs"][aria-disabled="true"]')
+            ->assertMissing('[data-test="clear-all-failed-jobs"][aria-disabled="true"]')
+            ->assertNoJavaScriptErrors()
+            ->assertNoConsoleLogs()
+            ->assertNoAccessibilityIssues();
     });
 
     it('cancels a pending job before a worker reserves it', function (): void {
@@ -61,6 +85,255 @@ describe('Horizon interface interactions', function (): void {
             ->assertScript('document.documentElement.classList.contains("dark")')
             ->assertNoJavaScriptErrors()
             ->assertNoConsoleLogs();
+    });
+
+    it('prefetches queue metrics without showing a deferred chart fallback', function (): void {
+        $page = visit('/horizon/queues/reports')
+            ->waitForText('Retained Pending Jobs');
+
+        $result = $page->script(<<<'JS'
+            () => new Promise((resolve, reject) => {
+                const headers = new WeakMap()
+                const partialRequests = []
+                const originalSend = XMLHttpRequest.prototype.send
+                const originalSetRequestHeader = XMLHttpRequest.prototype.setRequestHeader
+                let fallbackSeen = false
+                const observer = new MutationObserver(inspect)
+                const timeout = window.setTimeout(
+                    () => finish(new Error('Timed out switching to the prefetched queue metrics view.')),
+                    10000,
+                )
+
+                function inspect() {
+                    fallbackSeen ||= document.querySelector(
+                        '[aria-label="Loading queue metrics"]',
+                    ) !== null
+                }
+
+                function finish(error = null) {
+                    window.clearTimeout(timeout)
+                    document.removeEventListener('inertia:success', onSuccess)
+                    observer.disconnect()
+                    XMLHttpRequest.prototype.send = originalSend
+                    XMLHttpRequest.prototype.setRequestHeader = originalSetRequestHeader
+
+                    if (error) {
+                        reject(error)
+                        return
+                    }
+
+                    resolve({
+                        fallbackSeen,
+                        partialRequests,
+                        search: window.location.search,
+                        headings: Array.from(document.querySelectorAll('h2'))
+                            .map((heading) => heading.textContent?.trim()),
+                    })
+                }
+
+                function onSuccess(event) {
+                    if (
+                        event.detail.page.component !== 'Queues/Show'
+                        || event.detail.page.props.view !== 'metrics'
+                        || ! window.location.search.includes('view=metrics')
+                    ) {
+                        return
+                    }
+
+                    window.requestAnimationFrame(() => window.requestAnimationFrame(() => finish()))
+                }
+
+                XMLHttpRequest.prototype.setRequestHeader = function (name, value) {
+                    const requestHeaders = headers.get(this) ?? {}
+                    requestHeaders[name.toLowerCase()] = String(value)
+                    headers.set(this, requestHeaders)
+
+                    return originalSetRequestHeader.call(this, name, value)
+                }
+
+                XMLHttpRequest.prototype.send = function (body) {
+                    const partialData = headers.get(this)?.['x-inertia-partial-data']
+
+                    if (partialData) {
+                        partialRequests.push(partialData)
+                    }
+
+                    return originalSend.call(this, body)
+                }
+
+                const metrics = Array.from(document.querySelectorAll('[role="tab"]'))
+                    .find((tab) => tab.textContent?.trim() === 'Metrics')
+
+                if (!(metrics instanceof HTMLElement)) {
+                    finish(new Error('The Metrics queue tab was not found.'))
+                    return
+                }
+
+                inspect()
+                observer.observe(document.body, {
+                    childList: true,
+                    subtree: true,
+                })
+                document.addEventListener('inertia:success', onSuccess)
+                metrics.dispatchEvent(new MouseEvent('mouseover', {
+                    bubbles: true,
+                    cancelable: true,
+                    view: window,
+                }))
+                window.setTimeout(() => metrics.click(), 150)
+            })
+        JS);
+
+        expect($result['fallbackSeen'])->toBeFalse()
+            ->and($result['partialRequests'])->toContain('view,preview')
+            ->and($result['search'])->toBe('?tab=pending&view=metrics')
+            ->and($result['headings'])->toContain('Throughput — reports')
+            ->and($result['headings'])->toContain('Runtime — reports');
+
+        $page
+            ->assertNoJavaScriptErrors()
+            ->assertNoConsoleLogs();
+    });
+
+    it('keeps long failed-job identifiers inside directional mobile scrollers', function (): void {
+        [
+            'failedJobId' => $failedJobId,
+            'batchId' => $batchId,
+        ] = bindBrowserFailedJobIdentifierOverflowFixtures();
+
+        $page = visit("/horizon/failed/{$failedJobId}")
+            ->on()->mobile()
+            ->resize(337, 844)
+            ->assertSee($failedJobId)
+            ->assertSee($batchId)
+            ->assertPresent('[data-test="failed-job-id"]')
+            ->assertPresent('[data-test="failed-job-batch-id"]');
+
+        $identifierOverflow = $page->script(<<<'JS'
+            async () => {
+                const nextFrame = () => new Promise((resolve) => requestAnimationFrame(resolve))
+                const waitForState = async (wrapper, left, right) => {
+                    for (let frame = 0; frame < 120; frame++) {
+                        const state = {
+                            left: wrapper.getAttribute('data-overflow-left') === 'true',
+                            right: wrapper.getAttribute('data-overflow-right') === 'true',
+                        }
+
+                        if (state.left === left && state.right === right) {
+                            return state
+                        }
+
+                        await nextFrame()
+                    }
+
+                    throw new Error(`Timed out waiting for overflow state ${left}/${right}.`)
+                }
+                const inspect = async (selector) => {
+                    const valueCell = document.querySelector(selector)
+                    const scroll = valueCell?.querySelector('[data-slot="detail-list-value-scroll"]')
+                    const overflowWrapper = scroll?.closest(
+                        '[data-overflow-left][data-overflow-right]',
+                    )
+                    const fadeLeft = valueCell?.querySelector(
+                        '[data-slot="detail-list-value-fade-left"]',
+                    )
+                    const fadeRight = valueCell?.querySelector(
+                        '[data-slot="detail-list-value-fade-right"]',
+                    )
+
+                    if (
+                        ! valueCell
+                        || ! scroll
+                        || ! overflowWrapper
+                        || ! fadeLeft
+                        || ! fadeRight
+                    ) {
+                        throw new Error(`Missing overflow elements for ${selector}.`)
+                    }
+
+                    const scrollStyle = getComputedStyle(scroll)
+                    const scrollbarStyle = getComputedStyle(scroll, '::-webkit-scrollbar')
+                    const fadeLeftStyle = getComputedStyle(fadeLeft)
+                    const fadeRightStyle = getComputedStyle(fadeRight)
+                    const initial = await waitForState(overflowWrapper, false, true)
+                    const maxScrollLeft = scroll.scrollWidth - scroll.clientWidth
+
+                    scroll.scrollLeft = maxScrollLeft / 2
+                    scroll.dispatchEvent(new Event('scroll'))
+                    const middle = await waitForState(overflowWrapper, true, true)
+
+                    scroll.scrollLeft = maxScrollLeft
+                    scroll.dispatchEvent(new Event('scroll'))
+                    const end = await waitForState(overflowWrapper, true, false)
+
+                    scroll.scrollLeft = 0
+                    scroll.dispatchEvent(new Event('scroll'))
+                    const backAtStart = await waitForState(overflowWrapper, false, true)
+
+                    return {
+                        whiteSpace: scrollStyle.whiteSpace,
+                        overflowX: scrollStyle.overflowX,
+                        scrollbarWidth: scrollStyle.scrollbarWidth,
+                        webkitScrollbarDisplay: scrollbarStyle.display,
+                        clientWidth: scroll.clientWidth,
+                        scrollWidth: scroll.scrollWidth,
+                        fadeWidths: [
+                            fadeLeft.getBoundingClientRect().width,
+                            fadeRight.getBoundingClientRect().width,
+                        ],
+                        fadePointerEvents: [
+                            fadeLeftStyle.pointerEvents,
+                            fadeRightStyle.pointerEvents,
+                        ],
+                        states: {
+                            initial,
+                            middle,
+                            end,
+                            backAtStart,
+                        },
+                    }
+                }
+
+                return {
+                    viewportWidth: window.innerWidth,
+                    documentHasHorizontalOverflow:
+                        document.documentElement.scrollWidth
+                        > document.documentElement.clientWidth,
+                    failedJobId: await inspect('[data-test="failed-job-id"]'),
+                    batchId: await inspect('[data-test="failed-job-batch-id"]'),
+                }
+            }
+        JS);
+
+        expect($identifierOverflow)->toMatchArray([
+            'viewportWidth' => 337,
+            'documentHasHorizontalOverflow' => false,
+        ]);
+
+        foreach (['failedJobId', 'batchId'] as $identifier) {
+            $overflow = $identifierOverflow[$identifier];
+
+            expect($overflow)->toMatchArray([
+                'whiteSpace' => 'nowrap',
+                'overflowX' => 'auto',
+                'scrollbarWidth' => 'none',
+                'webkitScrollbarDisplay' => 'none',
+                'fadePointerEvents' => ['none', 'none'],
+                'states' => [
+                    'initial' => ['left' => false, 'right' => true],
+                    'middle' => ['left' => true, 'right' => true],
+                    'end' => ['left' => true, 'right' => false],
+                    'backAtStart' => ['left' => false, 'right' => true],
+                ],
+            ]);
+            expect($overflow['scrollWidth'])->toBeGreaterThan($overflow['clientWidth']);
+            expect($overflow['fadeWidths'])->each->toBe(40);
+        }
+
+        $page
+            ->assertNoJavaScriptErrors()
+            ->assertNoConsoleLogs()
+            ->assertNoAccessibilityIssues();
     });
 
     it('keeps predicted autoscaling active until the process count reaches its target', function (): void {
@@ -287,20 +560,67 @@ describe('Horizon interface interactions', function (): void {
             ->assertNoConsoleLogs();
     });
 
-    it('searches jobs and exposes the feature filters', function (): void {
-        visit('/horizon/jobs/completed')
-            ->fill('input[aria-label="Search completed jobs"]', 'a job that does not exist')
-            ->assertValue('input[aria-label="Search completed jobs"]', 'a job that does not exist')
-            ->assertSee('No matching completed jobs')
+    it('navigates to consolidated job tabs through the mobile sidebar submenu', function (): void {
+        config()->set('horizon-new-dawn.job_navigation_breakdown', true);
+
+        visit('/horizon')
+            ->on()->iPhone14Pro()
+            ->click('Toggle Sidebar')
+            ->assertPresent('[data-mobile="true"] a[href$="/horizon/jobs/pending"]')
+            ->assertPresent('[data-mobile="true"] a[href$="/horizon/failed"]')
+            ->assertPresent('[data-mobile="true"] a[href$="/horizon/jobs/completed"]')
+            ->assertPresent('[data-mobile="true"] a[href$="/horizon/jobs/silenced"]')
+            ->click('[data-mobile="true"] a[href$="/horizon/jobs/completed"]')
+            ->assertPathIs('/horizon/jobs/completed')
+            ->assertMissing('[data-mobile="true"]')
+            ->assertSee('Completed jobs')
+            ->assertNoJavaScriptErrors()
+            ->assertNoConsoleLogs();
+    });
+
+    it('filters completed jobs through exact server-owned controls', function (): void {
+        $matchingId = bindRetainedJobBrowserFixtures(
+            matchingIndex: 5,
+            type: RetainedJobType::Completed,
+        );
+        $page = visit('/horizon/jobs/completed')
+            ->assertCount('table tbody:last-of-type tr', 50)
+            ->assertMissing("a[href$=\"/{$matchingId}\"]")
             ->click('button[aria-label="Filter jobs"]')
-            ->assertSee('Narrow the loaded completed jobs using filters available for this tab.')
+            ->assertSee('Narrow all retained completed jobs with exact server-side filters.')
             ->assertSee('Job class')
             ->assertSee('Queue')
             ->assertSee('Connection')
-            ->assertSee('Tag')
-            ->click('Done')
+            ->assertDontSee('Retry status');
+
+        interfaceInteractionsOpenJobFilterSelect($page, 'Job class');
+
+        $page
+            ->click('ProductionOnly')
+            ->waitForText('Queue: reports')
+            ->assertCount('table tbody:last-of-type tr', 1)
+            ->assertPresent("a[href$=\"/{$matchingId}\"]")
+            ->assertQueryStringHas('filter_job', 'App\\Jobs\\ProductionOnly');
+
+        $filteredResult = $page->script(<<<'JS'
+            () => ({
+                total: window.history.state?.page?.props?.jobs?.total ?? null,
+                ids: (window.history.state?.page?.props?.jobs?.data ?? []).map((job) => job.id),
+            })
+        JS);
+
+        expect($filteredResult)->toBe([
+            'total' => 1,
+            'ids' => [$matchingId],
+        ]);
+
+        $page
+            ->refresh()
+            ->assertCount('table tbody:last-of-type tr', 1)
+            ->assertPresent("a[href$=\"/{$matchingId}\"]")
             ->assertNoJavaScriptErrors()
-            ->assertNoConsoleLogs();
+            ->assertNoConsoleLogs()
+            ->assertNoAccessibilityIssues();
     });
 
     it('searches and filters metrics and queues', function (): void {
@@ -352,23 +672,12 @@ describe('Horizon interface interactions', function (): void {
             ->assertNoConsoleLogs();
     });
 
-    it('searches, filters, and changes batch status', function (): void {
+    it('omits exact batch query controls for an unsupported repository', function (): void {
         visit('/horizon/batches')
-            ->fill('input[aria-label="Search batches by name or ID"]', 'a batch that does not exist')
-            ->assertValue(
-                'input[aria-label="Search batches by name or ID"]',
-                'a batch that does not exist',
-            )
-            ->click('button[aria-label="Filter batches"]')
-            ->assertSee('Narrow retained batches by queue, connection, or creation time.')
-            ->assertSee('Queue')
-            ->assertSee('Connection')
-            ->assertSee('Created')
-            ->click('Done')
-            ->assertDontSee('Narrow retained batches by queue, connection, or creation time.')
-            ->click('[role="tab"]:nth-child(2)')
-            ->assertAttribute('[role="tab"]:nth-child(2)', 'aria-selected', 'true')
-            ->assertSee('No matching batches')
+            ->assertSee('Exact batch queries unavailable')
+            ->assertMissing('input[aria-label="Search batches by name or ID"]')
+            ->assertMissing('button[aria-label^="Filter batches"]')
+            ->assertMissing('[role="tablist"][aria-label="Batch status"]')
             ->assertNoJavaScriptErrors()
             ->assertNoConsoleLogs();
     });
@@ -384,18 +693,78 @@ describe('Horizon interface interactions', function (): void {
             ->assertNoConsoleLogs();
     });
 
-    it('searches failed jobs by exact tag and exposes its filters', function (): void {
-        visit('/horizon/failed')
-            ->fill('input[aria-label="Filter failed jobs by exact tag"]', 'tenant:missing')
-            ->assertValue('input[aria-label="Filter failed jobs by exact tag"]', 'tenant:missing')
-            ->assertSee('No matching failed jobs')
+    it('filters all retained failed jobs by exact tag and server-owned facets', function (): void {
+        $matchingId = bindRetainedJobBrowserFixtures(type: RetainedJobType::Failed);
+        $page = visit('/horizon/failed')
+            ->assertCount('table tbody:last-of-type tr', 50)
+            ->assertMissing("a[href$=\"/{$matchingId}\"]")
+            ->fill('input[aria-label="Filter failed jobs by exact tag"]', 'tenant:production')
+            ->waitForText('Queue: reports')
+            ->assertValue(
+                'input[aria-label="Filter failed jobs by exact tag"]',
+                'tenant:production',
+            )
+            ->assertCount('table tbody:last-of-type tr', 1)
+            ->assertPresent("a[href$=\"/{$matchingId}\"]")
+            ->assertQueryStringHas('tag', 'tenant:production')
             ->click('button[aria-label="Filter jobs"]')
-            ->assertSee('Narrow the loaded failed jobs using filters available for this tab.')
+            ->assertSee('Narrow all retained failed jobs with exact server-side filters.')
+            ->assertSee('Job class')
             ->assertSee('Connection')
             ->assertSee('Queue')
-            ->assertSee('Retry status')
-            ->click('Done')
+            ->assertDontSee('Retry status');
+
+        interfaceInteractionsOpenJobFilterSelect($page, 'Connection');
+
+        $page
+            ->click('redis-secondary')
+            ->assertPresent('button[aria-label="Filter jobs, 1 active"]')
+            ->assertQueryStringHas('filter_connection', 'redis-secondary');
+
+        $filteredResult = $page->script(<<<'JS'
+            () => ({
+                total: window.history.state?.page?.props?.jobs?.total ?? null,
+                ids: (window.history.state?.page?.props?.jobs?.data ?? []).map((job) => job.id),
+            })
+        JS);
+
+        expect($filteredResult)->toBe([
+            'total' => 1,
+            'ids' => [$matchingId],
+        ]);
+
+        $page
+            ->refresh()
+            ->assertCount('table tbody:last-of-type tr', 1)
+            ->assertPresent("a[href$=\"/{$matchingId}\"]")
             ->assertNoJavaScriptErrors()
-            ->assertNoConsoleLogs();
+            ->assertNoConsoleLogs()
+            ->assertNoAccessibilityIssues();
     });
 });
+
+function interfaceInteractionsOpenJobFilterSelect(
+    AwaitableWebpage|Webpage $page,
+    string $label,
+): void {
+    $labelJson = json_encode($label, JSON_THROW_ON_ERROR);
+    $opened = $page->script(<<<JS
+        () => {
+            const label = Array.from(document.querySelectorAll('[role="dialog"] label'))
+                .find((element) => element.textContent?.trim() === {$labelJson})
+            const trigger = label instanceof HTMLLabelElement
+                ? document.getElementById(label.htmlFor)
+                : null
+
+            if (! trigger) {
+                return false
+            }
+
+            trigger.click()
+
+            return true
+        }
+    JS);
+
+    expect($opened)->toBeTrue();
+}

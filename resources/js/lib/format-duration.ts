@@ -1,72 +1,79 @@
-const numberFormatter = new Intl.NumberFormat();
-const preciseNumberFormatter = new Intl.NumberFormat(undefined, {
+const numberFormatter = new Intl.NumberFormat("en-US");
+const preciseNumberFormatter = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 2,
 });
 
 export type DurationFormat = "approximate" | "precise";
 
 const preciseUnits = [
-  { singular: "year", plural: "years", seconds: 31_536_000 },
-  { singular: "month", plural: "months", seconds: 2_592_000 },
-  { singular: "day", plural: "days", seconds: 86_400 },
-  { singular: "hour", plural: "hours", seconds: 3_600 },
-  { singular: "minute", plural: "minutes", seconds: 60 },
-  { singular: "second", plural: "seconds", seconds: 1 },
+  { suffix: "y", seconds: 31_536_000 },
+  { suffix: "mo", seconds: 2_592_000 },
+  { suffix: "d", seconds: 86_400 },
+  { suffix: "h", seconds: 3_600 },
+  { suffix: "m", seconds: 60 },
+  { suffix: "s", seconds: 1 },
 ] as const;
 const maximumPreciseParts = 3;
+const minimumSecondsDisplay = 1;
 
 export function formatDuration(seconds: number, format: DurationFormat = "approximate"): string {
-  const duration = Math.max(0, seconds);
+  const normalizedDuration = normalizeDuration(seconds);
+
+  if (normalizedDuration > 0 && normalizedDuration < minimumSecondsDisplay) {
+    return formatMilliseconds(normalizedDuration);
+  }
+
+  const duration = roundToHundredth(normalizedDuration);
 
   if (format === "precise") {
     return formatPreciseDuration(duration);
   }
 
   if (duration <= 5) {
-    return "A few seconds";
+    return formatUnit(duration, "s", preciseNumberFormatter);
   }
 
   if (duration < 60) {
-    return `${numberFormatter.format(Math.round(duration))} seconds`;
+    return formatUnit(Math.round(duration), "s");
   }
 
   if (duration < 90) {
-    return "A minute";
+    return "1m";
   }
 
   if (duration < 2_700) {
-    return `${numberFormatter.format(Math.round(duration / 60))} minutes`;
+    return formatUnit(Math.round(duration / 60), "m");
   }
 
   if (duration < 5_400) {
-    return "An hour";
+    return "1h";
   }
 
   if (duration < 79_200) {
-    return `${numberFormatter.format(Math.round(duration / 3_600))} hours`;
+    return formatUnit(Math.round(duration / 3_600), "h");
   }
 
   if (duration < 129_600) {
-    return "A day";
+    return "1d";
   }
 
   if (duration < 2_592_000) {
-    return `${numberFormatter.format(Math.round(duration / 86_400))} days`;
+    return formatUnit(Math.round(duration / 86_400), "d");
   }
 
   if (duration < 5_184_000) {
-    return "A month";
+    return "1mo";
   }
 
   if (duration < 31_536_000) {
-    return `${numberFormatter.format(Math.round(duration / 2_592_000))} months`;
+    return formatUnit(Math.round(duration / 2_592_000), "mo");
   }
 
   if (duration < 63_072_000) {
-    return "A year";
+    return "1y";
   }
 
-  return `${numberFormatter.format(Math.round(duration / 31_536_000))} years`;
+  return formatUnit(Math.round(duration / 31_536_000), "y");
 }
 
 function formatPreciseDuration(duration: number): string {
@@ -85,25 +92,39 @@ function formatPreciseDuration(duration: number): string {
       continue;
     }
 
-    parts.push(
-      `${preciseNumberFormatter.format(value)} ${durationUnit(value, unit.singular, unit.plural)}`,
-    );
+    parts.push(formatUnit(value, unit.suffix, preciseNumberFormatter));
     remainingSeconds -= value * unit.seconds;
   }
 
-  return parts.length > 0 ? parts.join(", ") : "0 second";
+  return parts.length > 0 ? parts.join(" ") : "0s";
 }
 
-function durationUnit(value: number, singular: string, plural: string): string {
-  return value <= 1 ? singular : plural;
+function normalizeDuration(seconds: number): number {
+  return Number.isFinite(seconds) ? Math.max(0, seconds) : 0;
 }
 
-export function lowercaseFirst(value: string) {
-  return `${value.charAt(0).toLowerCase()}${value.slice(1)}`;
+function roundToHundredth(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
+function formatMilliseconds(seconds: number): string {
+  return formatUnit(seconds * 1_000, "ms", preciseNumberFormatter);
+}
+
+function formatUnit(
+  value: number,
+  suffix: string,
+  formatter: Intl.NumberFormat = numberFormatter,
+): string {
+  return `${formatter.format(value)}${suffix}`;
 }
 
 export function formatRawDuration(seconds: number): string {
-  const duration = Math.max(0, seconds);
+  const duration = normalizeDuration(seconds);
 
-  return `${preciseNumberFormatter.format(duration)} ${durationUnit(duration, "second", "seconds")}`;
+  if (duration > 0 && duration < minimumSecondsDisplay) {
+    return formatMilliseconds(duration);
+  }
+
+  return formatUnit(roundToHundredth(duration), "s", preciseNumberFormatter);
 }

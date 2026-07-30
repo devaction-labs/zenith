@@ -143,7 +143,7 @@ describe('MonitoringData', function (): void {
             ->toBe(['alpha', 'zeta']);
     });
 
-    it('normalizes tag jobs and exposes offset scroll metadata', function (): void {
+    it('does not expose a next page when exactly one full page remains', function (): void {
         $tagIds = array_combine(
             range(0, 49),
             array_map(static fn (int $index): string => "job-{$index}", range(0, 49)),
@@ -159,24 +159,49 @@ describe('MonitoringData', function (): void {
             ),
         ]);
         $tags = mockDashboardContract(TagRepository::class);
-        dashboardReturnsFor($tags, 'paginate', ['checkout', 0, 50], $tagIds);
-        dashboardReturnsFor($tags, 'count', ['checkout'], 80);
+        dashboardReturnsFor($tags, 'paginate', ['checkout', 0, 51], $tagIds);
+        dashboardReturnsFor($tags, 'count', ['checkout'], 50);
         $jobs = mockDashboardContract(JobRepository::class);
         dashboardReturnsFor($jobs, 'getJobs', [$tagIds, 0], $jobRows);
 
         $page = (new MonitoringData($tags, $jobs, new JobsData($jobs)))
             ->page('checkout', MonitoringStatus::Jobs, 0);
 
-        expect($page->total)->toBe(80)
+        expect($page->total)->toBe(50)
             ->and($page->items)->toHaveCount(50)
-            ->and($page->next)->toBe(50)
+            ->and($page->next)->toBeNull()
             ->and($page->items[0]->delay)->toBe(60)
             ->and($page->items[0]->toArray())->not->toHaveKeys(['payload', 'exception', 'context']);
     });
 
+    it('uses one lookahead reference to expose a next page without hydrating it', function (): void {
+        $tagIds = array_map(
+            static fn (int $index): string => "job-{$index}",
+            range(0, 50),
+        );
+        $pageIds = array_slice($tagIds, 0, 50);
+        $jobRows = new Collection(array_map(
+            static fn (int $index): object => horizonJob($index, "job-{$index}"),
+            range(0, 49),
+        ));
+        $tags = mockDashboardContract(TagRepository::class);
+        dashboardReturnsFor($tags, 'paginate', ['checkout', 0, 51], $tagIds);
+        dashboardReturnsFor($tags, 'count', ['checkout'], 51);
+        $jobs = mockDashboardContract(JobRepository::class);
+        dashboardReturnsFor($jobs, 'getJobs', [$pageIds, 0], $jobRows);
+
+        $page = (new MonitoringData($tags, $jobs, new JobsData($jobs)))
+            ->page('checkout', MonitoringStatus::Jobs, 0);
+
+        expect($page->total)->toBe(51)
+            ->and($page->items)->toHaveCount(50)
+            ->and($page->next)->toBe(50)
+            ->and(array_column($page->items, 'id'))->not->toContain('job-50');
+    });
+
     it('uses the failed tag boundary and stops on a short page', function (): void {
         $tags = mockDashboardContract(TagRepository::class);
-        dashboardReturnsFor($tags, 'paginate', ['failed:checkout', 50, 50], [50 => 'failed-1']);
+        dashboardReturnsFor($tags, 'paginate', ['failed:checkout', 50, 51], [50 => 'failed-1']);
         dashboardReturnsFor($tags, 'count', ['failed:checkout'], 51);
         $jobs = mockDashboardContract(JobRepository::class);
         dashboardReturnsFor($jobs, 'getJobs', [['failed-1'], 50], new Collection([

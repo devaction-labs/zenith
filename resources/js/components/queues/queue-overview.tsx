@@ -1,34 +1,55 @@
-import { Link } from "@inertiajs/react";
+import { Link, router } from "@inertiajs/react";
 import { TriangleAlertIcon } from "lucide-react";
 import { lazy, Suspense } from "react";
 
 import { ProgressRing } from "@/components/batches/progress-ring";
 import {
+  AVERAGE_RUNTIME_SINCE_SNAPSHOT_TOOLTIP,
+  CompletedJobsValue,
+  determinePeriod,
   OverviewDetail,
   OverviewStatLink,
-  retainedPeriodLabel,
+  SILENCED_JOBS_TOOLTIP,
+  THROUGHPUT_SINCE_SNAPSHOT_TOOLTIP,
 } from "@/components/dashboard/dashboard-overview";
 import { Duration } from "@/components/duration";
 import { QueueActionsMenu, QueuePauseBadge } from "@/components/queues/queue-actions-menu";
 import { QueueWaitThresholdMetric } from "@/components/queues/queue-wait-threshold";
+import { ResponsiveTabsHeader, type ResponsiveTabItem } from "@/components/responsive-tabs-header";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Statistic,
+  StatisticGrid,
+  StatisticLabel,
+  StatisticValue,
+} from "@/components/ui/statistic";
+import { Tabs } from "@/components/ui/tabs";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { show as queueShow } from "@/generated/routes/horizon-new-dawn/queues";
 import { resolveHorizonRoute } from "@/lib/horizon-route";
+import { livePendingTotal } from "@/lib/live-pending-total";
+import { cn } from "@/lib/utils";
 import type { MetricPreview } from "@/types/metrics";
 import type { QueueActivityTab, QueueDetailView, QueueSummary } from "@/types/queues";
 
-const numberFormatter = new Intl.NumberFormat(undefined, { maximumFractionDigits: 3 });
+const numberFormatter = new Intl.NumberFormat(undefined, {
+  maximumFractionDigits: 3,
+});
 let metricChartPromise: Promise<{
   default: typeof import("@/components/metrics/metric-chart").MetricChart;
 }> | null = null;
+let loadedMetricChart: typeof import("@/components/metrics/metric-chart").MetricChart | null = null;
 
 function loadMetricChart() {
-  metricChartPromise ??= import("@/components/metrics/metric-chart").then(({ MetricChart }) => ({
-    default: MetricChart,
-  }));
+  metricChartPromise ??= import("@/components/metrics/metric-chart").then(({ MetricChart }) => {
+    loadedMetricChart = MetricChart;
+
+    return {
+      default: MetricChart,
+    };
+  });
 
   return metricChartPromise;
 }
@@ -56,6 +77,9 @@ export function QueueOverview({
   preview,
   horizonBaseUrl,
   queuePausing = true,
+  timedQueuePausing = true,
+  batchAttributionAvailable = false,
+  inactive = false,
 }: {
   view: QueueDetailView;
   tab: QueueActivityTab;
@@ -63,8 +87,11 @@ export function QueueOverview({
   preview: MetricPreview | null;
   horizonBaseUrl: string;
   queuePausing?: boolean;
+  timedQueuePausing?: boolean;
+  batchAttributionAvailable?: boolean;
+  inactive?: boolean;
 }) {
-  if (!summary.available) {
+  if (!summary.available && !inactive) {
     return (
       <Alert variant="destructive">
         <TriangleAlertIcon aria-hidden="true" />
@@ -83,10 +110,65 @@ export function QueueOverview({
 
     return resolveHorizonRoute(route, horizonBaseUrl).url;
   };
+  const viewItems: readonly ResponsiveTabItem<QueueDetailView>[] = [
+    {
+      value: "overview",
+      label: "Overview",
+      render: <Link href={viewUrl("overview")} only={["view", "preview"]} prefetch preserveState />,
+    },
+    {
+      value: "metrics",
+      label: "Metrics",
+      render: (
+        <Link
+          href={viewUrl("metrics")}
+          only={["view", "preview"]}
+          prefetch
+          preserveState
+          onFocus={() => void loadMetricChart()}
+          onMouseEnter={() => void loadMetricChart()}
+          onClick={(event) => {
+            if (loadedMetricChart !== null) {
+              return;
+            }
+
+            event.preventDefault();
+
+            void loadMetricChart().then(() => {
+              router.visit(viewUrl("metrics"), {
+                only: ["view", "preview"],
+                preserveState: true,
+              });
+            });
+          }}
+        />
+      ),
+    },
+  ];
+  const selectView = (nextView: QueueDetailView | null) => {
+    if (!nextView || nextView === view) {
+      return;
+    }
+
+    const visit = () => {
+      router.visit(viewUrl(nextView), {
+        only: ["view", "preview"],
+        preserveState: true,
+      });
+    };
+
+    if (nextView === "metrics" && loadedMetricChart === null) {
+      void loadMetricChart().then(visit);
+
+      return;
+    }
+
+    visit();
+  };
 
   return (
     <Card>
-      <CardHeader className="h-[54px] min-h-[54px] border-b-0 py-2.5">
+      <CardHeader className="border-b-0">
         <CardTitle className="flex min-w-0 items-center gap-2" title={summary.name}>
           <span className="truncate">{summary.name}</span>
           {summary.pauseTargets.map((target) => (
@@ -98,61 +180,49 @@ export function QueueOverview({
             />
           ))}
         </CardTitle>
-        <CardAction>
-          <QueueActionsMenu
-            queue={summary.name}
-            targets={summary.pauseTargets}
-            failedJobs={summary.failedJobs}
-            horizonBaseUrl={horizonBaseUrl}
-            queuePausing={queuePausing}
-          />
-        </CardAction>
+        {!inactive ? (
+          <CardAction>
+            <QueueActionsMenu
+              queue={summary.name}
+              targets={summary.pauseTargets}
+              failedJobs={summary.failedJobs}
+              horizonBaseUrl={horizonBaseUrl}
+              queuePausing={queuePausing}
+              timedQueuePausing={timedQueuePausing}
+            />
+          </CardAction>
+        ) : null}
       </CardHeader>
       <CardContent className="p-0">
         <Tabs value={view} className="gap-0">
-          <TabsList
-            variant="line"
-            className="w-full justify-start gap-2 overflow-x-auto rounded-none border-b border-separator px-3 py-0"
-            aria-label="Queue view"
-          >
-            <TabsTrigger
-              className="h-auto flex-none rounded-none px-3 pt-0 pb-3 text-[13.5px]"
-              value="overview"
-              nativeButton={false}
-              render={<Link href={viewUrl("overview")} prefetch preserveState />}
-            >
-              Overview
-            </TabsTrigger>
-            <TabsTrigger
-              className="h-auto flex-none rounded-none px-3 pt-0 pb-3 text-[13.5px]"
-              value="metrics"
-              nativeButton={false}
-              render={
-                <Link
-                  href={viewUrl("metrics")}
-                  prefetch
-                  preserveState
-                  onFocus={() => void loadMetricChart()}
-                  onMouseEnter={() => void loadMetricChart()}
-                />
-              }
-            >
-              Metrics
-            </TabsTrigger>
-          </TabsList>
+          <ResponsiveTabsHeader
+            value={view}
+            items={viewItems}
+            ariaLabel="Queue view"
+            separatedFromHeader
+            onValueChange={selectView}
+            className="border-b border-separator"
+            triggerClassName="pt-0 pb-3"
+          />
         </Tabs>
-        {summary.message ? (
-          <Alert className="m-4">
-            <TriangleAlertIcon aria-hidden="true" />
-            <AlertTitle>Some queue data is unavailable</AlertTitle>
-            <AlertDescription>{summary.message}</AlertDescription>
-          </Alert>
-        ) : null}
-        {view === "metrics" ? (
-          <QueueMetrics name={summary.name} preview={preview} />
-        ) : (
-          <QueueStatistics summary={summary} horizonBaseUrl={horizonBaseUrl} />
-        )}
+        <div className="relative">
+          <div
+            className={cn(view === "metrics" && "invisible")}
+            aria-hidden={view === "metrics" ? true : undefined}
+            inert={view === "metrics" ? true : undefined}
+          >
+            <QueueStatistics
+              summary={summary}
+              horizonBaseUrl={horizonBaseUrl}
+              batchAttributionAvailable={batchAttributionAvailable}
+            />
+          </div>
+          {view === "metrics" ? (
+            <div className="absolute inset-0 min-h-0 overflow-hidden">
+              <QueueMetrics name={summary.name} preview={preview} />
+            </div>
+          ) : null}
+        </div>
       </CardContent>
     </Card>
   );
@@ -161,21 +231,46 @@ export function QueueOverview({
 function QueueStatistics({
   summary,
   horizonBaseUrl,
+  batchAttributionAvailable,
 }: {
   summary: QueueSummary;
   horizonBaseUrl: string;
+  batchAttributionAvailable: boolean;
 }) {
+  const pendingTotal = livePendingTotal(
+    summary.pendingReserved,
+    summary.pendingReadyNow,
+    summary.pendingDelayed,
+  );
+
   return (
     <>
-      <div className="grid gap-px bg-separator sm:grid-cols-2 md:grid-cols-4">
+      <StatisticGrid
+        className={cn(
+          "sm:grid-cols-2",
+          batchAttributionAvailable ? "md:grid-cols-4" : "md:grid-cols-3",
+        )}
+      >
         <OverviewStatLink
           href={activityUrl(summary.name, "pending", horizonBaseUrl)}
-          title="Retained Pending Jobs"
-          value={retainedValue(summary.pendingJobs, summary.pendingComplete)}
+          title="Pending Jobs"
+          value={pendingTotal === null ? "—" : pendingTotal}
         >
-          <OverviewDetail label="Live reserved" value={summary.pendingReserved} />
-          <OverviewDetail label="Live ready" value={summary.pendingReadyNow} />
-          <OverviewDetail label="Live delayed" value={summary.pendingDelayed} />
+          <OverviewDetail
+            label="Reserved"
+            value={summary.pendingReserved}
+            tooltip="Jobs currently being worked on."
+          />
+          <OverviewDetail
+            label="Ready"
+            value={summary.pendingReadyNow}
+            tooltip="Jobs waiting for an available worker."
+          />
+          <OverviewDetail
+            label="Delayed"
+            value={summary.pendingDelayed}
+            tooltip="Jobs scheduled to run later."
+          />
         </OverviewStatLink>
         <OverviewStatLink
           href={activityUrl(summary.name, "failed", horizonBaseUrl)}
@@ -183,74 +278,74 @@ function QueueStatistics({
           value={retainedValue(summary.failedJobs, summary.failedComplete)}
         >
           <OverviewDetail
-            label="Average/minute"
-            value={retainedValue(summary.failedJobsPerMinute, summary.failedJobsPerMinuteComplete)}
-          />
-          <OverviewDetail
-            label={retainedPeriodLabel(summary.failedRetentionMinutes, 60)}
+            label="Past hour"
             value={retainedValue(summary.failedJobsPastHour, summary.failedJobsPastHourComplete)}
           />
           <OverviewDetail
-            label={retainedPeriodLabel(summary.failedRetentionMinutes, 1440)}
+            label="Past 24 hours"
             value={retainedValue(summary.failedJobsPastDay, summary.failedJobsPastDayComplete)}
+          />
+          <OverviewDetail
+            label={`Past ${determinePeriod(summary.failedRetentionMinutes)}`}
+            value={retainedValue(summary.failedJobs, summary.failedComplete)}
           />
         </OverviewStatLink>
         <OverviewStatLink
           href={activityUrl(summary.name, "completed", horizonBaseUrl)}
           title="Completed Jobs"
-          value={retainedValue(summary.completedJobs, summary.completedComplete)}
-        >
-          <OverviewDetail
-            label="Average/minute"
-            value={retainedValue(
-              summary.completedJobsPerMinute,
-              summary.completedJobsPerMinuteComplete,
-            )}
-          />
-          <OverviewDetail
-            label={retainedPeriodLabel(summary.completedRetentionMinutes, 60)}
-            value={retainedValue(
-              summary.completedJobsPastHour,
-              summary.completedJobsPastHourComplete,
-            )}
-          />
-          <OverviewDetail
-            label={retainedPeriodLabel(summary.completedRetentionMinutes, 1440)}
-            value={retainedValue(
-              summary.completedJobsPastDay,
-              summary.completedJobsPastDayComplete,
-            )}
-          />
-        </OverviewStatLink>
-        <OverviewStatLink
-          href={activityUrl(summary.name, "batches", horizonBaseUrl)}
-          title="Batches in progress"
-          value={retainedValue(summary.activeBatches, summary.batchesComplete)}
-          unit="in progress"
-        >
-          {summary.batchPreviews.slice(0, 3).map((batch) => (
-            <div
-              className="flex items-center justify-between gap-2 border-t border-dashed border-separator py-[7px] text-[13px]"
-              key={batch.id}
-            >
-              <span className="truncate text-muted-foreground">{batch.name}</span>
-              <ProgressRing
-                className="shrink-0 gap-1.5 [&_span]:text-[13px]"
-                value={batch.progress}
+          value={
+            summary.completedJobs === null ? (
+              "—"
+            ) : (
+              <CompletedJobsValue
+                value={retainedValue(summary.completedJobs, summary.completedComplete)}
+                retentionMinutes={summary.completedRetentionMinutes}
               />
-            </div>
-          ))}
+            )
+          }
+        >
+          <OverviewDetail label="Jobs per minute" value={summary.jobsPerMinute} />
+          <OverviewDetail
+            label="Throughput"
+            value={summary.throughput}
+            tooltip={THROUGHPUT_SINCE_SNAPSHOT_TOOLTIP}
+          />
+          <OverviewDetail
+            label="Silenced Jobs"
+            value={retainedValue(summary.silencedJobs, summary.silencedComplete)}
+            tooltip={SILENCED_JOBS_TOOLTIP}
+          />
         </OverviewStatLink>
-      </div>
-      <div className="grid gap-px border-t border-separator bg-separator sm:grid-cols-2 md:grid-cols-4">
-        <QueueMetric label="Total processes" value={summary.processes ?? "—"} />
+        {batchAttributionAvailable ? (
+          <OverviewStatLink
+            href={activityUrl(summary.name, "batches", horizonBaseUrl)}
+            title="Batches in progress"
+            value={retainedValue(summary.activeBatches, summary.batchesComplete)}
+          >
+            {summary.batchPreviews.slice(0, 3).map((batch) => (
+              <div
+                className="flex items-center justify-between gap-2 border-t border-dashed border-separator py-[7px] text-[13px]"
+                key={batch.id}
+              >
+                <span className="truncate text-muted-foreground">{batch.name}</span>
+                <ProgressRing
+                  className="shrink-0 gap-1.5 [&_span]:text-[13px]"
+                  value={batch.progress}
+                />
+              </div>
+            ))}
+          </OverviewStatLink>
+        ) : null}
+      </StatisticGrid>
+      <StatisticGrid className="border-t border-separator sm:grid-cols-2 md:grid-cols-4">
+        <QueueMetric label="Total Processes" value={summary.processes ?? "—"} />
         {summary.waitThreshold ? (
           <QueueWaitThresholdMetric waitThreshold={summary.waitThreshold} />
         ) : (
-          <QueueMetric label="Wait threshold" value="—" />
+          <QueueMetric label="Wait Threshold" value="—" />
         )}
         <QueueMetric
-          label="Average job runtime"
+          label="Average Runtime"
           value={
             summary.averageRuntime === null ? (
               "—"
@@ -258,25 +353,26 @@ function QueueStatistics({
               <Duration seconds={summary.averageRuntime} format="precise" />
             )
           }
-          detail="Since last snapshot"
+          tooltip={AVERAGE_RUNTIME_SINCE_SNAPSHOT_TOOLTIP}
         />
         <QueueMetric
           label="Throughput"
           value={summary.throughput ?? "—"}
-          detail="Since last snapshot"
+          tooltip={THROUGHPUT_SINCE_SNAPSHOT_TOOLTIP}
         />
-      </div>
+      </StatisticGrid>
     </>
   );
 }
 
 function QueueMetrics({ name, preview }: { name: string; preview: MetricPreview | null }) {
   const snapshots = preview?.data ?? [];
+  const LoadedMetricChart = loadedMetricChart;
 
   return (
-    <>
+    <div className="flex h-full min-h-0 flex-col">
       {preview !== null && !preview.available ? (
-        <Alert variant="destructive" className="m-4">
+        <Alert variant="destructive" className="m-4 shrink-0">
           <TriangleAlertIcon aria-hidden="true" />
           <AlertTitle>Metrics unavailable</AlertTitle>
           <AlertDescription>
@@ -284,38 +380,62 @@ function QueueMetrics({ name, preview }: { name: string; preview: MetricPreview 
           </AlertDescription>
         </Alert>
       ) : null}
-      <div className="grid gap-px bg-separator md:grid-cols-2">
+      <div className="grid min-h-0 flex-1 grid-rows-2 gap-px bg-separator md:grid-cols-2 md:grid-rows-1">
         <QueueMetricChart title={`Throughput — ${name}`}>
-          <Suspense fallback={<MetricChartSkeleton />}>
-            <MetricChart kind="throughput" snapshots={snapshots} />
-          </Suspense>
+          {LoadedMetricChart ? (
+            <LoadedMetricChart kind="throughput" snapshots={snapshots} />
+          ) : (
+            <Suspense fallback={<MetricChartSkeleton />}>
+              <MetricChart kind="throughput" snapshots={snapshots} />
+            </Suspense>
+          )}
         </QueueMetricChart>
         <QueueMetricChart title={`Runtime — ${name}`}>
-          <Suspense fallback={<MetricChartSkeleton />}>
-            <MetricChart kind="runtime" snapshots={snapshots} />
-          </Suspense>
+          {LoadedMetricChart ? (
+            <LoadedMetricChart kind="runtime" snapshots={snapshots} />
+          ) : (
+            <Suspense fallback={<MetricChartSkeleton />}>
+              <MetricChart kind="runtime" snapshots={snapshots} />
+            </Suspense>
+          )}
         </QueueMetricChart>
       </div>
-    </>
+    </div>
   );
 }
 
 function MetricChartSkeleton() {
   return (
-    <div className="flex flex-col gap-3 px-6" aria-label="Loading queue metrics">
-      <Skeleton className="h-[205px] w-full" />
-      <Skeleton className="mx-auto h-3 w-28" />
+    <div
+      data-slot="queue-metric-fallback"
+      className="flex h-full min-h-0 flex-col gap-3 px-4 sm:px-6"
+      aria-label="Loading queue metrics"
+    >
+      <Skeleton className="min-h-0 w-full flex-1" />
+      <Skeleton className="mx-auto h-3 w-28 shrink-0" />
     </div>
   );
 }
 
 function QueueMetricChart({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="bg-card">
-      <h2 className="truncate px-6 py-4 text-sm font-medium" title={title}>
+    <section className="flex min-h-0 flex-col bg-card">
+      <h2 className="shrink-0 truncate px-4 py-4 text-sm font-medium sm:px-6" title={title}>
         {title}
       </h2>
-      <div className="px-0 pt-3 pb-2 [&_[data-slot=chart]]:h-[245px]">{children}</div>
+      <div className="relative min-h-0 flex-1">
+        <div
+          className={cn(
+            "absolute inset-0 flex min-h-0 flex-col overflow-auto px-0 pt-3 pb-2",
+            "[&>*]:flex [&>*]:h-full [&>*]:min-h-0 [&>*]:flex-col",
+            "[&_[data-slot=chart]]:h-full [&_[data-slot=chart]]:min-h-0 [&_[data-slot=chart]]:aspect-auto",
+            "[&_[data-slot=empty]]:h-full [&_[data-slot=empty]]:min-h-0",
+            "[&_[data-slot=queue-metric-fallback]]:h-full [&_[data-slot=queue-metric-fallback]]:min-h-0",
+          )}
+        >
+          {children}
+        </div>
+      </div>
     </section>
   );
 }
@@ -323,17 +443,34 @@ function QueueMetricChart({ title, children }: { title: string; children: React.
 function QueueMetric({
   label,
   value,
-  detail,
+  tooltip,
 }: {
   label: string;
   value: React.ReactNode;
-  detail?: string;
+  tooltip?: string;
 }) {
   return (
-    <div className="bg-card px-6 py-4">
-      <p className="text-[13px] font-medium text-muted-foreground">{label}</p>
-      <p className="mt-3 text-[1.375rem] font-semibold tracking-tight tabular-nums">{value}</p>
-      {detail ? <p className="mt-0.5 text-[13px] text-muted-foreground">{detail}</p> : null}
-    </div>
+    <Statistic>
+      <StatisticLabel>
+        {tooltip ? (
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <span
+                  className="cursor-help rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  tabIndex={0}
+                />
+              }
+            >
+              {label}
+            </TooltipTrigger>
+            <TooltipContent side="top">{tooltip}</TooltipContent>
+          </Tooltip>
+        ) : (
+          label
+        )}
+      </StatisticLabel>
+      <StatisticValue>{value}</StatisticValue>
+    </Statistic>
   );
 }

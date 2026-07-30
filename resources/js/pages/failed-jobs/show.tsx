@@ -8,14 +8,16 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 
+import { DetailList, DetailListItem } from "@/components/detail-list";
 import { Duration } from "@/components/duration";
 import { FailedJobActionsMenu } from "@/components/jobs/failed-job-actions";
 import { JobStatus } from "@/components/jobs/job-status";
 import { JobTags } from "@/components/jobs/job-tags";
 import { StackTrace } from "@/components/jobs/stack-trace";
 import { JsonPayload } from "@/components/payload/json-payload";
+import { ResponsiveTabsHeader, type ResponsiveTabItem } from "@/components/responsive-tabs-header";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Empty,
   EmptyDescription,
@@ -31,7 +33,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { show as failedJobShow } from "@/generated/routes/horizon-new-dawn/failed-jobs";
 import { show as batchShow } from "@/generated/routes/horizon-new-dawn/batches";
 import { show as jobShow } from "@/generated/routes/horizon-new-dawn/jobs";
@@ -79,9 +81,19 @@ function FailedJobShow({ horizon, job }: FailedJobDetailPageProps) {
     job.pushedAt !== null && job.reservedAt !== null
       ? Math.max(0, job.reservedAt - job.pushedAt)
       : null;
-  const details: Array<{ label: string; value: React.ReactNode; identifier?: boolean }> = [
+  const details: Array<{
+    label: string;
+    value: React.ReactNode;
+    identifier?: boolean;
+    testId?: string;
+  }> = [
     { label: "Status", value: <JobStatus status="failed" /> },
-    { label: "ID", value: job.id, identifier: true },
+    {
+      label: "ID",
+      value: job.id,
+      identifier: true,
+      testId: "failed-job-id",
+    },
     { label: "Connection", value: job.connection },
     {
       label: "Queue",
@@ -100,6 +112,8 @@ function FailedJobShow({ horizon, job }: FailedJobDetailPageProps) {
       ? [
           {
             label: "Batch",
+            identifier: true,
+            testId: "failed-job-batch-id",
             value: (
               <Link
                 className="text-sm text-foreground underline decoration-foreground/40 underline-offset-4 transition-colors hover:text-primary hover:decoration-primary"
@@ -116,6 +130,8 @@ function FailedJobShow({ horizon, job }: FailedJobDetailPageProps) {
       ? [
           {
             label: "Retry of ID",
+            identifier: true,
+            testId: "failed-job-retry-id",
             value: (
               <Link
                 className="text-sm text-foreground underline decoration-foreground/40 underline-offset-4 transition-colors hover:text-primary hover:decoration-primary"
@@ -161,57 +177,46 @@ function FailedJobShow({ horizon, job }: FailedJobDetailPageProps) {
   return (
     <>
       <Head title="Failed Job Detail" />
-      <div className="flex flex-col gap-3.5">
+      <div className="flex flex-col gap-[7px] min-[1140px]:gap-3.5">
         <Card>
-          <CardHeader className="flex h-[54px] flex-row justify-between gap-4 px-6 py-0">
+          <CardHeader className="flex flex-row justify-between gap-4">
             <CardTitle className="min-w-0 truncate" title={job.name}>
               {job.name}
             </CardTitle>
-            <div className="flex shrink-0 items-center">
+            <CardAction className="flex shrink-0 items-center self-center">
               <FailedJobActionsMenu
                 jobId={job.id}
                 horizonBaseUrl={horizon.baseUrl}
                 canRetry={job.retryEligible}
               />
-            </div>
+            </CardAction>
           </CardHeader>
           <CardContent className="p-0">
-            <dl className="pt-1.5 pb-2.5">
-              {details.map((detail, index) => (
-                <Detail key={detail.label} detail={detail} bordered={index > 0} />
-              ))}
-            </dl>
+            <DetailList>
+              {details.map((detail, index) => {
+                const title = typeof detail.value === "string" ? detail.value : undefined;
+
+                return (
+                  <DetailListItem
+                    key={detail.label}
+                    label={detail.label}
+                    bordered={index > 0}
+                    scrollable={detail.identifier}
+                    valueClassName={detail.identifier ? "text-sm" : "break-all"}
+                    valueTestId={detail.testId}
+                    valueTitle={title}
+                  >
+                    {detail.value}
+                  </DetailListItem>
+                );
+              })}
+            </DetailList>
           </CardContent>
         </Card>
 
         <FailedJobDataTabs job={job} horizonBaseUrl={horizon.baseUrl} />
       </div>
     </>
-  );
-}
-
-function Detail({
-  detail,
-  bordered,
-}: {
-  detail: { label: string; value: React.ReactNode; identifier?: boolean };
-  bordered: boolean;
-}) {
-  const title = typeof detail.value === "string" ? detail.value : undefined;
-
-  return (
-    <div
-      className={
-        bordered
-          ? "flex gap-4 border-t border-dashed border-separator px-6 py-2.5"
-          : "flex gap-4 px-6 py-2.5"
-      }
-    >
-      <dt className="w-40 shrink-0 text-muted-foreground">{detail.label}</dt>
-      <dd className={`min-w-0 break-all ${detail.identifier ? "text-sm" : ""}`} title={title}>
-        {detail.value}
-      </dd>
-    </div>
   );
 }
 
@@ -222,6 +227,13 @@ function FailedJobDataTabs({
   const [activeTab, setActiveTab] = useState<FailedJobDataTab>(initialFailedJobDataTab);
   const hasContext = Object.keys(job.context).length > 0;
   const hasData = Object.keys(job.payload).length > 0;
+  const tabItems: readonly ResponsiveTabItem<FailedJobDataTab>[] = [
+    { value: "exception", label: "Exception" },
+    { value: "context", label: "Context" },
+    { value: "data", label: "Data" },
+    { value: "tags", label: "Tags", count: job.tags.length },
+    { value: "retries", label: "Retries", count: job.retriedBy.length },
+  ];
 
   useActiveTabQuery(activeTab);
 
@@ -234,48 +246,16 @@ function FailedJobDataTabs({
           className="gap-0"
         >
           <div className="sticky top-0 z-10 border-b border-separator bg-card">
-            <TabsList
-              variant="line"
-              aria-label="Failed job data"
-              className="max-w-full justify-start gap-2 overflow-x-auto rounded-none px-3 py-0"
-            >
-              <TabsTrigger
-                value="exception"
-                className="h-auto flex-none rounded-none px-3 py-4 text-[13.5px]"
-              >
-                Exception
-              </TabsTrigger>
-              <TabsTrigger
-                value="context"
-                className="h-auto flex-none rounded-none px-3 py-4 text-[13.5px]"
-              >
-                Context
-              </TabsTrigger>
-              <TabsTrigger
-                value="data"
-                className="h-auto flex-none rounded-none px-3 py-4 text-[13.5px]"
-              >
-                Data
-              </TabsTrigger>
-              <TabsTrigger
-                value="tags"
-                className="h-auto flex-none rounded-none px-3 py-4 text-[13.5px]"
-              >
-                Tags
-                <Badge className="h-4 min-w-4 px-1.5 text-[10.5px]" variant="secondary">
-                  {job.tags.length}
-                </Badge>
-              </TabsTrigger>
-              <TabsTrigger
-                value="retries"
-                className="h-auto flex-none rounded-none px-3 py-4 text-[13.5px]"
-              >
-                Retries
-                <Badge className="h-4 min-w-4 px-1.5 text-[10.5px]" variant="secondary">
-                  {job.retriedBy.length}
-                </Badge>
-              </TabsTrigger>
-            </TabsList>
+            <ResponsiveTabsHeader
+              value={activeTab}
+              items={tabItems}
+              ariaLabel="Failed job data"
+              onValueChange={(value) => {
+                if (value !== null && value !== activeTab) {
+                  setActiveTab(value);
+                }
+              }}
+            />
           </div>
 
           <TabsContent value="exception" className="mt-0">
@@ -285,7 +265,7 @@ function FailedJobDataTabs({
               <DataEmptyState
                 icon={CircleAlertIcon}
                 title="No exception details"
-                description="Horizon did not retain an exception message for this failed job."
+                description="No exception message was retained for this failed job."
               />
             )}
           </TabsContent>
@@ -297,7 +277,7 @@ function FailedJobDataTabs({
               <DataEmptyState
                 icon={BracesIcon}
                 title="No exception context"
-                description="This failure did not include any additional exception context."
+                description="No additional exception context was retained."
               />
             )}
           </TabsContent>
@@ -309,12 +289,12 @@ function FailedJobDataTabs({
               <DataEmptyState
                 icon={DatabaseIcon}
                 title="No job data"
-                description="The retained job payload does not contain any data."
+                description="No payload data was retained for this job."
               />
             )}
           </TabsContent>
 
-          <TabsContent value="tags" className="mt-0 px-6 py-4">
+          <TabsContent value="tags" className="mt-0 px-4 py-4 sm:px-6">
             <JobTags tags={job.tags} />
           </TabsContent>
 
@@ -384,9 +364,9 @@ function RecentRetries({
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead className="bg-thead px-6 text-xs text-muted-foreground">Status</TableHead>
-          <TableHead className="bg-thead px-6 text-xs text-muted-foreground">ID</TableHead>
-          <TableHead className="bg-thead px-6 text-right text-xs text-muted-foreground">
+          <TableHead className="bg-thead text-xs text-muted-foreground">Status</TableHead>
+          <TableHead className="bg-thead text-xs text-muted-foreground">ID</TableHead>
+          <TableHead className="bg-thead text-right text-xs text-muted-foreground">
             Retry Time
           </TableHead>
         </TableRow>
@@ -412,10 +392,10 @@ function RecentRetries({
                 }
               }}
             >
-              <TableCell className="px-6">
+              <TableCell>
                 <RetryStatus status={retry.status} />
               </TableCell>
-              <TableCell className="px-6">
+              <TableCell>
                 {detailUrl ? (
                   <Link className="text-foreground hover:underline" href={detailUrl} prefetch>
                     {retry.id}
@@ -424,7 +404,7 @@ function RecentRetries({
                   retry.id
                 )}
               </TableCell>
-              <TableCell className="px-6 text-right text-muted-foreground">
+              <TableCell className="text-right text-muted-foreground">
                 {timestamp(retry.retriedAt)}
               </TableCell>
             </TableRow>

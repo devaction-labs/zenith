@@ -44,7 +44,9 @@ describe("failed job actions", () => {
       expect.objectContaining({ preserveScroll: true }),
     );
 
-    act(() => options.onStart());
+    act(() => {
+      options.onStart();
+    });
     expect(screen.getByRole("button", { name: "Retrying failed jobs" })).toBeDisabled();
   });
 });

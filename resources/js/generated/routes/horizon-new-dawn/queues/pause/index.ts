@@ -52,7 +52,7 @@ store.post = (args: { connection: string | number, queue: string | number } | [c
 
 /**
 * @see \NckRtl\HorizonNewDawn\Http\Controllers\QueuePauseController::destroy
-* @see src/Http/Controllers/QueuePauseController.php:41
+* @see src/Http/Controllers/QueuePauseController.php:43
 * @route '/horizon/queues/{connection}/{queue}/pause'
 */
 export const destroy = (args: { connection: string | number, queue: string | number } | [connection: string | number, queue: string | number ], options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
@@ -67,7 +67,7 @@ destroy.definition = {
 
 /**
 * @see \NckRtl\HorizonNewDawn\Http\Controllers\QueuePauseController::destroy
-* @see src/Http/Controllers/QueuePauseController.php:41
+* @see src/Http/Controllers/QueuePauseController.php:43
 * @route '/horizon/queues/{connection}/{queue}/pause'
 */
 destroy.url = (args: { connection: string | number, queue: string | number } | [connection: string | number, queue: string | number ], options?: RouteQueryOptions) => {
@@ -93,7 +93,7 @@ destroy.url = (args: { connection: string | number, queue: string | number } | [
 
 /**
 * @see \NckRtl\HorizonNewDawn\Http\Controllers\QueuePauseController::destroy
-* @see src/Http/Controllers/QueuePauseController.php:41
+* @see src/Http/Controllers/QueuePauseController.php:43
 * @route '/horizon/queues/{connection}/{queue}/pause'
 */
 destroy.delete = (args: { connection: string | number, queue: string | number } | [connection: string | number, queue: string | number ], options?: RouteQueryOptions): RouteDefinition<'delete'> => ({

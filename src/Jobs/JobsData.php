@@ -13,6 +13,8 @@ use Illuminate\Support\Str;
 use JsonException;
 use Laravel\Horizon\Contracts\JobRepository;
 use NckRtl\HorizonNewDawn\Jobs\Data\JobDetailData;
+use NckRtl\HorizonNewDawn\Jobs\Data\JobFilterCatalogData;
+use NckRtl\HorizonNewDawn\Jobs\Data\JobIndexFiltersData;
 use NckRtl\HorizonNewDawn\Jobs\Data\JobPageData;
 use NckRtl\HorizonNewDawn\Jobs\Data\JobRowData;
 use Throwable;
@@ -24,13 +26,56 @@ final readonly class JobsData
     public function __construct(
         private JobRepository $jobs,
         private ?RedisFactory $redis = null,
-        private ?PendingJobPaginator $pendingJobs = null,
+        private ?RetainedJobQuery $retainedQuery = null,
+        private ?RetainedJobFilterCatalog $filterCatalog = null,
     ) {}
 
-    public function page(JobListType $type, int|string|null $afterIndex): JobPageData
-    {
+    public function page(
+        JobListType $type,
+        int|string|null $afterIndex,
+        ?JobIndexFiltersData $filters = null,
+        ?string $search = null,
+    ): JobPageData {
+        $filters ??= JobIndexFiltersData::none();
+        $search = $this->normalizedSearch($search);
+
+        if ($this->retainedQuery !== null) {
+            try {
+                $page = $this->retainedQuery->page(
+                    RetainedJobType::fromJobListType($type),
+                    $filters,
+                    $afterIndex,
+                    search: $search,
+                );
+
+                return $this->pageData(
+                    $page->jobs,
+                    $page->total,
+                    $page->current,
+                    $page->next,
+                );
+            } catch (Throwable $exception) {
+                report($exception);
+
+                return $this->unavailablePage(
+                    $afterIndex,
+                    $this->unavailableMessage(
+                        $type,
+                        $filters->hasAny() || $search !== null,
+                    ),
+                );
+            }
+        }
+
+        if ($filters->hasAny() || $search !== null) {
+            return $this->unavailablePage(
+                $afterIndex,
+                $this->unavailableMessage($type, filtered: true),
+            );
+        }
+
         try {
-            $page = $this->oldest($type, $afterIndex);
+            $page = $this->retainedPage($type, $afterIndex);
             $jobs = $page['jobs'];
             $total = match ($type) {
                 JobListType::Pending => $this->jobs->countPending(),
@@ -38,40 +83,77 @@ final readonly class JobsData
                 JobListType::Silenced => $this->jobs->countSilenced(),
             };
 
-            $items = [];
-
-            foreach ($jobs as $job) {
-                if (! is_object($job)) {
-                    continue;
-                }
-
-                $row = $this->row($job);
-
-                if ($row !== null) {
-                    $items[] = $row;
-                }
-            }
-
-            return new JobPageData(
-                available: true,
-                items: $items,
-                total: $total,
-                current: $page['current'],
-                next: $page['next'],
-                message: null,
+            return $this->pageData(
+                $jobs,
+                $total,
+                $page['current'],
+                $page['next'],
             );
         } catch (Throwable $exception) {
             report($exception);
 
-            return new JobPageData(
-                available: false,
-                items: [],
-                total: 0,
-                current: $afterIndex,
-                next: null,
-                message: 'Horizon jobs are currently unavailable.',
+            return $this->unavailablePage(
+                $afterIndex,
+                $this->unavailableMessage($type, filtered: false),
             );
         }
+    }
+
+    private function unavailableMessage(JobListType $type, bool $filtered): string
+    {
+        if ($filtered) {
+            return 'Global job search and filters are currently unavailable.';
+        }
+
+        return match ($type) {
+            JobListType::Pending => 'Horizon could not read retained pending jobs. Refresh the page to try again.',
+            JobListType::Completed => 'Horizon could not read retained completed jobs. Refresh the page to try again.',
+            JobListType::Silenced => 'Horizon could not read retained silenced jobs. Refresh the page to try again.',
+        };
+    }
+
+    public function filters(JobListType $type): JobFilterCatalogData
+    {
+        if ($this->filterCatalog === null) {
+            return JobFilterCatalogData::unavailable();
+        }
+
+        try {
+            return $this->filterCatalog->for(RetainedJobType::fromJobListType($type));
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return JobFilterCatalogData::unavailable();
+        }
+    }
+
+    public function querySignature(
+        JobListType $type,
+        JobIndexFiltersData $filters,
+        ?string $search = null,
+    ): string {
+        $search = $this->normalizedSearch($search);
+
+        if ($this->retainedQuery !== null) {
+            return $this->retainedQuery->signature(
+                RetainedJobType::fromJobListType($type),
+                $filters,
+                search: $search,
+            );
+        }
+
+        return hash('sha256', json_encode([
+            'type' => $type->value,
+            'filters' => $filters->signatureValues(),
+            'search' => $search,
+        ], JSON_THROW_ON_ERROR));
+    }
+
+    private function normalizedSearch(?string $search): ?string
+    {
+        $search = (string) Str::of($search ?? '')->trim();
+
+        return $search === '' ? null : $search;
     }
 
     public function find(string $id): ?JobDetailData
@@ -90,10 +172,88 @@ final readonly class JobsData
     public function batchId(object $job): ?string
     {
         $payload = $this->decodePayload($job->payload ?? null);
+
+        return $this->batchIdFromPayload($payload);
+    }
+
+    /** @param  array<string, mixed>  $payload */
+    public function batchIdFromPayload(array $payload): ?string
+    {
         $data = is_array($payload['data'] ?? null) ? $payload['data'] : [];
         $batchId = $data['batchId'] ?? null;
 
         return is_string($batchId) && $batchId !== '' ? $batchId : null;
+    }
+
+    /**
+     * Normalize a live Redis queue payload into a safe list row without loading
+     * Horizon job hashes or unserializing application classes for display.
+     *
+     * @param  array{
+     *     id: string,
+     *     connection: string,
+     *     queue: string,
+     *     payload: array<string, mixed>,
+     *     score: float|null
+     * }  $entry
+     * @param  'ready'|'reserved'|'delayed'|'released'  $state
+     */
+    public function rowFromQueueEntry(array $entry, string $state, int $index = 0): ?JobRowData
+    {
+        $payload = $entry['payload'];
+        $id = $entry['id'];
+        $name = $this->payloadDisplayName($payload);
+
+        if ($id === '' || $name === null) {
+            return null;
+        }
+
+        $status = $state === 'reserved' ? 'reserved' : 'pending';
+        $pushedAt = $this->timestamp($payload['pushedAt'] ?? null);
+        $decodedCommand = $this->decodedCommand($payload);
+        $delay = $this->delaySeconds($payload['delay'] ?? null, $decodedCommand, $pushedAt);
+        $originalScheduledAt = $this->initialScheduledAt(
+            $payload,
+            $decodedCommand,
+            $pushedAt,
+            $delay,
+        );
+        // Reserved ZSET scores are reservation expiry (retry_after), not reserved_at.
+        // Delayed/released delayed scores are availability timestamps and are safe to use.
+        $score = $this->timestamp($entry['score'] ?? null);
+        $scheduledAt = match ($state) {
+            'delayed', 'released' => $score ?? $originalScheduledAt,
+            'ready', 'reserved' => null,
+        };
+
+        return new JobRowData(
+            id: $id,
+            index: $index,
+            name: $name,
+            shortName: Str::afterLast($name, '\\'),
+            connection: $entry['connection'] !== '' ? $entry['connection'] : 'default',
+            queue: $entry['queue'] !== '' ? $entry['queue'] : 'default',
+            status: $status,
+            tags: $this->tags($payload),
+            attempts: is_numeric($payload['attempts'] ?? null) ? (int) $payload['attempts'] : 0,
+            retryOf: is_string($payload['retry_of'] ?? null) ? $payload['retry_of'] : null,
+            delay: $delay,
+            scheduledAt: $scheduledAt,
+            originalScheduledAt: $originalScheduledAt,
+            pushedAt: $pushedAt,
+            reservedAt: null,
+            completedAt: null,
+            failedAt: null,
+            runtime: null,
+            occurredAt: $pushedAt,
+            retried: false,
+            retryCompleted: false,
+            retryCount: 0,
+            latestRetryStatus: null,
+            retryEligible: false,
+            attemptsComplete: true,
+            inspectable: false,
+        );
     }
 
     public function row(
@@ -172,7 +332,23 @@ final readonly class JobsData
             latestRetryStatus: $latestRetryStatus,
             retryEligible: $retryEligible,
             attemptsComplete: $attemptsComplete,
+            inspectable: true,
         );
+    }
+
+    /** @param  array<string, mixed>  $payload */
+    private function payloadDisplayName(array $payload): ?string
+    {
+        $displayName = $payload['displayName'] ?? null;
+
+        if (is_string($displayName) && $displayName !== '') {
+            return $displayName;
+        }
+
+        $data = is_array($payload['data'] ?? null) ? $payload['data'] : [];
+        $commandName = $data['commandName'] ?? null;
+
+        return is_string($commandName) && $commandName !== '' ? $commandName : null;
     }
 
     public function detail(object $job): ?JobDetailData
@@ -225,18 +401,8 @@ final readonly class JobsData
      *     next: int|string|null
      * }
      */
-    private function oldest(JobListType $type, int|string|null $afterIndex): array
+    private function retainedPage(JobListType $type, int|string|null $afterIndex): array
     {
-        if ($type === JobListType::Pending && $this->pendingJobs !== null) {
-            $page = $this->pendingJobs->page($afterIndex, self::PAGE_SIZE);
-
-            return [
-                'jobs' => $this->jobs->getJobs($page->ids),
-                'current' => $page->current,
-                'next' => $page->next,
-            ];
-        }
-
         $numericAfterIndex = $this->numericCursor($afterIndex);
 
         if ($this->redis === null) {
@@ -260,7 +426,10 @@ final readonly class JobsData
             JobListType::Completed => 'completed_jobs',
             JobListType::Silenced => 'silenced_jobs',
         };
-        $ids = $this->redis->connection('horizon')->zrevrange(
+        $method = RetainedJobType::fromJobListType($type)->newestFirst()
+            ? 'zrange'
+            : 'zrevrange';
+        $ids = $this->redis->connection('horizon')->{$method}(
             $key,
             $start,
             $start + self::PAGE_SIZE,
@@ -290,6 +459,51 @@ final readonly class JobsData
     private function numericCursor(int|string|null $cursor): int
     {
         return is_numeric($cursor) ? (int) $cursor : -1;
+    }
+
+    /** @param Collection<int, mixed> $jobs */
+    private function pageData(
+        Collection $jobs,
+        int $total,
+        int|string|null $current,
+        int|string|null $next,
+    ): JobPageData {
+        $items = [];
+
+        foreach ($jobs as $job) {
+            if (! is_object($job)) {
+                continue;
+            }
+
+            $row = $this->row($job);
+
+            if ($row !== null) {
+                $items[] = $row;
+            }
+        }
+
+        return new JobPageData(
+            available: true,
+            items: $items,
+            total: $total,
+            current: $current,
+            next: $next,
+            message: null,
+        );
+    }
+
+    private function unavailablePage(
+        int|string|null $current,
+        string $message,
+    ): JobPageData {
+        return new JobPageData(
+            available: false,
+            items: [],
+            total: 0,
+            current: $current,
+            next: null,
+            message: $message,
+        );
     }
 
     /** @return array<string, mixed> */

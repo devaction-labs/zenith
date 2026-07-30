@@ -2,6 +2,7 @@ import { Head, Link } from "@inertiajs/react";
 import { TriangleAlertIcon } from "lucide-react";
 
 import { StatusBadge } from "@/components/dashboard/status-badge";
+import { DetailList, DetailListItem } from "@/components/detail-list";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { show as queueShow } from "@/generated/routes/horizon-new-dawn/queues";
@@ -39,7 +40,7 @@ function SupervisorShow({ horizon, supervisorDetails }: SupervisorDetailsPagePro
   return (
     <>
       <Head title={supervisor.name} />
-      <div className="flex flex-col gap-3.5">
+      <div className="flex flex-col gap-[7px] min-[1140px]:gap-3.5">
         <Card>
           <CardHeader>
             <CardTitle className="truncate" title={supervisor.id}>
@@ -52,14 +53,14 @@ function SupervisorShow({ horizon, supervisorDetails }: SupervisorDetailsPagePro
         </Card>
 
         {supervisor.warnings.map((warning) => (
-          <Alert key={`${warning.title}:${warning.description}`}>
-            <TriangleAlertIcon className="text-warn" aria-hidden="true" />
+          <Alert variant="warning" key={`${warning.title}:${warning.description}`}>
+            <TriangleAlertIcon aria-hidden="true" />
             <AlertTitle>{warning.title}</AlertTitle>
             <AlertDescription>{warning.description}</AlertDescription>
           </Alert>
         ))}
 
-        <div className="grid gap-3.5 lg:grid-cols-2">
+        <div className="grid gap-[7px] min-[1140px]:gap-3.5 lg:grid-cols-2">
           <PolicyCard title="Scaling Policy" properties={scalingProperties(supervisor)} />
           <PolicyCard title="Worker Policy" properties={workerProperties(supervisor)} />
         </div>
@@ -165,19 +166,18 @@ function PolicyCard({ title, properties }: { title: string; properties: Property
 
 function PropertyList({ properties }: { properties: Property[] }) {
   return (
-    <dl className="pt-1.5 pb-2.5">
+    <DetailList className="text-sm">
       {properties.map((property, index) => (
-        <div
-          className={`flex gap-4 px-6 py-2.5 text-sm ${
-            index > 0 ? "border-t border-dashed border-separator" : ""
-          }`}
+        <DetailListItem
           key={property.label}
+          label={property.label}
+          bordered={index > 0}
+          valueClassName="break-words"
         >
-          <dt className="w-40 shrink-0 text-muted-foreground">{property.label}</dt>
-          <dd className="min-w-0 break-words">{property.value}</dd>
-        </div>
+          {property.value}
+        </DetailListItem>
       ))}
-    </dl>
+    </DetailList>
   );
 }
 

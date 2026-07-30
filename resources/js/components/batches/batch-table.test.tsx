@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 
 import { BatchTable } from "@/components/batches/batch-table";
 
@@ -73,10 +73,10 @@ const batches = [
 ];
 
 describe("BatchTable", () => {
-  it("sorts all handoff columns and links to dedicated batch detail routes", () => {
+  it("renders supplied source order without advertising loaded-row sorting", () => {
     render(<BatchTable batches={batches} horizonBaseUrl="/horizon" />);
 
-    expect(screen.getAllByRole("columnheader")).toHaveLength(6);
+    expect(screen.getAllByRole("columnheader")).toHaveLength(5);
     expect(screen.getByRole("link", { name: "Slow export" })).toHaveAttribute(
       "href",
       "/horizon/batches/batch-slow",
@@ -84,24 +84,41 @@ describe("BatchTable", () => {
     expect(screen.getByText("Cancelled")).toBeVisible();
     expect(screen.getByText("Complete")).toBeVisible();
 
-    fireEvent.click(screen.getByRole("button", { name: "Sort by Total Jobs ascending" }));
     const rows = within(screen.getAllByRole("rowgroup")[1]).getAllByRole("row");
 
-    expect(rows[0]).toHaveTextContent("batch-fast");
-    expect(rows[3]).toHaveTextContent("Slow export");
+    expect(screen.queryByRole("button", { name: /Sort by/ })).not.toBeInTheDocument();
+    expect(rows[0]).toHaveTextContent("Slow export");
+    expect(rows[3]).toHaveTextContent("Cancelled import");
+  });
 
-    fireEvent.click(screen.getByRole("button", { name: "Sort by Failed ascending" }));
-    const zeroFailureRows = within(screen.getAllByRole("rowgroup")[1])
-      .getAllByRole("row")
-      .slice(0, 2)
-      .map((row) => row.textContent);
-    expect(zeroFailureRows).toContainEqual(expect.stringContaining("batch-fast"));
+  it("delegates explicitly controlled source sorting without reordering rows", () => {
+    const onSort = vi.fn();
+
+    render(
+      <BatchTable
+        batches={batches}
+        horizonBaseUrl="/horizon"
+        sorting={{
+          key: "totalJobs",
+          direction: "asc",
+          columns: ["totalJobs"],
+          onSort,
+        }}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Sort by Total descending" }));
+
+    expect(onSort).toHaveBeenCalledWith("totalJobs");
+    expect(within(screen.getAllByRole("rowgroup")[1]).getAllByRole("row")[0]).toHaveTextContent(
+      "Slow export",
+    );
   });
 
   it("only renders the handoff's cancelled status pill", () => {
     render(<BatchTable batches={batches} horizonBaseUrl="/horizon" />);
 
-    expect(screen.getAllByText("Pending")).toHaveLength(1);
+    expect(screen.queryByText("Pending")).not.toBeInTheDocument();
     expect(screen.queryByText("Failures")).not.toBeInTheDocument();
     expect(screen.queryByText("Finished")).not.toBeInTheDocument();
     expect(screen.getByText("Cancelled")).toBeVisible();
@@ -126,5 +143,11 @@ describe("BatchTable", () => {
     expect(emptyRow.querySelector('[data-slot="empty-icon"] svg')).toHaveClass("lucide-layers3");
     expect(screen.getByText("No batches")).toBeVisible();
     expect(screen.getByText("There aren't any batches.")).toBeVisible();
+  });
+
+  it("does not qualify available table rows with a retained-history warning", () => {
+    render(<BatchTable batches={batches} horizonBaseUrl="/horizon" />);
+
+    expect(screen.queryByText("Retained history is incomplete")).not.toBeInTheDocument();
   });
 });

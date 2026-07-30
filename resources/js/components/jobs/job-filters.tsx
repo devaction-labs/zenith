@@ -1,5 +1,5 @@
 import { FilterIcon } from "lucide-react";
-import { useId, useMemo } from "react";
+import { useId } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -21,109 +21,81 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { pendingJobState } from "@/lib/pending-job-state";
-import type { JobListType, JobRow } from "@/types/jobs";
+import type { JobFilterKey, JobFilterValues, JobListType } from "@/types/jobs";
+
+export type { JobFilterKey, JobFilterValues };
 
 const ALL_OPTIONS = "__all__";
-const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: "base" });
 
-export type JobFilterKey = "job" | "queue" | "connection" | "tag" | "state" | "retry";
-export type JobFilterScope = JobListType | "failed" | "monitoring";
-export type JobFilterValues = Record<JobFilterKey, string | null>;
-
-type FilterOption = {
+export type JobFilterOption = {
   label: string;
   value: string;
 };
 
 const filterKeysByScope = {
-  monitoring: ["job", "queue"],
-  pending: ["job", "queue", "connection", "tag", "state"],
-  failed: ["job", "queue", "connection", "tag", "retry"],
-  completed: ["job", "queue", "connection", "tag"],
-  silenced: ["job", "queue", "connection", "tag"],
-} as const satisfies Record<JobFilterScope, readonly JobFilterKey[]>;
+  pending: ["job", "queue", "connection", "state"],
+  failed: ["job", "queue", "connection"],
+  completed: ["job", "queue", "connection"],
+  silenced: ["job", "queue", "connection"],
+} as const satisfies Record<JobListType | "failed", readonly JobFilterKey[]>;
 
 const filterLabels = {
   job: { label: "Job class", allLabel: "All job classes" },
   queue: { label: "Queue", allLabel: "All queues" },
   connection: { label: "Connection", allLabel: "All connections" },
-  tag: { label: "Tag", allLabel: "All tags" },
   state: { label: "State", allLabel: "All pending states" },
-  retry: { label: "Retry status", allLabel: "All retry statuses" },
 } satisfies Record<JobFilterKey, { label: string; allLabel: string }>;
 
 export const emptyJobFilterValues: JobFilterValues = {
   job: null,
   queue: null,
   connection: null,
-  tag: null,
   state: null,
-  retry: null,
 };
 
-export function jobFilterKeys(scope: JobFilterScope): readonly JobFilterKey[] {
+export function jobFilterKeys(scope: JobListType | "failed"): readonly JobFilterKey[] {
   return filterKeysByScope[scope];
 }
 
-export function matchesJobFilters(
-  job: JobRow,
-  filterKeys: readonly JobFilterKey[],
-  values: JobFilterValues,
-  now = Date.now() / 1000,
-): boolean {
-  return filterKeys.every((filterKey) => {
-    const filterValue = values[filterKey];
-
-    if (filterValue === null) {
-      return true;
-    }
-
-    if (filterKey === "tag") {
-      return job.tags.includes(filterValue);
-    }
-
-    return jobFilterValue(job, filterKey, now) === filterValue;
-  });
-}
-
 export function JobFilters({
-  jobs,
   filterKeys,
+  options,
   values,
+  onIntent,
   onFilterChange,
   onClearFilters,
-  description = "Narrow the loaded jobs using filters available for this view.",
+  description = "Narrow the complete retained job history using exact filters.",
 }: {
-  jobs: readonly JobRow[];
   filterKeys: readonly JobFilterKey[];
+  options: Partial<Record<JobFilterKey, readonly JobFilterOption[]>>;
   values: JobFilterValues;
+  onIntent: () => void;
   onFilterChange: (filterKey: JobFilterKey, value: string | null) => void;
   onClearFilters: () => void;
   description?: string;
 }) {
-  const options = useMemo(
-    () =>
-      Object.fromEntries(
-        filterKeys.map((filterKey) => [filterKey, filterOptions(jobs, filterKey)]),
-      ) as Partial<Record<JobFilterKey, FilterOption[]>>,
-    [filterKeys, jobs],
-  );
   const activeFilterCount = filterKeys.filter((filterKey) => values[filterKey] !== null).length;
+  const label = activeFilterCount > 0 ? `Filter jobs, ${activeFilterCount} active` : "Filter jobs";
 
   return (
-    <Dialog>
+    <Dialog
+      onOpenChange={(open) => {
+        if (open) {
+          onIntent();
+        }
+      }}
+    >
       <DialogTrigger
         render={
           <Button
             type="button"
             variant="action"
             size="icon-sm"
-            className="relative"
-            aria-label={
-              activeFilterCount > 0 ? `Filter jobs, ${activeFilterCount} active` : "Filter jobs"
-            }
-            title="Filter jobs"
+            className="relative text-muted-foreground"
+            aria-label={label}
+            title={label}
+            onFocus={onIntent}
+            onPointerEnter={onIntent}
           />
         }
       >
@@ -146,7 +118,7 @@ export function JobFilters({
               key={filterKey}
               label={filterLabels[filterKey].label}
               allLabel={filterLabels[filterKey].allLabel}
-              options={options[filterKey] ?? []}
+              options={filterOptions(filterKey, options)}
               value={values[filterKey]}
               onValueChange={(value) => onFilterChange(filterKey, value)}
             />
@@ -168,7 +140,10 @@ export function JobFilters({
   );
 }
 
-function filterOptions(jobs: readonly JobRow[], filterKey: JobFilterKey): FilterOption[] {
+function filterOptions(
+  filterKey: JobFilterKey,
+  options: Partial<Record<JobFilterKey, readonly JobFilterOption[]>>,
+): readonly JobFilterOption[] {
   if (filterKey === "state") {
     return [
       { label: "Ready", value: "ready" },
@@ -178,54 +153,7 @@ function filterOptions(jobs: readonly JobRow[], filterKey: JobFilterKey): Filter
     ];
   }
 
-  if (filterKey === "retry") {
-    return [
-      { label: "Not retried", value: "not-retried" },
-      { label: "Retried", value: "retried" },
-    ];
-  }
-
-  const options = jobs.flatMap((job) => {
-    if (filterKey === "job") {
-      return [{ label: job.shortName, value: job.name }];
-    }
-
-    if (filterKey === "tag") {
-      return job.tags.map((tag) => ({ label: tag, value: tag }));
-    }
-
-    const value = jobFilterValue(job, filterKey, Date.now() / 1000);
-
-    return value === null ? [] : [{ label: value, value }];
-  });
-
-  return Array.from(new Map(options.map((option) => [option.value, option])).values()).sort(
-    (left, right) => collator.compare(left.label, right.label),
-  );
-}
-
-function jobFilterValue(
-  job: JobRow,
-  filterKey: Exclude<JobFilterKey, "tag">,
-  now: number,
-): string | null {
-  if (filterKey === "job") {
-    return job.name;
-  }
-
-  if (filterKey === "queue") {
-    return job.queue;
-  }
-
-  if (filterKey === "connection") {
-    return job.connection;
-  }
-
-  if (filterKey === "retry") {
-    return job.retried ? "retried" : "not-retried";
-  }
-
-  return pendingJobState(job, now);
+  return options[filterKey] ?? [];
 }
 
 function FilterSelect({
@@ -237,7 +165,7 @@ function FilterSelect({
 }: {
   label: string;
   allLabel: string;
-  options: FilterOption[];
+  options: readonly JobFilterOption[];
   value: string | null;
   onValueChange: (value: string | null) => void;
 }) {
@@ -255,7 +183,7 @@ function FilterSelect({
         <SelectTrigger id={triggerId} className="w-full">
           <SelectValue />
         </SelectTrigger>
-        <SelectContent alignItemWithTrigger={false}>
+        <SelectContent alignItemWithTrigger={false} listLabel={`${label} options`}>
           <SelectGroup>
             {items.map((item) => (
               <SelectItem key={item.value} value={item.value}>

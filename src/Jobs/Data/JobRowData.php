@@ -35,5 +35,6 @@ final class JobRowData extends Data
         public readonly ?string $latestRetryStatus,
         public readonly bool $retryEligible,
         public readonly bool $attemptsComplete = true,
+        public readonly bool $inspectable = true,
     ) {}
 }

@@ -18,6 +18,7 @@ import {
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { destroy as removeFailedJob } from "@/generated/routes/horizon-new-dawn/failed-jobs";
@@ -114,10 +115,16 @@ export function FailedJobsActionsMenu({
   horizonBaseUrl,
   hasFailedJobs,
   retryable,
+  retryUnavailableReason,
+  clearable,
+  clearUnavailableReason,
 }: {
   horizonBaseUrl: string;
   hasFailedJobs: boolean;
   retryable: boolean;
+  retryUnavailableReason: string | null;
+  clearable: boolean;
+  clearUnavailableReason: string | null;
 }) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [working, setWorking] = useState(false);
@@ -155,23 +162,44 @@ export function FailedJobsActionsMenu({
           label="Failed jobs actions"
           working={working}
         />
-        <DropdownMenuContent align="end" className="w-44">
+        <DropdownMenuContent
+          align="end"
+          className={cn(
+            "w-44",
+            (retryUnavailableReason !== null || clearUnavailableReason !== null) && "w-72",
+          )}
+        >
           <DropdownMenuGroup>
-            <DropdownMenuItem disabled={!retryable} onSelect={retryAll}>
+            <DropdownMenuItem
+              data-test="retry-all-failed-jobs"
+              disabled={!retryable}
+              onSelect={retryAll}
+            >
               <RotateCcwIcon className="size-3.5" />
               Retry all
             </DropdownMenuItem>
+            {retryUnavailableReason !== null ? (
+              <DropdownMenuLabel className="whitespace-normal font-normal leading-snug">
+                {retryUnavailableReason}
+              </DropdownMenuLabel>
+            ) : null}
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
             <DropdownMenuItem
+              data-test="clear-all-failed-jobs"
               variant="destructive"
-              disabled={!hasFailedJobs}
+              disabled={!clearable}
               onSelect={() => setDialogOpen(true)}
             >
               <Trash2Icon />
               Clear all failed jobs
             </DropdownMenuItem>
+            {clearUnavailableReason !== null ? (
+              <DropdownMenuLabel className="whitespace-normal font-normal leading-snug">
+                {clearUnavailableReason}
+              </DropdownMenuLabel>
+            ) : null}
           </DropdownMenuGroup>
         </DropdownMenuContent>
       </DropdownMenu>

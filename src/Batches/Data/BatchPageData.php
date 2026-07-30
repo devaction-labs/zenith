@@ -12,6 +12,7 @@ final class BatchPageData extends Data
     public function __construct(
         public readonly bool $available,
         public readonly array $batches,
+        public readonly bool $complete,
         public readonly ?string $current,
         public readonly ?string $next,
         public readonly ?string $message,

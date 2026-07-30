@@ -8,8 +8,10 @@ use DateTimeInterface;
 use Illuminate\Bus\Batch;
 use Illuminate\Bus\BatchRepository;
 use NckRtl\HorizonNewDawn\Batches\Data\BatchDetailData;
+use NckRtl\HorizonNewDawn\Batches\Data\BatchIndexFiltersData;
 use NckRtl\HorizonNewDawn\Batches\Data\BatchPageData;
 use NckRtl\HorizonNewDawn\Batches\Data\BatchRowData;
+use NckRtl\HorizonNewDawn\Batches\Data\BatchStatusCountsData;
 use RuntimeException;
 use Throwable;
 
@@ -20,6 +22,7 @@ final readonly class BatchesData
     public function __construct(
         private BatchRepository $batches,
         private BatchJobsData $batchJobs,
+        private ?DatabaseBatchQuery $databaseQuery = null,
     ) {}
 
     public function page(
@@ -28,29 +31,34 @@ final readonly class BatchesData
         ?string $queue = null,
         ?string $connection = null,
         ?BatchCreatedRange $created = null,
+        ?BatchStatus $status = null,
+        BatchSort $sort = BatchSort::CreatedAt,
+        BatchSortDirection $direction = BatchSortDirection::Descending,
     ): BatchPageData {
         try {
-            if (($query !== null && trim($query) !== '')
-                || $queue !== null
-                || $connection !== null
-                || $created !== null
-            ) {
-                [$batches, $next] = $this->filteredPage(
+            if ($this->databaseQuery?->supported() === true) {
+                return $this->databaseQuery->page(
+                    new BatchIndexFiltersData(
+                        query: $query,
+                        queue: $queue,
+                        connection: $connection,
+                        created: $created,
+                        status: $status,
+                        sort: $sort,
+                        direction: $direction,
+                    ),
                     $beforeId,
-                    $query,
-                    $queue,
-                    $connection,
-                    $created,
                 );
-            } else {
-                [$batches, $next] = $this->repositoryPage($beforeId);
             }
+
+            [$batches, $next] = $this->repositoryPage($beforeId);
 
             $rows = array_values(array_map($this->row(...), $batches));
 
             return new BatchPageData(
                 available: true,
                 batches: $rows,
+                complete: true,
                 current: $beforeId,
                 next: $next,
                 message: null,
@@ -61,11 +69,25 @@ final readonly class BatchesData
             return new BatchPageData(
                 available: false,
                 batches: [],
+                complete: false,
                 current: $beforeId,
                 next: null,
                 message: 'Batches are currently unavailable.',
             );
         }
+    }
+
+    public function statusCounts(BatchIndexFiltersData $filters): BatchStatusCountsData
+    {
+        try {
+            if ($this->databaseQuery?->supported() === true) {
+                return $this->databaseQuery->statusCounts($filters);
+            }
+        } catch (Throwable $exception) {
+            report($exception);
+        }
+
+        return BatchStatusCountsData::zero();
     }
 
     public function find(string $id): ?BatchDetailData
@@ -78,14 +100,31 @@ final readonly class BatchesData
             }
 
             $row = $this->row($batch);
-            $jobLists = $this->batchJobs->forBatch($batch);
+            $storedAttribution = $this->databaseQuery?->attributionSupported() === true
+                ? $this->databaseQuery->attribution($id)
+                : null;
+            $jobLists = $this->batchJobs->forBatch($batch, $storedAttribution);
+            $connection = $row->connection;
+            $queue = $row->queue;
+            $queueExplicit = $row->queueExplicit;
+            $connectionExplicit = $row->connectionExplicit;
+
+            if ($storedAttribution !== null) {
+                $connection = $storedAttribution->connection;
+                $queue = $storedAttribution->queue ?? 'default';
+                $queueExplicit = $storedAttribution->queueIsExplicit;
+                $connectionExplicit = $storedAttribution->connectionIsExplicit;
+            }
 
             return new BatchDetailData(
                 id: $row->id,
                 name: $row->name,
                 displayName: $row->displayName,
-                connection: $row->connection,
-                queue: $row->queue,
+                connection: $connection,
+                queue: $queue,
+                queueExplicit: $queueExplicit,
+                connectionExplicit: $connectionExplicit,
+                attributionCaptured: $storedAttribution !== null,
                 totalJobs: $row->totalJobs,
                 pendingJobs: $row->pendingJobs,
                 failedJobs: $row->failedJobs,
@@ -135,6 +174,8 @@ final readonly class BatchesData
             createdAt: $batch->createdAt->getTimestamp(),
             cancelledAt: $this->timestamp($batch->cancelledAt),
             finishedAt: $this->timestamp($batch->finishedAt),
+            queueExplicit: $attribution['queueExplicit'],
+            connectionExplicit: $attribution['connectionExplicit'],
         );
     }
 
@@ -148,10 +189,18 @@ final readonly class BatchesData
         return $this->attribution($batch)['connection'];
     }
 
-    /** @return array{connection: ?string, queue: string} */
+    /**
+     * @return array{
+     *     connection: ?string,
+     *     queue: string,
+     *     queueExplicit: bool,
+     *     connectionExplicit: bool
+     * }
+     */
     private function attribution(Batch $batch): array
     {
-        $connection = $this->option($batch, 'connection');
+        $metadata = DatabaseBatchMetadata::fromOptions($batch->id, $batch->options);
+        $connection = $metadata->connection;
 
         if ($connection === null) {
             $configuredDefault = config('queue.default');
@@ -160,9 +209,14 @@ final readonly class BatchesData
                 : null;
         }
 
-        $queue = $this->option($batch, 'queue') ?? $this->configuredQueue($connection) ?? 'default';
+        $queue = $metadata->queue ?? $this->configuredQueue($connection) ?? 'default';
 
-        return ['connection' => $connection, 'queue' => $queue];
+        return [
+            'connection' => $connection,
+            'queue' => $queue,
+            'queueExplicit' => $metadata->queueIsExplicit,
+            'connectionExplicit' => $metadata->connectionIsExplicit,
+        ];
     }
 
     private function configuredQueue(?string $connection): ?string
@@ -180,13 +234,6 @@ final readonly class BatchesData
         $queue = $connections[$connection]['queue'] ?? null;
 
         return is_string($queue) && $queue !== '' ? $queue : null;
-    }
-
-    private function option(Batch $batch, string $key): ?string
-    {
-        $value = $batch->options[$key] ?? null;
-
-        return is_string($value) && $value !== '' ? $value : null;
     }
 
     /** @return array{0: array<int, Batch>, 1: ?string} */
@@ -209,45 +256,6 @@ final readonly class BatchesData
         return [$batches, $cursor];
     }
 
-    /** @return array{0: array<int, Batch>, 1: ?string} */
-    private function filteredPage(
-        ?string $beforeId,
-        ?string $query,
-        ?string $queue,
-        ?string $connection,
-        ?BatchCreatedRange $created,
-    ): array {
-        $matches = [];
-        $cursor = $beforeId;
-        $cutoff = $created?->cutoffTimestamp();
-
-        while (true) {
-            $candidates = $this->batches->get(self::PAGE_SIZE, $cursor);
-
-            if ($candidates === []) {
-                return [$matches, null];
-            }
-
-            $nextCursor = $this->advanceCursor($candidates, $cursor);
-
-            foreach ($candidates as $batch) {
-                $cursor = $batch->id;
-
-                if (! $this->matchesFilters($batch, $query, $queue, $connection, $cutoff)) {
-                    continue;
-                }
-
-                $matches[] = $batch;
-
-                if (count($matches) === self::PAGE_SIZE) {
-                    return [$matches, $cursor];
-                }
-            }
-
-            $cursor = $nextCursor;
-        }
-    }
-
     /**
      * @param  array<int, Batch>  $batches
      */
@@ -266,34 +274,6 @@ final readonly class BatchesData
         }
 
         return $cursor;
-    }
-
-    private function matchesFilters(
-        Batch $batch,
-        ?string $query,
-        ?string $queue,
-        ?string $connection,
-        ?int $createdAfter,
-    ): bool {
-        if ($query !== null && trim($query) !== '') {
-            $needle = trim($query);
-
-            if (mb_stripos($batch->name, $needle) === false && mb_stripos($batch->id, $needle) === false) {
-                return false;
-            }
-        }
-
-        $attribution = $this->attribution($batch);
-
-        if ($queue !== null && $attribution['queue'] !== $queue) {
-            return false;
-        }
-
-        if ($connection !== null && $attribution['connection'] !== $connection) {
-            return false;
-        }
-
-        return $createdAfter === null || $batch->createdAt->getTimestamp() >= $createdAfter;
     }
 
     private function timestamp(?DateTimeInterface $value): ?int

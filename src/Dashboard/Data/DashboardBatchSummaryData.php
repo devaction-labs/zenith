@@ -10,7 +10,8 @@ final class DashboardBatchSummaryData extends Data
 {
     /** @param array<int, DashboardBatchPreviewData> $previews */
     public function __construct(
-        public readonly int $active,
+        public readonly bool $batchesAvailable,
+        public readonly ?int $active,
         public readonly array $previews,
     ) {}
 }

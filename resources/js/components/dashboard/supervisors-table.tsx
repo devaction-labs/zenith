@@ -22,6 +22,12 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import {
+  Statistic,
+  StatisticGrid,
+  StatisticLabel,
+  StatisticValue,
+} from "@/components/ui/statistic";
+import {
   Table,
   TableBody,
   TableCell,
@@ -107,7 +113,7 @@ function HorizonInstance({
     <section aria-labelledby={`horizon-instance-${group.name}`}>
       <div
         className={cn(
-          "flex min-h-[54px] items-center justify-between gap-4 border-b border-separator px-6 pb-3",
+          "flex min-h-[54px] items-center justify-between gap-4 border-b border-separator pr-2.5 pb-3 pl-4 sm:px-6",
           hasMoreThanTwoInstances ? "pt-6" : "pt-4",
         )}
       >
@@ -158,12 +164,14 @@ function HorizonInstance({
                 onSort={onSort}
                 className={
                   column.key === "processes" || column.key === "balancing"
-                    ? "px-6 text-right"
-                    : "px-6"
+                    ? "text-right"
+                    : undefined
                 }
               />
             ))}
-            {group.local ? <TableHead className="px-6 text-right">Actions</TableHead> : null}
+            {group.local ? (
+              <TableHead className="pr-2.5 pl-3 text-right sm:pr-6">Actions</TableHead>
+            ) : null}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -197,21 +205,17 @@ function HorizonInstance({
                 }}
                 onMouseEnter={() => router.prefetch(detailUrl)}
               >
-                <TableCell className="px-6">
+                <TableCell>
                   <Link className="font-normal text-foreground" href={detailUrl} prefetch>
                     {item.name}
                   </Link>
                 </TableCell>
-                <TableCell className="px-6">
+                <TableCell>
                   <StatusBadge status={status} />
                 </TableCell>
-                <TableCell tone="secondary" className="px-6">
-                  {item.connection}
-                </TableCell>
-                <TableCell tone="secondary" className="px-6">
-                  {item.queues.join(", ")}
-                </TableCell>
-                <TableCell tone="secondary" className="relative px-6 text-right tabular-nums">
+                <TableCell tone="secondary">{item.connection}</TableCell>
+                <TableCell tone="secondary">{item.queues.join(", ")}</TableCell>
+                <TableCell tone="secondary" className="relative text-right tabular-nums">
                   <span className={scaling ? "mr-4" : undefined} data-process-count="">
                     {item.processes}
                   </span>
@@ -222,11 +226,11 @@ function HorizonInstance({
                     />
                   ) : null}
                 </TableCell>
-                <TableCell tone="secondary" className="px-6 text-right">
+                <TableCell tone="secondary" className="text-right">
                   {item.balancing}
                 </TableCell>
                 {group.local ? (
-                  <TableCell className="px-6 text-right">
+                  <TableCell className="pr-2.5 pl-3 text-right sm:pr-6">
                     <SupervisorActions
                       horizonBaseUrl={horizonBaseUrl}
                       onTransition={(transition) => onSupervisorTransition(item.id, transition)}
@@ -445,7 +449,7 @@ export function SupervisorsTable({
               <EmptyTitle>No Horizon instances</EmptyTitle>
               <EmptyDescription>
                 Run <code className="font-sans">php artisan horizon</code> to start an instance and
-                start processing queues.
+                process queues.
               </EmptyDescription>
             </EmptyHeader>
           </Empty>
@@ -477,11 +481,11 @@ export function SupervisorsTable({
         }
       />
       <CardContent className="p-0">
-        <div className="grid gap-px border-b border-separator bg-separator sm:grid-cols-3">
+        <StatisticGrid className="border-b border-separator sm:grid-cols-3">
           <InstanceStat label="Total Instances" value={supervisors.groups.length} />
           <InstanceStat label="Total Supervisors" value={supervisorCount} />
           <InstanceStat label="Paused Supervisors" value={pausedSupervisorCount} />
-        </div>
+        </StatisticGrid>
         <div className="divide-y divide-separator">
           {supervisors.groups.map((group) => (
             <HorizonInstance
@@ -507,10 +511,10 @@ export function SupervisorsTable({
 
 function InstanceStat({ label, value }: { label: string; value: number }) {
   return (
-    <div className="bg-card px-6 py-4">
-      <p className="text-[13px] font-medium text-muted-foreground">{label}</p>
-      <p className="mt-3 text-[1.375rem] font-semibold tracking-tight tabular-nums">{value}</p>
-    </div>
+    <Statistic>
+      <StatisticLabel>{label}</StatisticLabel>
+      <StatisticValue>{value}</StatisticValue>
+    </Statistic>
   );
 }
 

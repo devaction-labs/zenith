@@ -15,6 +15,7 @@ use NckRtl\HorizonNewDawn\Support\Data\NavigationCountsData;
 use NckRtl\HorizonNewDawn\Support\FrameworkCapabilities;
 use NckRtl\HorizonNewDawn\Support\HorizonRuntime;
 use NckRtl\HorizonNewDawn\Support\NavigationCounts;
+use NckRtl\HorizonNewDawn\Support\PollInterval;
 
 final class HandleInertiaRequests extends Middleware
 {
@@ -48,11 +49,15 @@ final class HandleInertiaRequests extends Middleware
 
                 return new HorizonShellData(
                     baseUrl: route('horizon-new-dawn.dashboard'),
-                    pollInterval: (int) config('horizon-new-dawn.poll_interval'),
+                    pollInterval: PollInterval::milliseconds(),
                     status: $status,
                     processing: $this->runtime->isProcessing($status),
                     maintenanceMode: $this->application->isDownForMaintenance(),
                     capabilities: $this->capabilities,
+                    jobNavigationBreakdown: config(
+                        'horizon-new-dawn.job_navigation_breakdown',
+                        false,
+                    ) === true,
                 );
             },
             'monitoredTags' => fn (): array => $this->monitoring->monitoredTags(),

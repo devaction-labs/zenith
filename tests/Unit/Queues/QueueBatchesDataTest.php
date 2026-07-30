@@ -111,7 +111,7 @@ it('filters retained batches and counts only genuinely active matching batches',
 
     expect($summary->total)->toBe(5)
         ->and($summary->active)->toBe(2)
-        ->and(array_column($summary->toArray()['previews'], 'id'))->toBe(['active-2', 'active-1'])
+        ->and(array_column($summary->toArray()['previews'], 'id'))->toBe(['active-1', 'active-2'])
         ->and($summary->complete)->toBeTrue()
         ->and(array_column($page->toArray()['rows'], 'id'))->toBe([
             'active-2',
@@ -121,6 +121,33 @@ it('filters retained batches and counts only genuinely active matching batches',
             'finished',
         ])
         ->and($page->complete)->toBeTrue();
+});
+
+it('previews the best three active batches by progress descending with id tie-break', function (): void {
+    $repository = mockDashboardContract(BatchRepository::class);
+    $source = [
+        retainedQueueBatch('preview-new-zero', 'reports', pending: 10),
+        retainedQueueBatch('preview-ten', 'reports', pending: 9),
+        retainedQueueBatch('preview-mid-z', 'reports', pending: 7),
+        retainedQueueBatch('preview-mid-a', 'reports', pending: 7),
+        retainedQueueBatch('preview-old-high', 'reports', pending: 2),
+        retainedQueueBatch('preview-finished', 'reports', pending: 0),
+        retainedQueueBatch('preview-other', 'other', pending: 1),
+    ];
+    dashboardReturnsFor($repository, 'get', [50, null], $source);
+    dashboardReturnsFor($repository, 'get', [50, 'preview-other'], []);
+
+    $summary = retainedQueueBatchesData($repository)->summary('reports');
+
+    expect($summary->total)->toBe(6)
+        ->and($summary->active)->toBe(5)
+        ->and($summary->complete)->toBeTrue()
+        ->and(array_column($summary->toArray()['previews'], 'id'))->toBe([
+            'preview-old-high',
+            'preview-mid-z',
+            'preview-mid-a',
+        ])
+        ->and(array_column($summary->toArray()['previews'], 'progress'))->toBe([80, 30, 30]);
 });
 
 it('replaces unserializable legacy summary objects with scalar cache payloads', function (): void {
@@ -163,8 +190,14 @@ it('replaces unserializable legacy summary objects with scalar cache payloads', 
         ->and($cache->get($cacheKey))->toBeArray();
 });
 
-it('rounds a 1500ms retained batch summary poll interval down to a one second cache ttl', function (): void {
-    config()->set('horizon-new-dawn.poll_interval', 1500);
+it('uses the configured or default poll interval for its summary cache ttl', function (
+    ?int $pollInterval,
+    int $expectedCacheSeconds,
+): void {
+    config()->set(
+        'horizon-new-dawn',
+        $pollInterval === null ? [] : ['poll_interval' => $pollInterval],
+    );
 
     $repository = mockDashboardContract(BatchRepository::class);
     dashboardReturnsFor($repository, 'get', [50, null], [
@@ -180,7 +213,7 @@ it('rounds a 1500ms retained batch summary poll interval down to a one second ca
         'remember',
         [
             Mockery::type('string'),
-            1,
+            $expectedCacheSeconds,
             Mockery::type(Closure::class),
         ],
         'once',
@@ -195,7 +228,10 @@ it('rounds a 1500ms retained batch summary poll interval down to a one second ca
     );
 
     expect($data->summary('reports')->total)->toBe(1);
-});
+})->with([
+    'configured 1500ms interval' => [1500, 1],
+    'cached config without the interval' => [null, 5],
+]);
 
 it('continues from the final inspected batch after a bounded nonmatching scan', function (): void {
     $repository = mockDashboardContract(BatchRepository::class);

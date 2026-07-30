@@ -31,6 +31,7 @@ use NckRtl\HorizonNewDawn\FailedJobs\FailedJobsData;
 use NckRtl\HorizonNewDawn\Jobs\ForgetsPendingJob;
 use NckRtl\HorizonNewDawn\Jobs\JobsData;
 use NckRtl\HorizonNewDawn\Metrics\MetricsData;
+use NckRtl\HorizonNewDawn\Metrics\SnapshotJobsPerMinute;
 use NckRtl\HorizonNewDawn\Monitoring\MonitoringData;
 use NckRtl\HorizonNewDawn\Queues\QueueActivityData;
 use NckRtl\HorizonNewDawn\Queues\QueueBatchesData;
@@ -44,12 +45,16 @@ use NckRtl\HorizonNewDawn\Supervisors\SupervisorDetails;
 use NckRtl\HorizonNewDawn\Support\FrameworkCapabilities;
 use NckRtl\HorizonNewDawn\Support\HorizonRuntime;
 
-function bindBrowserPageFixtures(): void
-{
+function bindBrowserPageFixtures(
+    int $pendingJobCount = 0,
+    int $completedJobCount = 0,
+    int $failedJobCount = 1,
+    int $silencedJobCount = 1,
+): void {
     Horizon::auth(static fn (): bool => true);
     config()->set('horizon-new-dawn.poll_interval', 0);
     config()->set('queue.connections.redis.retry_after', 120);
-    $capabilities = new FrameworkCapabilities(queuePausing: false);
+    $capabilities = new FrameworkCapabilities(queuePausing: false, timedQueuePausing: false);
     app()->instance(FrameworkCapabilities::class, $capabilities);
 
     $masters = mockDashboardContract(MasterSupervisorRepository::class);
@@ -67,6 +72,7 @@ function bindBrowserPageFixtures(): void
 
     $failed = horizonJob(4, 'failed-1');
     $failed->status = 'failed';
+    $failed->reserved_at = '1784281003.40';
     $failed->completed_at = null;
     $failed->failed_at = '1784281003.50';
 
@@ -115,10 +121,12 @@ function bindBrowserPageFixtures(): void
     dashboardReturns($jobs, 'getFailed', new Collection([$failed]));
     dashboardReturnsUsing($jobs, 'findFailed', static fn (string $id): ?object => $jobsById[$id] ?? null);
     dashboardReturns($jobs, 'getSilenced', new Collection([$silenced]));
-    dashboardReturns($jobs, 'countPending', 0);
-    dashboardReturns($jobs, 'countCompleted', 0);
-    dashboardReturns($jobs, 'countFailed', 1);
-    dashboardReturns($jobs, 'countSilenced', 1);
+    dashboardReturns($jobs, 'countPending', $pendingJobCount);
+    dashboardReturns($jobs, 'countCompleted', $completedJobCount);
+    dashboardReturns($jobs, 'countFailed', $failedJobCount);
+    dashboardReturns($jobs, 'countRecentlyFailed', $failedJobCount);
+    dashboardReturns($jobs, 'countRecent', $completedJobCount);
+    dashboardReturns($jobs, 'countSilenced', $silencedJobCount);
     app()->instance(JobRepository::class, $jobs);
 
     $jobData = new JobsData($jobs);
@@ -154,11 +162,12 @@ function bindBrowserPageFixtures(): void
     dashboardReturns($metrics, 'measuredJobs', ['App\\Jobs\\SyncInventory']);
     dashboardReturns($metrics, 'measuredQueues', ['default']);
     dashboardReturns($metrics, 'snapshotsForJob', [
-        (object) ['time' => 1784588400, 'throughput' => 12, 'runtime' => 1500],
+        (object) ['time' => 1784588400, 'throughput' => 12, 'runtime' => 100],
     ]);
     dashboardReturns($metrics, 'snapshotsForQueue', [
         (object) ['time' => 1784588400, 'throughput' => 8, 'runtime' => 2000],
     ]);
+    dashboardReturns($metrics, 'throughput', 0);
     dashboardReturns($metrics, 'throughputForJob', 12);
     dashboardReturns($metrics, 'throughputForQueue', 0);
     dashboardReturns($metrics, 'runtimeForJob', 1500);
@@ -181,6 +190,7 @@ function bindBrowserPageFixtures(): void
         $batchRepository,
         new BatchJobsData($jobs, $jobData),
     );
+    app()->instance(BatchRepository::class, $batchRepository);
     app()->instance(BatchesData::class, $batches);
 
     $supervisors = mockDashboardContract(SupervisorRepository::class);
@@ -238,7 +248,14 @@ function bindBrowserPageFixtures(): void
         $batches,
         app(CacheFactory::class),
     );
-    app()->instance(QueueSummary::class, new QueueSummary($queueJobs, $queueBatches, $metrics));
+    app()->instance(QueueJobsData::class, $queueJobs);
+    app()->instance(QueueBatchesData::class, $queueBatches);
+    app()->instance(QueueSummary::class, new QueueSummary(
+        $queueJobs,
+        $queueBatches,
+        $metrics,
+        app(SnapshotJobsPerMinute::class),
+    ));
     app()->instance(QueueActivityData::class, new QueueActivityData($queueJobs, $queueBatches));
 
     app()->instance(QueueManager::class, new BrowserPendingJobQueueManager(
@@ -252,6 +269,132 @@ function bindBrowserPageFixtures(): void
             return true;
         }
     });
+}
+
+function bindBrowserQueueCompletedSummaryRefreshFixtures(): void
+{
+    bindBrowserPageFixtures();
+    config()->set('horizon-new-dawn.poll_interval', 500);
+
+    $summaryAttempt = 0;
+    $completedJobs = static function (int $count): Collection {
+        return new Collection(array_map(
+            static function (int $index): object {
+                $job = horizonJob($index, "completed-summary-{$index}");
+                $job->queue = 'reports';
+                $job->status = 'completed';
+
+                return $job;
+            },
+            range(1, $count),
+        ));
+    };
+    $jobs = mockDashboardContract(JobRepository::class);
+    dashboardReturns($jobs, 'countPending', 0);
+    dashboardReturnsUsing(
+        $jobs,
+        'countCompleted',
+        static function () use (&$summaryAttempt): int {
+            $summaryAttempt++;
+
+            return $summaryAttempt >= 3 ? 37 : 36;
+        },
+    );
+    dashboardReturnsUsing(
+        $jobs,
+        'getCompleted',
+        static function (string $cursor = '-1') use (
+            &$summaryAttempt,
+            $completedJobs,
+        ): Collection {
+            if ($summaryAttempt === 2) {
+                throw new \RuntimeException(
+                    'The completed summary is temporarily unavailable.',
+                );
+            }
+
+            return $completedJobs($summaryAttempt >= 3 ? 37 : 36);
+        },
+    );
+    dashboardReturns($jobs, 'countFailed', 0);
+    dashboardReturns($jobs, 'countRecentlyFailed', 0);
+    dashboardReturns($jobs, 'countRecent', 36);
+    dashboardReturns($jobs, 'countSilenced', 0);
+
+    $jobData = new JobsData($jobs);
+    $failedJobs = new FailedJobsData(
+        $jobs,
+        app(TagRepository::class),
+        $jobData,
+        new FailedJobRetryEligibility,
+    );
+    $queueJobs = new QueueJobsData(
+        $jobs,
+        $jobData,
+        $failedJobs,
+        app(CacheFactory::class),
+    );
+
+    app()->instance(QueueSummary::class, new QueueSummary(
+        $queueJobs,
+        app(QueueBatchesData::class),
+        app(MetricsRepository::class),
+        app(SnapshotJobsPerMinute::class),
+    ));
+}
+
+function bindBrowserFailedJobBulkLimitFixtures(): void
+{
+    bindBrowserPageFixtures();
+
+    $failed = horizonJob(0, 'failed-over-limit');
+    $failed->status = 'failed';
+    $failed->completed_at = null;
+    $failed->failed_at = '1784281003.50';
+
+    $jobs = mockDashboardContract(JobRepository::class);
+    dashboardReturns($jobs, 'getFailed', new Collection([$failed]));
+    dashboardReturns($jobs, 'countFailed', 2);
+    app()->instance(FailedJobsData::class, new FailedJobsData(
+        $jobs,
+        app(TagRepository::class),
+        new JobsData($jobs),
+        new FailedJobRetryEligibility,
+    ));
+}
+
+/** @return array{failedJobId: string, batchId: string} */
+function bindBrowserFailedJobIdentifierOverflowFixtures(): array
+{
+    bindBrowserPageFixtures();
+
+    $failedJobId = '018f7f45-6a22-7d5d-8f4c-9b032d6e7a81';
+    $batchId = '018f7f45-6a22-7d5d-8f4c-9b032d6e7a82';
+    $failed = horizonJob(0, $failedJobId);
+    $failed->status = 'failed';
+    $failed->completed_at = null;
+    $failed->failed_at = '1784281003.50';
+    $payload = json_decode($failed->payload, true, flags: JSON_THROW_ON_ERROR);
+    $payload['data']['batchId'] = $batchId;
+    $failed->payload = json_encode($payload, JSON_THROW_ON_ERROR);
+
+    $jobs = mockDashboardContract(JobRepository::class);
+    dashboardReturns($jobs, 'findFailed', $failed);
+    $jobData = new JobsData($jobs);
+
+    app()->instance(JobRepository::class, $jobs);
+    app()->instance(JobsData::class, $jobData);
+    app()->instance(FailedJobsData::class, new FailedJobsData(
+        $jobs,
+        app(TagRepository::class),
+        $jobData,
+        new FailedJobRetryEligibility,
+    ));
+
+    return [
+        'failedJobId' => $failedJobId,
+        'batchId' => $batchId,
+    ];
 }
 
 function bindBrowserSupervisorScalingFixtures(): void
@@ -421,7 +564,7 @@ function browserScalingSupervisor(
     ];
 }
 
-function bindBrowserInfiniteScrollRefreshFixtures(): void
+function bindBrowserInfiniteScrollRefreshFixtures(bool $emptyOnRefresh = false): void
 {
     bindBrowserPageFixtures();
     config()->set('horizon-new-dawn.poll_interval', 2000);
@@ -434,31 +577,54 @@ function bindBrowserInfiniteScrollRefreshFixtures(): void
 
         return $job;
     };
-    $initialFirstPage = array_map($failedJob, range(100, 51));
-    $secondPage = array_map($failedJob, range(50, 1));
-    $newJob = $failedJob(101);
+    $initialFirstPage = array_map($failedJob, range(149, 100));
+    $secondPage = array_map($failedJob, range(99, 50));
+    $thirdPage = array_map($failedJob, range(49, 1));
+    $newJob = $failedJob(150);
     $updatedJob = clone $initialFirstPage[0];
     $updatedJob->name = 'App\\Jobs\\RefreshedImportFeed';
-    $refreshedFirstPage = [$newJob, $updatedJob, ...array_slice($initialFirstPage, 1, 48)];
-    $firstPageRequests = 0;
+    $refreshedFirstPage = $emptyOnRefresh
+        ? []
+        : [$newJob, $updatedJob, ...array_slice($initialFirstPage, 1, 48)];
+    // Full document loads call getFailed('-1') more than once (list page + bulk
+    // retry scan). Only Inertia partials that include jobs should advance to the
+    // refreshed first-page snapshot used by automatic refresh tests.
+    $useRefreshedFirstPage = false;
 
     $jobs = mockDashboardContract(JobRepository::class);
     dashboardReturnsUsing(
         $jobs,
         'getFailed',
-        static function (string $startingAt) use (
-            &$firstPageRequests,
+        static function (mixed $startingAt) use (
+            &$useRefreshedFirstPage,
             $initialFirstPage,
             $refreshedFirstPage,
             $secondPage,
+            $thirdPage,
         ): Collection {
-            if ($startingAt !== '-1') {
+            $startingAt = (string) $startingAt;
+
+            if ($startingAt === '100') {
                 return new Collection($secondPage);
             }
 
-            $firstPageRequests++;
+            if ($startingAt === '50') {
+                return new Collection($thirdPage);
+            }
 
-            return new Collection($firstPageRequests <= 3 ? $initialFirstPage : $refreshedFirstPage);
+            if ($startingAt !== '-1') {
+                return new Collection;
+            }
+
+            $partialData = (string) request()->header('X-Inertia-Partial-Data', '');
+
+            if ($partialData !== '' && str_contains($partialData, 'jobs')) {
+                $useRefreshedFirstPage = true;
+            }
+
+            return new Collection(
+                $useRefreshedFirstPage ? $refreshedFirstPage : $initialFirstPage,
+            );
         },
     );
     dashboardReturns($jobs, 'getJobs', new Collection);
@@ -467,7 +633,15 @@ function bindBrowserInfiniteScrollRefreshFixtures(): void
     dashboardReturns($jobs, 'getSilenced', new Collection);
     dashboardReturns($jobs, 'countPending', 0);
     dashboardReturns($jobs, 'countCompleted', 0);
-    dashboardReturns($jobs, 'countFailed', 101);
+    dashboardReturnsUsing(
+        $jobs,
+        'countFailed',
+        static function () use (&$useRefreshedFirstPage, $emptyOnRefresh): int {
+            return $emptyOnRefresh && $useRefreshedFirstPage ? 0 : 150;
+        },
+    );
+    dashboardReturns($jobs, 'countRecentlyFailed', 0);
+    dashboardReturns($jobs, 'countRecent', 0);
     dashboardReturns($jobs, 'countSilenced', 0);
     app()->instance(JobRepository::class, $jobs);
 

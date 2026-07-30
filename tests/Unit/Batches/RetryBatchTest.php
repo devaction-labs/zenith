@@ -36,7 +36,12 @@ describe('RetryBatch', function (): void {
         ], JSON_THROW_ON_ERROR);
         $jobs = mockDashboardContract(JobRepository::class);
         $batch->failedJobIds = ['failed-1', 'failed-2', 'failed-1', 'failed-3', 'failed-4'];
-        dashboardReturnsFor($jobs, 'getJobs', [$batch->failedJobIds], new Collection([
+        dashboardReturnsFor($jobs, 'getJobs', [[
+            'failed-1',
+            'failed-2',
+            'failed-3',
+            'failed-4',
+        ]], new Collection([
             horizonJob(0, 'failed-1'),
             $retry,
             horizonJob(0, 'failed-1'),

@@ -1,8 +1,5 @@
-import { router, usePage } from "@inertiajs/react";
 import { RefreshCwIcon } from "lucide-react";
-import { useEffect, useState } from "react";
 
-import { ThemeToggle } from "@/components/shell/theme-toggle";
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -12,8 +9,16 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { Switch } from "@/components/ui/switch";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { ThemeToggle } from "@/components/shell/theme-toggle";
+import { useAutoRefreshStatus } from "@/lib/auto-refresh-status";
 import { cn } from "@/lib/utils";
 import type { HorizonStatus as HorizonStatusValue } from "@/types/dashboard";
+
+const autoRefreshLabel = "Auto load new entries";
+const autoRefreshFailedLabel = "Auto refresh failed; retrying automatically";
+const autoRefreshFailedDescription =
+  "The last automatic refresh failed. Horizon will keep retrying at the normal interval.";
 
 export function SidebarFooterControls({
   status,
@@ -24,39 +29,34 @@ export function SidebarFooterControls({
   autoLoad: boolean;
   onAutoLoadChange: (enabled: boolean) => void;
 }) {
-  const page = usePage();
-  const [activeRequestIds, setActiveRequestIds] = useState<Set<string>>(() => new Set());
-  const hasUnresolvedDeferredProps = Object.values(page.deferredProps ?? {}).some((props) =>
-    props.some((prop) => page.props[prop] === undefined),
+  const refreshStatus = useAutoRefreshStatus();
+  const visibleStatus = autoLoad ? refreshStatus : "idle";
+  const isRefreshing = visibleStatus === "refreshing";
+  const isFailed = visibleStatus === "failed";
+  const label = isFailed ? autoRefreshFailedLabel : autoRefreshLabel;
+
+  const button = (
+    <SidebarMenuButton
+      className="h-9 gap-2.5 rounded-lg px-2.5 pr-14"
+      aria-label={label}
+      aria-pressed={autoLoad}
+      aria-busy={isRefreshing}
+      aria-description={isFailed ? autoRefreshFailedDescription : undefined}
+      data-refresh-status={visibleStatus}
+      onClick={() => onAutoLoadChange(!autoLoad)}
+    >
+      <RefreshCwIcon
+        className={cn(
+          "text-muted-foreground",
+          isRefreshing && "animate-spin motion-reduce:animate-none",
+          isFailed && "text-destructive",
+        )}
+        style={{ rotate: "0turn" }}
+        aria-hidden="true"
+      />
+      <span>Auto refresh</span>
+    </SidebarMenuButton>
   );
-  const isLoading = autoLoad && (activeRequestIds.size > 0 || hasUnresolvedDeferredProps);
-
-  useEffect(() => {
-    const stopListeningForStarts = router.on("start", (event) => {
-      if (event.detail.visit.prefetch) {
-        return;
-      }
-
-      setActiveRequestIds((current) => new Set(current).add(event.detail.visit.id));
-    });
-    const stopListeningForFinishes = router.on("finish", (event) => {
-      if (event.detail.visit.prefetch) {
-        return;
-      }
-
-      setActiveRequestIds((current) => {
-        const next = new Set(current);
-        next.delete(event.detail.visit.id);
-
-        return next;
-      });
-    });
-
-    return () => {
-      stopListeningForStarts();
-      stopListeningForFinishes();
-    };
-  }, []);
 
   return (
     <SidebarGroup className="p-0" data-horizon-status={status}>
@@ -67,22 +67,16 @@ export function SidebarFooterControls({
             <ThemeToggle showTooltip={false} variant="menu" />
           </SidebarMenuItem>
           <SidebarMenuItem>
-            <SidebarMenuButton
-              className="h-9 gap-2.5 rounded-lg px-2.5 pr-14"
-              aria-label="Auto load new entries"
-              aria-pressed={autoLoad}
-              aria-busy={isLoading}
-              onClick={() => onAutoLoadChange(!autoLoad)}
-            >
-              <RefreshCwIcon
-                className={cn(
-                  "text-muted-foreground",
-                  isLoading && "animate-spin motion-reduce:animate-none",
-                )}
-                style={{ rotate: "0turn" }}
-              />
-              <span>Auto refresh</span>
-            </SidebarMenuButton>
+            {isFailed ? (
+              <Tooltip>
+                <TooltipTrigger render={button} />
+                <TooltipContent side="right" sideOffset={8}>
+                  {autoRefreshFailedDescription}
+                </TooltipContent>
+              </Tooltip>
+            ) : (
+              button
+            )}
             <Switch
               checked={autoLoad}
               className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2"

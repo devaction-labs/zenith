@@ -5,16 +5,17 @@ declare(strict_types=1);
 namespace NckRtl\HorizonNewDawn\Jobs\Actions;
 
 use Illuminate\Queue\QueueManager;
-use Illuminate\Redis\Connections\Connection as RedisConnection;
-use Illuminate\Redis\Connections\PhpRedisClusterConnection;
-use Illuminate\Redis\Connections\PhpRedisConnection;
-use Illuminate\Redis\Connections\PredisClusterConnection;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Date;
 use JsonException;
 use Laravel\Horizon\Contracts\JobRepository;
+use Laravel\Horizon\JobPayload;
 use Laravel\Horizon\RedisQueue;
 use NckRtl\HorizonNewDawn\Jobs\ReleaseDelayedJobNowResult;
+use NckRtl\HorizonNewDawn\Support\RedisQueueName;
+use NckRtl\HorizonNewDawn\Support\RedisScript;
 use RuntimeException;
+use Throwable;
 
 final readonly class ReleaseDelayedJobNow
 {
@@ -48,10 +49,7 @@ final readonly class ReleaseDelayedJobNow
         }
 
         $redis = $queue->getConnection();
-        $clusterQueueName = $this->isCluster($redis) && ! $this->hasHashTag($queueName)
-            ? '{'.$queueName.'}'
-            : $queueName;
-        $ready = $queue->getQueue($clusterQueueName);
+        $ready = $queue->getQueue(RedisQueueName::normalize($redis, $queueName));
         $now = Date::now()->getTimestamp();
         $replacementPayload = $this->withMadeAvailableMetadata($payload, $now);
 
@@ -59,30 +57,66 @@ final readonly class ReleaseDelayedJobNow
             return ReleaseDelayedJobNowResult::NotDelayed;
         }
 
-        $changed = $this->evaluate(
+        $delayedScore = RedisScript::evaluate(
             $redis,
             <<<'LUA'
-                if redis.call('zscore', KEYS[1], ARGV[1]) == false then
-                    return 0
+                local score = redis.call('zscore', KEYS[1], ARGV[1])
+
+                if not score or redis.call('zrem', KEYS[1], ARGV[1]) == 0 then
+                    return false
                 end
 
-                redis.call('zrem', KEYS[1], ARGV[1])
-                redis.call('zadd', KEYS[1], ARGV[2], ARGV[3])
+                redis.call('rpush', KEYS[2], ARGV[2])
+                redis.call('rpush', KEYS[3], 1)
 
-                return 1
+                return score
             LUA,
-            1,
+            3,
             $ready.':delayed',
+            $ready,
+            $ready.':notify',
             $payload,
-            (string) $now,
             $replacementPayload,
         );
 
-        if ((int) $changed !== 1) {
+        if (! is_numeric($delayedScore) || (float) $delayedScore <= 0) {
             return ReleaseDelayedJobNowResult::NotDelayed;
         }
 
-        $queue->migrateExpiredJobs($ready.':delayed', $ready);
+        try {
+            $this->jobs->migrated(
+                $connection,
+                $queueName,
+                new Collection([new JobPayload($replacementPayload)]),
+            );
+        } catch (Throwable $exception) {
+            try {
+                RedisScript::evaluate(
+                    $redis,
+                    <<<'LUA'
+                        if redis.call('lrem', KEYS[2], 1, ARGV[2]) == 0 then
+                            return 0
+                        end
+
+                        redis.call('lpop', KEYS[3])
+                        redis.call('zadd', KEYS[1], ARGV[3], ARGV[1])
+
+                        return 1
+                    LUA,
+                    3,
+                    $ready.':delayed',
+                    $ready,
+                    $ready.':notify',
+                    $payload,
+                    $replacementPayload,
+                    (string) $delayedScore,
+                );
+            } catch (Throwable $rollbackException) {
+                report($rollbackException);
+            }
+
+            throw $exception;
+        }
 
         return ReleaseDelayedJobNowResult::Released;
     }
@@ -106,41 +140,5 @@ final readonly class ReleaseDelayedJobNow
         } catch (JsonException) {
             return null;
         }
-    }
-
-    private function hasHashTag(string $key): bool
-    {
-        $open = strpos($key, '{');
-
-        if ($open === false) {
-            return false;
-        }
-
-        $close = strpos($key, '}', $open + 1);
-
-        return $close !== false && $close - $open > 1;
-    }
-
-    private function isCluster(RedisConnection $redis): bool
-    {
-        if (in_array('isCluster', get_class_methods($redis), true)) {
-            return $redis->isCluster();
-        }
-
-        return $redis instanceof PhpRedisClusterConnection ||
-            $redis instanceof PredisClusterConnection;
-    }
-
-    private function evaluate(
-        RedisConnection $redis,
-        string $script,
-        int $numberOfKeys,
-        mixed ...$arguments,
-    ): mixed {
-        if ($redis instanceof PhpRedisConnection) {
-            return $redis->command('eval', [$script, $arguments, $numberOfKeys]);
-        }
-
-        return $redis->command('eval', [$script, $numberOfKeys, ...$arguments]);
     }
 }

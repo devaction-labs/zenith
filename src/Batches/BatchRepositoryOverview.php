@@ -7,7 +7,7 @@ namespace NckRtl\HorizonNewDawn\Batches;
 use Illuminate\Bus\Batch;
 use Illuminate\Bus\BatchRepository;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
-use RuntimeException;
+use NckRtl\HorizonNewDawn\Support\PollInterval;
 use Throwable;
 
 final readonly class BatchRepositoryOverview
@@ -19,21 +19,21 @@ final readonly class BatchRepositoryOverview
     public function __construct(
         private BatchRepository $batches,
         private CacheFactory $cache,
+        private ?DatabaseBatchQuery $databaseQuery = null,
     ) {}
 
     /**
      * @return array{
      *     total: int,
      *     active: int,
+     *     complete: bool,
+     *     message: ?string,
      *     previews: list<array{id: string, name: string, progress: int}>
      * }
      */
     public function get(): array
     {
-        $cacheSeconds = intdiv(
-            max(0, (int) config('horizon-new-dawn.poll_interval', 0)),
-            1000,
-        );
+        $cacheSeconds = PollInterval::cacheSeconds();
 
         if ($cacheSeconds === 0) {
             return $this->build();
@@ -64,82 +64,79 @@ final readonly class BatchRepositoryOverview
      * @return array{
      *     total: int,
      *     active: int,
+     *     complete: bool,
+     *     message: ?string,
      *     previews: list<array{id: string, name: string, progress: int}>
      * }
      */
     private function build(): array
     {
+        if ($this->databaseQuery?->supported() === true) {
+            return $this->databaseQuery->overview();
+        }
+
         $total = 0;
         $active = 0;
+        /** @var list<array{id: string, name: string, progress: int}> $previews */
         $previews = [];
-        $cursor = null;
 
-        while (true) {
-            $batches = $this->batches->get(self::PAGE_SIZE, $cursor);
+        foreach ((new RetainedBatchScanner($this->batches))->pages(self::PAGE_SIZE) as $page) {
+            foreach ($page as $batch) {
+                $total++;
 
-            if ($batches === []) {
-                return [
-                    'total' => $total,
-                    'active' => $active,
-                    'previews' => $previews,
-                ];
-            }
-
-            $total += count($batches);
-
-            foreach ($batches as $batch) {
                 if (! $this->isActive($batch)) {
                     continue;
                 }
 
                 $active++;
-
-                if (count($previews) >= 3) {
-                    continue;
-                }
-
-                $name = trim($batch->name);
-                $previews[] = [
-                    'id' => $batch->id,
-                    'name' => $name === '' ? $batch->id : $name,
-                    'progress' => (int) round($batch->progress()),
-                ];
+                $this->considerPreview($previews, $batch);
             }
-
-            $cursor = $this->advanceCursor($batches, $cursor);
         }
-    }
 
-    private function isActive(Batch $batch): bool
-    {
-        return ! $batch->cancelled()
-            && max(0, $batch->pendingJobs - $batch->failedJobs) > 0;
+        return [
+            'total' => $total,
+            'active' => $active,
+            'complete' => true,
+            'message' => null,
+            'previews' => $previews,
+        ];
     }
 
     /**
-     * @param  array<int, Batch>  $batches
+     * Keep at most the three best active previews (progress desc, then id desc).
+     *
+     * @param  list<array{id: string, name: string, progress: int}>  $previews
      */
-    private function advanceCursor(array $batches, ?string $current): string
+    private function considerPreview(array &$previews, Batch $batch): void
     {
-        $batch = end($batches);
+        $name = trim($batch->name);
+        $previews[] = [
+            'id' => $batch->id,
+            'name' => $name === '' ? $batch->id : $name,
+            'progress' => (int) round($batch->progress()),
+        ];
 
-        if (! $batch instanceof Batch) {
-            throw new RuntimeException('The batch repository returned an empty page.');
+        usort($previews, static function (array $left, array $right): int {
+            $progress = $right['progress'] <=> $left['progress'];
+
+            if ($progress !== 0) {
+                return $progress;
+            }
+
+            return $right['id'] <=> $left['id'];
+        });
+
+        if (count($previews) > 3) {
+            array_pop($previews);
         }
-
-        $cursor = $batch->id;
-
-        if ($cursor === '' || ($current !== null && strcmp($cursor, $current) >= 0)) {
-            throw new RuntimeException('The batch repository did not advance its pagination cursor.');
-        }
-
-        return $cursor;
     }
 
     /**
      * @return array{
      *     total: int,
      *     active: int,
+     *     complete: bool,
+     *     message: ?string,
      *     previews: list<array{id: string, name: string, progress: int}>
      * }|null
      */
@@ -148,6 +145,8 @@ final readonly class BatchRepositoryOverview
         if (! is_array($payload)
             || ! is_int($payload['total'] ?? null)
             || ! is_int($payload['active'] ?? null)
+            || ! is_bool($payload['complete'] ?? null)
+            || (! is_string($payload['message'] ?? null) && ($payload['message'] ?? null) !== null)
             || ! is_array($payload['previews'] ?? null)
         ) {
             return null;
@@ -174,7 +173,15 @@ final readonly class BatchRepositoryOverview
         return [
             'total' => $payload['total'],
             'active' => $payload['active'],
+            'complete' => $payload['complete'],
+            'message' => $payload['message'] ?? null,
             'previews' => $previews,
         ];
+    }
+
+    private function isActive(Batch $batch): bool
+    {
+        return ! $batch->cancelled()
+            && max(0, $batch->pendingJobs - $batch->failedJobs) > 0;
     }
 }

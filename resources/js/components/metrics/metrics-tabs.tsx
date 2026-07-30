@@ -1,6 +1,7 @@
-import { Link } from "@inertiajs/react";
+import { Link, router } from "@inertiajs/react";
 
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ResponsiveTabsHeader } from "@/components/responsive-tabs-header";
+import { Tabs } from "@/components/ui/tabs";
 import { index as metricsIndex } from "@/generated/routes/horizon-new-dawn/metrics";
 import { useActiveTabQuery } from "@/hooks/use-active-tab-query";
 import { resolveHorizonRoute } from "@/lib/horizon-route";
@@ -20,28 +21,30 @@ export function MetricsTabs({
 
   return (
     <Tabs value={type} className="gap-0">
-      <TabsList
-        variant="line"
-        className="relative w-full justify-start gap-2 rounded-none px-4 py-0 before:pointer-events-none before:absolute before:inset-x-0 before:bottom-0 before:h-px before:bg-separator"
-        aria-label="Metrics type"
-      >
-        <TabsTrigger
-          className="h-auto flex-none rounded-none px-3 py-2.5 text-[13.5px]"
-          value="jobs"
-          nativeButton={false}
-          render={<Link href={route("jobs")} prefetch preserveState />}
-        >
-          Jobs
-        </TabsTrigger>
-        <TabsTrigger
-          className="h-auto flex-none rounded-none px-3 py-2.5 text-[13.5px]"
-          value="queues"
-          nativeButton={false}
-          render={<Link href={route("queues")} prefetch preserveState />}
-        >
-          Queues
-        </TabsTrigger>
-      </TabsList>
+      <ResponsiveTabsHeader
+        value={type}
+        items={[
+          {
+            value: "jobs",
+            label: "Jobs",
+            render: <Link href={route("jobs")} prefetch preserveState />,
+          },
+          {
+            value: "queues",
+            label: "Queues",
+            render: <Link href={route("queues")} prefetch preserveState />,
+          },
+        ]}
+        ariaLabel="Metrics type"
+        onValueChange={(value) => {
+          if (value !== null && value !== type) {
+            router.visit(route(value), { preserveState: true });
+          }
+        }}
+        className="w-full"
+        tabsListClassName="relative w-full px-4 before:pointer-events-none before:absolute before:inset-x-0 before:bottom-0 before:h-px before:bg-separator"
+        triggerClassName="py-2.5"
+      />
     </Tabs>
   );
 }

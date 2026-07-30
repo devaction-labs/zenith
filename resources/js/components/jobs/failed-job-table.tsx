@@ -1,8 +1,12 @@
 import { Link, router } from "@inertiajs/react";
 import { TriangleAlertIcon } from "lucide-react";
-import { useEffect, type Ref } from "react";
+import { type Ref } from "react";
 
 import { SortableTableHead } from "@/components/data-table/sortable-table-head";
+import {
+  controlledSortHeader,
+  type ControlledTableSorting,
+} from "@/components/data-table/table-sorting";
 import { NewEntriesTableRow } from "@/components/data-table/new-entries-alert";
 import { TableEmpty } from "@/components/data-table/table-empty";
 import { Duration } from "@/components/duration";
@@ -14,16 +18,10 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { show as failedJobShow } from "@/generated/routes/horizon-new-dawn/failed-jobs";
-import { useSortableRows, type SortColumn } from "@/hooks/use-sortable-rows";
 import { resolveHorizonRoute } from "@/lib/horizon-route";
 import { isInteractiveTarget } from "@/lib/interactive-target";
 import type { JobRow } from "@/types/jobs";
 
-const columns: SortColumn<JobRow>[] = [
-  { key: "name", value: (job) => job.name },
-  { key: "runtime", value: (job) => job.runtime },
-  { key: "failedAt", value: (job) => job.failedAt },
-];
 const dateFormatter = new Intl.DateTimeFormat("sv-SE", {
   year: "numeric",
   month: "2-digit",
@@ -36,10 +34,6 @@ const dateFormatter = new Intl.DateTimeFormat("sv-SE", {
 
 function formatTimestamp(timestamp: number | null) {
   return timestamp === null ? "—" : dateFormatter.format(timestamp * 1000);
-}
-
-function directionFor(key: string, sort: { key: string; direction: "asc" | "desc" } | null) {
-  return sort?.key === key ? sort.direction : undefined;
 }
 
 function upperFirst(value: string | null) {
@@ -56,7 +50,7 @@ function retryStatus(status: string | null) {
   }
 
   if (status === "failed") {
-    return { label: "Retried · Failed", variant: "destructive" } as const;
+    return { label: "Retried", variant: "destructive" } as const;
   }
 
   return { label: "Retried · Unknown", variant: "warning" } as const;
@@ -71,8 +65,7 @@ export function FailedJobTable({
   onLoadNewEntries,
   emptyTitle,
   emptyDescription,
-  visibleJobIds,
-  onSortedChange,
+  sorting,
   bodyRef,
 }: {
   jobs: readonly JobRow[];
@@ -83,35 +76,23 @@ export function FailedJobTable({
   onLoadNewEntries?: () => void;
   emptyTitle?: string;
   emptyDescription?: string;
-  visibleJobIds?: ReadonlySet<string>;
-  onSortedChange?: (sorted: boolean) => void;
+  sorting?: ControlledTableSorting;
   bodyRef?: Ref<HTMLTableSectionElement>;
 }) {
-  const sorted = useSortableRows(jobs, columns, { persist: true });
-  const isSorted = sorted.sort !== null;
-  const hasVisibleJobs =
-    visibleJobIds === undefined
-      ? sorted.rows.length > 0
-      : sorted.rows.some((job) => visibleJobIds.has(job.id));
-  const renderedRows =
-    visibleJobIds === undefined
-      ? sorted.rows
-      : [
-          ...sorted.rows.filter((job) => visibleJobIds.has(job.id)),
-          ...sorted.rows.filter((job) => !visibleJobIds.has(job.id)),
-        ];
-
-  useEffect(() => {
-    onSortedChange?.(isSorted);
-  }, [isSorted, onSortedChange]);
+  const hasVisibleJobs = jobs.length > 0;
 
   if (!available) {
     return (
-      <Alert variant="destructive" className="m-4">
-        <TriangleAlertIcon aria-hidden="true" />
-        <AlertTitle>Failed jobs unavailable</AlertTitle>
-        <AlertDescription>{message ?? "Failed jobs are currently unavailable."}</AlertDescription>
-      </Alert>
+      <div className="box-border w-full min-w-0 p-4">
+        <Alert variant="destructive" className="max-w-full">
+          <TriangleAlertIcon aria-hidden="true" />
+          <AlertTitle>Failed jobs couldn’t be loaded</AlertTitle>
+          <AlertDescription>
+            {message ??
+              "Horizon could not read retained failed jobs. Refresh the page to try again."}
+          </AlertDescription>
+        </Alert>
+      </div>
     );
   }
 
@@ -119,28 +100,18 @@ export function FailedJobTable({
     <Table>
       <TableHeader className="sticky top-0 z-10">
         <TableRow>
-          <SortableTableHead
-            label="Job"
-            columnKey="name"
-            direction={directionFor("name", sorted.sort)}
-            onSort={sorted.toggle}
-            className="px-4 sm:px-6"
-          />
+          <SortableTableHead label="Job" {...controlledSortHeader(sorting, "name")} />
           <SortableTableHead
             label="Runtime"
-            columnKey="runtime"
-            direction={directionFor("runtime", sorted.sort)}
-            onSort={sorted.toggle}
-            className="w-[100px] px-4 text-right sm:px-6"
+            {...controlledSortHeader(sorting, "runtime")}
+            className="w-[100px] text-right"
           />
           <SortableTableHead
             label="Failed"
-            columnKey="failedAt"
-            direction={directionFor("failedAt", sorted.sort)}
-            onSort={sorted.toggle}
-            className="w-[190px] px-4 sm:px-6"
+            {...controlledSortHeader(sorting, "failedAt")}
+            className="w-[190px]"
           />
-          <SortableTableHead label="Actions" className="w-[80px] px-4 text-right sm:px-6" />
+          <SortableTableHead label="Actions" className="w-[80px] pr-2.5 pl-3 text-right sm:pr-6" />
         </TableRow>
       </TableHeader>
       <TableBody role="presentation">
@@ -157,7 +128,7 @@ export function FailedJobTable({
         ) : null}
       </TableBody>
       <TableBody ref={bodyRef}>
-        {renderedRows.map((job) => {
+        {jobs.map((job) => {
           const detailUrl = resolveHorizonRoute(failedJobShow(job.id), horizonBaseUrl).url;
           const retryOfUrl = job.retryOf
             ? resolveHorizonRoute(failedJobShow(job.retryOf), horizonBaseUrl).url
@@ -168,7 +139,6 @@ export function FailedJobTable({
             <TableRow
               className="cursor-pointer"
               key={job.id}
-              hidden={visibleJobIds !== undefined && !visibleJobIds.has(job.id)}
               onClick={(event) => {
                 if (isInteractiveTarget(event.target)) {
                   return;
@@ -184,7 +154,6 @@ export function FailedJobTable({
                 queue={job.queue}
                 tags={job.tags}
                 href={detailUrl}
-                className="px-4 sm:px-6"
                 accessory={
                   job.retried ? (
                     <Tooltip>
@@ -220,13 +189,13 @@ export function FailedJobTable({
                   </>
                 }
               />
-              <TableCell className="px-4 text-right tabular-nums text-muted-foreground sm:px-6">
+              <TableCell className="text-right tabular-nums text-muted-foreground">
                 {job.runtime === null ? "—" : <Duration seconds={job.runtime} format="precise" />}
               </TableCell>
-              <TableCell className="px-4 text-muted-foreground sm:px-6">
+              <TableCell className="text-muted-foreground">
                 {formatTimestamp(job.failedAt)}
               </TableCell>
-              <TableCell className="px-4 text-right sm:px-6">
+              <TableCell className="pr-2.5 pl-3 text-right sm:pr-6">
                 <FailedJobActionsMenu
                   jobId={job.id}
                   horizonBaseUrl={horizonBaseUrl}

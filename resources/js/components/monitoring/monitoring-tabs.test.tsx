@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
 import { MonitoringTabs } from "@/components/monitoring/monitoring-tabs";
 
@@ -36,8 +36,6 @@ describe("MonitoringTabs", () => {
         horizonBaseUrl="/horizon"
         trackedCount={4}
         failedCount={2}
-        jobFilter={null}
-        queueFilter={null}
       />,
     );
 
@@ -67,11 +65,11 @@ describe("MonitoringTabs", () => {
     );
   });
 
-  it("preserves job filters across status tabs while resetting the cursor", () => {
+  it("drops stale loaded-row query state across status tabs", () => {
     window.history.replaceState(
       {},
       "",
-      "/horizon/monitoring/customer%3A42/jobs?starting_at=50&tab=jobs",
+      "/horizon/monitoring/customer%3A42/jobs?starting_at=50&tab=jobs&job=App%5CJobs%5CDelayedExport&queue=exports&sort=name&direction=asc",
     );
 
     render(
@@ -81,18 +79,16 @@ describe("MonitoringTabs", () => {
         horizonBaseUrl="/horizon"
         trackedCount={4}
         failedCount={2}
-        jobFilter={"App\\Jobs\\DelayedExport"}
-        queueFilter="exports"
       />,
     );
 
     expect(screen.getByRole("tab", { name: /Recent Jobs/ })).toHaveAttribute(
       "href",
-      "/horizon/monitoring/customer%3A42/jobs?job=App%5CJobs%5CDelayedExport&queue=exports",
+      "/horizon/monitoring/customer%3A42/jobs",
     );
     expect(screen.getByRole("tab", { name: /Failed Jobs/ })).toHaveAttribute(
       "href",
-      "/horizon/monitoring/customer%3A42/failed?job=App%5CJobs%5CDelayedExport&queue=exports",
+      "/horizon/monitoring/customer%3A42/failed",
     );
   });
 });

@@ -5,51 +5,79 @@ declare(strict_types=1);
 namespace NckRtl\HorizonNewDawn\FailedJobs\Actions;
 
 use Laravel\Horizon\Contracts\JobRepository;
+use NckRtl\HorizonNewDawn\BulkOperations\BulkOperationChunkResult;
+use NckRtl\HorizonNewDawn\BulkOperations\BulkOperationSnapshot;
+use Throwable;
 
 final readonly class RetryAllFailedJobs
 {
-    private const int PAGE_SIZE = 50;
-
     public function __construct(
         private JobRepository $jobs,
         private RetryFailedJob $retry,
+        private BulkOperationSnapshot $snapshots,
     ) {}
 
-    public function handle(?string $connection = null, ?string $queue = null): int
-    {
-        $scheduled = 0;
-        $seen = [];
-        $sourceTotal = max(0, (int) $this->jobs->countFailed());
+    public function processChunk(
+        ?string $operationId = null,
+        ?string $connection = null,
+        ?string $queue = null,
+    ): BulkOperationChunkResult {
+        $operationId ??= $this->snapshots->createFromSortedSet('failed_jobs');
 
-        for ($inspected = 0; $inspected < $sourceTotal; $inspected += self::PAGE_SIZE) {
-            $rawPageSize = min(self::PAGE_SIZE, $sourceTotal - $inspected);
-            $chunk = $this->jobs->getFailed((string) ($inspected - 1));
+        $ids = $this->snapshots->nextChunk($operationId);
 
-            foreach ($chunk->take($rawPageSize) as $job) {
-                if (! is_object($job) || ! is_string($job->id ?? null) || $job->id === '') {
-                    continue;
-                }
-
-                if ($connection !== null && ($job->connection ?? null) !== $connection) {
-                    continue;
-                }
-
-                if ($queue !== null && ($job->queue ?? null) !== $queue) {
-                    continue;
-                }
-
-                if (isset($seen[$job->id])) {
-                    continue;
-                }
-
-                $seen[$job->id] = true;
-
-                if ($this->retry->handleBulk($job->id, $job)) {
-                    $scheduled++;
-                }
-            }
+        if ($ids === []) {
+            return BulkOperationChunkResult::completed(
+                $operationId,
+                $this->snapshots->finish($operationId),
+            );
         }
 
-        return $scheduled;
+        $hydrated = [];
+
+        foreach ($this->jobs->getJobs($ids) as $job) {
+            if (! is_object($job) || ! is_string($job->id ?? null) || $job->id === '') {
+                continue;
+            }
+
+            $hydrated[$job->id] = $job;
+        }
+
+        try {
+            foreach ($ids as $id) {
+                $job = $hydrated[$id] ?? null;
+
+                if (
+                    $job === null
+                    || ($connection !== null && ($job->connection ?? null) !== $connection)
+                    || ($queue !== null && ($job->queue ?? null) !== $queue)
+                ) {
+                    $this->snapshots->acknowledge($operationId, $id);
+
+                    continue;
+                }
+
+                if ($this->retry->handleBulk($id, $job)) {
+                    $this->snapshots->addAffected($operationId, 1);
+                }
+
+                $this->snapshots->acknowledge($operationId, $id);
+            }
+        } catch (Throwable $exception) {
+            $this->snapshots->renew($operationId);
+
+            throw $exception;
+        }
+
+        $totalAffected = $this->snapshots->totalAffected($operationId);
+
+        if ($this->snapshots->hasMore($operationId)) {
+            return BulkOperationChunkResult::continuing($operationId, $totalAffected);
+        }
+
+        return BulkOperationChunkResult::completed(
+            $operationId,
+            $this->snapshots->finish($operationId),
+        );
     }
 }

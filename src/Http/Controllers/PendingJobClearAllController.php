@@ -5,23 +5,26 @@ declare(strict_types=1);
 namespace NckRtl\HorizonNewDawn\Http\Controllers;
 
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Str;
-use NckRtl\HorizonNewDawn\Jobs\Actions\ClearPendingJobs;
+use NckRtl\HorizonNewDawn\BulkOperations\BulkOperationDispatcher;
+use NckRtl\HorizonNewDawn\BulkOperations\Jobs\ClearPendingJobsJob;
+use Throwable;
 
 final class PendingJobClearAllController
 {
-    public function destroy(ClearPendingJobs $clear): RedirectResponse
-    {
-        $result = $clear->handle();
-        $jobs = Str::plural('job', $result->cleared);
+    public function destroy(
+        BulkOperationDispatcher $dispatcher,
+    ): RedirectResponse {
+        try {
+            $dispatcher->dispatch(new ClearPendingJobsJob);
 
-        if ($result->failedTargets !== []) {
+            return back()->with('toast.success', 'Clearing all pending jobs was queued.');
+        } catch (Throwable $exception) {
+            report($exception);
+
             return back()->with(
                 'toast.error',
-                "Cleared {$result->cleared} pending {$jobs}, but could not clear ".implode(', ', $result->failedTargets).'.',
+                'The bulk operation could not be queued. Check the application logs and try again.',
             );
         }
-
-        return back()->with('toast.success', "Cleared {$result->cleared} pending {$jobs}.");
     }
 }

@@ -42,5 +42,6 @@ export type MonitoringTagPageProps = {
   tag: string;
   status: MonitoringStatus;
   summary: MonitoringTagSummary;
+  listRevision: string;
   jobs: JobCollection;
 };

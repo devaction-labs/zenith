@@ -6,7 +6,7 @@ import retryFailed from './retry-failed'
 import batches from './batches'
 /**
 * @see \NckRtl\HorizonNewDawn\Http\Controllers\QueueController::index
-* @see src/Http/Controllers/QueueController.php:24
+* @see src/Http/Controllers/QueueController.php:27
 * @route '/horizon/queues'
 */
 export const index = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -21,7 +21,7 @@ index.definition = {
 
 /**
 * @see \NckRtl\HorizonNewDawn\Http\Controllers\QueueController::index
-* @see src/Http/Controllers/QueueController.php:24
+* @see src/Http/Controllers/QueueController.php:27
 * @route '/horizon/queues'
 */
 index.url = (options?: RouteQueryOptions) => {
@@ -30,7 +30,7 @@ index.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \NckRtl\HorizonNewDawn\Http\Controllers\QueueController::index
-* @see src/Http/Controllers/QueueController.php:24
+* @see src/Http/Controllers/QueueController.php:27
 * @route '/horizon/queues'
 */
 index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -40,7 +40,7 @@ index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 
 /**
 * @see \NckRtl\HorizonNewDawn\Http\Controllers\QueueController::index
-* @see src/Http/Controllers/QueueController.php:24
+* @see src/Http/Controllers/QueueController.php:27
 * @route '/horizon/queues'
 */
 index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -50,7 +50,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
 /**
 * @see \NckRtl\HorizonNewDawn\Http\Controllers\QueueController::show
-* @see src/Http/Controllers/QueueController.php:32
+* @see src/Http/Controllers/QueueController.php:35
 * @route '/horizon/queues/{queue}'
 */
 export const show = (args: { queue: string | number } | [queue: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -65,7 +65,7 @@ show.definition = {
 
 /**
 * @see \NckRtl\HorizonNewDawn\Http\Controllers\QueueController::show
-* @see src/Http/Controllers/QueueController.php:32
+* @see src/Http/Controllers/QueueController.php:35
 * @route '/horizon/queues/{queue}'
 */
 show.url = (args: { queue: string | number } | [queue: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -92,7 +92,7 @@ show.url = (args: { queue: string | number } | [queue: string | number ] | strin
 
 /**
 * @see \NckRtl\HorizonNewDawn\Http\Controllers\QueueController::show
-* @see src/Http/Controllers/QueueController.php:32
+* @see src/Http/Controllers/QueueController.php:35
 * @route '/horizon/queues/{queue}'
 */
 show.get = (args: { queue: string | number } | [queue: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -102,7 +102,7 @@ show.get = (args: { queue: string | number } | [queue: string | number ] | strin
 
 /**
 * @see \NckRtl\HorizonNewDawn\Http\Controllers\QueueController::show
-* @see src/Http/Controllers/QueueController.php:32
+* @see src/Http/Controllers/QueueController.php:35
 * @route '/horizon/queues/{queue}'
 */
 show.head = (args: { queue: string | number } | [queue: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'head'> => ({

@@ -6,6 +6,14 @@ import { WorkloadTable } from "@/components/dashboard/workload-table";
 import { Duration } from "@/components/duration";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
+  Statistic,
+  StatisticGrid,
+  StatisticLabel,
+  StatisticSupportingText,
+  StatisticValue,
+} from "@/components/ui/statistic";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
   index as batchesIndex,
   show as batchShow,
 } from "@/generated/routes/horizon-new-dawn/batches";
@@ -60,24 +68,31 @@ function Dashboard({ horizon, summary, workload, supervisors }: DashboardPagePro
           </CardHeader>
           <CardContent className="p-0">
             {hasWorkload ? (
-              <div className="grid gap-px border-b border-separator bg-separator sm:grid-cols-2 md:grid-cols-4">
+              <StatisticGrid className="sm:grid-cols-2 shell:grid-cols-5">
                 <WorkloadStat label="Total Processes" value={summary.processes} />
                 <WorkloadStat
                   label="Max Wait Time"
-                  value={<Duration seconds={summary.maxWaitSeconds} />}
-                  detail={summary.maxWaitQueue}
+                  value={
+                    summary.maxWaitSeconds > 0 ? <Duration seconds={summary.maxWaitSeconds} /> : "—"
+                  }
                 />
                 <WorkloadStat label="Max Runtime" value={summary.queueWithMaxRuntime ?? "—"} />
                 <WorkloadStat
                   label="Max Throughput"
                   value={summary.queueWithMaxThroughput ?? "—"}
                 />
-              </div>
+                <WorkloadStat
+                  label="Hourly Pressure"
+                  value={summary.recentJobs}
+                  valueTooltip="The number of jobs received by Horizon in the past hour."
+                />
+              </StatisticGrid>
             ) : null}
             <WorkloadTable
               workload={workload}
               horizonBaseUrl={horizon.baseUrl}
               queuePausing={horizon.capabilities?.queuePausing ?? false}
+              timedQueuePausing={horizon.capabilities?.timedQueuePausing ?? false}
             />
           </CardContent>
         </Card>
@@ -103,17 +118,37 @@ function WorkloadStat({
   label,
   value,
   detail,
+  valueTooltip,
 }: {
   label: string;
   value: React.ReactNode;
   detail?: string | null;
+  valueTooltip?: string;
 }) {
+  const displayValue = valueTooltip ? (
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <span
+            className="cursor-help rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            tabIndex={0}
+          />
+        }
+      >
+        {value}
+      </TooltipTrigger>
+      <TooltipContent side="top">{valueTooltip}</TooltipContent>
+    </Tooltip>
+  ) : (
+    value
+  );
+
   return (
-    <div className="bg-card px-6 py-4">
-      <p className="text-[13px] font-medium text-muted-foreground">{label}</p>
-      <p className="mt-3 text-[1.375rem] font-semibold tracking-tight tabular-nums">{value}</p>
-      {detail ? <p className="mt-0.5 text-[13px] text-muted-foreground">({detail})</p> : null}
-    </div>
+    <Statistic>
+      <StatisticLabel>{label}</StatisticLabel>
+      <StatisticValue>{displayValue}</StatisticValue>
+      {detail ? <StatisticSupportingText>({detail})</StatisticSupportingText> : null}
+    </Statistic>
   );
 }
 

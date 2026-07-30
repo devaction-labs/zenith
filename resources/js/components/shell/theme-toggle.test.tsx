@@ -1,8 +1,9 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
-import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeToggle } from "@/components/shell/theme-toggle";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { ColorSchemeProvider } from "@/hooks/use-color-scheme";
 
 describe("ThemeToggle", () => {
   beforeEach(() => {
@@ -20,9 +21,11 @@ describe("ThemeToggle", () => {
 
   it("describes and applies the next color scheme", () => {
     render(
-      <TooltipProvider>
-        <ThemeToggle />
-      </TooltipProvider>,
+      <ColorSchemeProvider>
+        <TooltipProvider>
+          <ThemeToggle />
+        </TooltipProvider>
+      </ColorSchemeProvider>,
     );
 
     const toggle = screen.getByRole("button", { name: "Color scheme: system. Switch to dark." });

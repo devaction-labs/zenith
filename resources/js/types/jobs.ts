@@ -1,6 +1,18 @@
 import type { HorizonStatus } from "@/types/dashboard";
 
 export type JobListType = "pending" | "completed" | "silenced";
+export type JobFilterKey = "job" | "queue" | "connection" | "state";
+export type JobSort = "name" | "pushedAt" | "completedAt" | "failedAt" | "runtime";
+
+export type JobFilterValues = Record<JobFilterKey, string | null>;
+
+export type JobFilterCatalog = {
+  available: boolean;
+  jobs: Array<{ value: string; label: string }>;
+  queues: string[];
+  connections: string[];
+  message: string | null;
+};
 
 export type JobRow = {
   id: string;
@@ -28,6 +40,8 @@ export type JobRow = {
   retryCount: number;
   latestRetryStatus: string | null;
   retryEligible: boolean;
+  /** When false, the row has no Horizon job hash and must not link to job detail. */
+  inspectable?: boolean;
 };
 
 export type JobCollection = {
@@ -66,12 +80,23 @@ export type FailedJobDetail = Omit<JobDetail, "completedAt"> & {
   exception: string;
 };
 
+export type FailedJobBulkActions = {
+  hasFailedJobs: boolean;
+  retryable: boolean;
+  retryUnavailableReason: string | null;
+  clearable: boolean;
+  clearUnavailableReason: string | null;
+};
+
 export type FailedJobsPageProps = {
   horizon: JobsPageProps["horizon"];
   query: string;
-  jobs: JobCollection & {
-    retryable: boolean;
-  };
+  filters: JobFilterValues;
+  filterCatalog?: JobFilterCatalog;
+  querySignature: string;
+  listRevision: string;
+  actions: FailedJobBulkActions;
+  jobs: JobCollection;
 };
 
 export type FailedJobDetailPageProps = {
@@ -86,11 +111,16 @@ export type JobsPageProps = {
     status: HorizonStatus;
   };
   type: JobListType;
+  query: string;
   pendingCounts: {
     available: boolean;
     ready: number | null;
     delayed: number | null;
   } | null;
+  filters: JobFilterValues;
+  filterCatalog?: JobFilterCatalog;
+  querySignature: string;
+  listRevision: string;
   jobs: JobCollection;
 };
 

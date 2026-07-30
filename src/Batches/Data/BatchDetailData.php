@@ -24,6 +24,9 @@ final class BatchDetailData extends Data
         public readonly ?int $finishedAt,
         public readonly ?string $connection,
         public readonly ?string $queue,
+        public readonly bool $queueExplicit,
+        public readonly bool $connectionExplicit,
+        public readonly bool $attributionCaptured,
         public readonly BatchJobListsData $jobs,
     ) {}
 }

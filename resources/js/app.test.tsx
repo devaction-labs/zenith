@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
 const inertia = vi.hoisted(() => ({
   createInertiaApp: vi.fn(),
@@ -19,6 +19,19 @@ describe("Inertia application", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.resetModules();
+    document.body.innerHTML = "";
+  });
+
+  it("exposes Inertia visit hooks when the server DevTools recorder marks the response", async () => {
+    document.body.innerHTML = '<script data-inertia-devtools-id type="application/json"></script>';
+
+    await import("@/app");
+
+    expect(inertia.createInertiaApp).toHaveBeenCalledWith(
+      expect.objectContaining({
+        dev: true,
+      }),
+    );
   });
 
   it("uses the Horizon primary color for the progress bar", async () => {

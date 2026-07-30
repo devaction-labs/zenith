@@ -1,7 +1,7 @@
 import { PauseIcon, PlayIcon, PowerIcon } from "lucide-react";
 import { router } from "@inertiajs/react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/toast";
 
 import { Button } from "@/components/ui/button";
 import { ActionMenuTrigger } from "@/components/ui/action-menu-trigger";
@@ -127,7 +127,7 @@ export function HorizonInstancesActions({
     const csrfToken = document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content;
 
     if (!csrfToken) {
-      toast.error(fallback);
+      toast.add({ title: fallback, type: "error" });
 
       return;
     }
@@ -139,7 +139,7 @@ export function HorizonInstancesActions({
       const message = typeof payload?.message === "string" ? payload.message : fallback;
 
       if (!response.ok) {
-        toast.error(message);
+        toast.add({ title: message, type: "error" });
         setWorking(null);
 
         return;
@@ -149,10 +149,10 @@ export function HorizonInstancesActions({
         setDialogOpen(false);
       }
 
-      toast.success(message);
+      toast.add({ title: message, type: "success" });
       revalidateInstances(() => setWorking(null));
     } catch {
-      toast.error(fallback);
+      toast.add({ title: fallback, type: "error" });
       setWorking(null);
     }
   };
@@ -236,7 +236,7 @@ export function HorizonInstanceActions({
     const csrfToken = document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content;
 
     if (!csrfToken) {
-      toast.error(fallback);
+      toast.add({ title: fallback, type: "error" });
 
       return;
     }
@@ -254,17 +254,17 @@ export function HorizonInstanceActions({
       const message = typeof payload?.message === "string" ? payload.message : fallback;
 
       if (!response.ok) {
-        toast.error(message);
+        toast.add({ title: message, type: "error" });
         onTransitionFailure(token);
         setWorking(null);
 
         return;
       }
 
-      toast.success(message);
+      toast.add({ title: message, type: "success" });
       setWorking(null);
     } catch {
-      toast.error(fallback);
+      toast.add({ title: fallback, type: "error" });
       onTransitionFailure(token);
       setWorking(null);
     }
@@ -281,7 +281,6 @@ export function HorizonInstanceActions({
         available={!transitionPending && (status === "running" || status === "paused")}
         label={`Horizon instance ${instanceName} actions`}
         working={working !== null}
-        className="text-muted-foreground hover:text-foreground focus-visible:text-foreground aria-expanded:text-foreground"
       />
       <DropdownMenuContent align="end" className="w-44">
         {status === "paused" ? (
@@ -326,7 +325,7 @@ export function SupervisorActions({
     const csrfToken = document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content;
 
     if (!csrfToken) {
-      toast.error(fallback);
+      toast.add({ title: fallback, type: "error" });
 
       return;
     }
@@ -344,17 +343,17 @@ export function SupervisorActions({
       const message = typeof payload?.message === "string" ? payload.message : fallback;
 
       if (!response.ok) {
-        toast.error(message);
+        toast.add({ title: message, type: "error" });
         onTransitionFailure(token);
         setWorking(null);
 
         return;
       }
 
-      toast.success(message);
+      toast.add({ title: message, type: "success" });
       setWorking(null);
     } catch {
-      toast.error(fallback);
+      toast.add({ title: fallback, type: "error" });
       onTransitionFailure(token);
       setWorking(null);
     }
@@ -372,7 +371,6 @@ export function SupervisorActions({
         available={!transitionPending && (status === "running" || status === "paused")}
         label={`Supervisor ${supervisor} actions`}
         working={working !== null}
-        className="text-muted-foreground hover:text-foreground focus-visible:text-foreground aria-expanded:text-foreground"
       />
       <DropdownMenuContent align="end" className="w-48">
         {status === "paused" ? (

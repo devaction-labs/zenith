@@ -5,24 +5,30 @@ declare(strict_types=1);
 namespace NckRtl\HorizonNewDawn\Http\Controllers;
 
 use Illuminate\Http\RedirectResponse;
-use NckRtl\HorizonNewDawn\Batches\Actions\ClearBatchFailedJobs;
+use NckRtl\HorizonNewDawn\BulkOperations\BulkOperationDispatcher;
+use NckRtl\HorizonNewDawn\BulkOperations\Jobs\ClearBatchFailedJobsJob;
 use Throwable;
 
 final class BatchFailedJobClearController
 {
-    public function destroy(ClearBatchFailedJobs $clear, string $batch): RedirectResponse
-    {
+    public function destroy(
+        BulkOperationDispatcher $operations,
+        string $batch,
+    ): RedirectResponse {
         try {
-            $count = $clear->handle($batch);
-            $message = $count === 1
-                ? 'Cleared 1 failed batch job.'
-                : "Cleared {$count} failed batch jobs.";
-
-            return back()->with('toast.success', $message);
+            $operations->dispatch(new ClearBatchFailedJobsJob($batch));
         } catch (Throwable $exception) {
             report($exception);
 
-            return back()->with('toast.error', 'Failed batch jobs could not be cleared.');
+            return back()->with(
+                'toast.error',
+                'The bulk operation could not be queued. Check the application logs and try again.',
+            );
         }
+
+        return back()->with(
+            'toast.success',
+            "Clearing failed jobs for batch {$batch} was queued.",
+        );
     }
 }

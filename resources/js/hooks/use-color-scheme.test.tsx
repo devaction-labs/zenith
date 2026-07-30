@@ -1,7 +1,8 @@
 import { act, renderHook } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { ReactNode } from "react";
+import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
-import { useColorScheme } from "@/hooks/use-color-scheme";
+import { ColorSchemeProvider, useColorScheme } from "@/hooks/use-color-scheme";
 
 const media = vi.hoisted(() => ({
   matches: false,
@@ -26,6 +27,10 @@ function installMatchMedia() {
   });
 }
 
+function wrapper({ children }: { children: ReactNode }) {
+  return <ColorSchemeProvider>{children}</ColorSchemeProvider>;
+}
+
 describe("useColorScheme", () => {
   beforeEach(() => {
     localStorage.clear();
@@ -37,7 +42,7 @@ describe("useColorScheme", () => {
   });
 
   it("cycles system, dark, and light while persisting the selection", () => {
-    const { result } = renderHook(() => useColorScheme());
+    const { result } = renderHook(() => useColorScheme(), { wrapper });
 
     expect(result.current.scheme).toBe("system");
     expect(result.current.resolvedScheme).toBe("light");
@@ -58,7 +63,7 @@ describe("useColorScheme", () => {
   });
 
   it("tracks operating system changes while system mode is selected", () => {
-    const { result } = renderHook(() => useColorScheme());
+    const { result } = renderHook(() => useColorScheme(), { wrapper });
 
     act(() => {
       media.matches = true;

@@ -6,8 +6,8 @@ namespace NckRtl\HorizonNewDawn\Queues;
 
 use Illuminate\Contracts\Redis\Factory as RedisFactory;
 use Illuminate\Redis\Connections\Connection;
-use Illuminate\Redis\Connections\PhpRedisConnection;
 use NckRtl\HorizonNewDawn\Jobs\ForgetsPendingJob;
+use NckRtl\HorizonNewDawn\Support\RedisScript;
 
 /**
  * Removes pending/reserved Horizon job hashes for one connection+queue pair.
@@ -27,7 +27,7 @@ final readonly class ClearQueueMetadata implements ClearsQueueMetadata, ForgetsP
         $prefix = (string) config('horizon.prefix', 'horizon:');
 
         do {
-            $result = $this->evaluate(
+            $result = RedisScript::evaluate(
                 $redis,
                 $this->purgeScript(),
                 2,
@@ -53,7 +53,7 @@ final readonly class ClearQueueMetadata implements ClearsQueueMetadata, ForgetsP
     /** @param array<int, string> $tags */
     public function forgetPending(string $id, array $tags): bool
     {
-        $removed = $this->evaluate(
+        $removed = RedisScript::evaluate(
             $this->horizonConnection(),
             <<<'LUA'
                 local hashkey = ARGV[1] .. ARGV[2]
@@ -89,34 +89,36 @@ final readonly class ClearQueueMetadata implements ClearsQueueMetadata, ForgetsP
         return $this->redis->connection('horizon');
     }
 
-    private function evaluate(Connection $redis, string $script, int $numberOfKeys, mixed ...$arguments): mixed
-    {
-        // Mirror Horizon's connection->eval(script, numkeys, ...) for each Redis driver.
-        // PhpRedisConnection packages keys/args as an array; Predis uses a flat argument list.
-        if ($redis instanceof PhpRedisConnection) {
-            return $redis->command('eval', [$script, $arguments, $numberOfKeys]);
-        }
-
-        return $redis->command('eval', [$script, $numberOfKeys, ...$arguments]);
-    }
-
     private function purgeScript(): string
     {
         return <<<'LUA'
             local count = 0
             local cursor = ARGV[4]
 
-            local scanner = redis.call('zscan', KEYS[1], cursor)
+            local scanner = redis.call('zscan', KEYS[1], cursor, 'COUNT', 1000)
             cursor = scanner[1]
 
             for i = 1, #scanner[2], 2 do
                 local jobid = scanner[2][i]
                 local hashkey = ARGV[1] .. jobid
-                local job = redis.call('hmget', hashkey, 'status', 'queue', 'connection')
+                local job = redis.call('hmget', hashkey, 'status', 'queue', 'connection', 'payload')
 
                 if ((job[1] == 'reserved' or job[1] == 'pending') and job[2] == ARGV[2] and job[3] == ARGV[3]) then
                     redis.call('zrem', KEYS[1], jobid)
                     redis.call('zrem', KEYS[2], jobid)
+
+                    if job[4] then
+                        local decoded, payload = pcall(cjson.decode, job[4])
+
+                        if decoded and type(payload) == 'table' and type(payload['tags']) == 'table' then
+                            for _, tag in ipairs(payload['tags']) do
+                                if type(tag) == 'string' then
+                                    redis.call('zrem', ARGV[1] .. tag, jobid)
+                                end
+                            end
+                        end
+                    end
+
                     redis.call('del', hashkey)
                     count = count + 1
                 end

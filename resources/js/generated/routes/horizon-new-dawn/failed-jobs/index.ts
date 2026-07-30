@@ -48,7 +48,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
 /**
 * @see \NckRtl\HorizonNewDawn\Http\Controllers\FailedJobController::show
-* @see src/Http/Controllers/FailedJobController.php:45
+* @see src/Http/Controllers/FailedJobController.php:77
 * @route '/horizon/failed/{job}'
 */
 export const show = (args: { job: string | number } | [job: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -63,7 +63,7 @@ show.definition = {
 
 /**
 * @see \NckRtl\HorizonNewDawn\Http\Controllers\FailedJobController::show
-* @see src/Http/Controllers/FailedJobController.php:45
+* @see src/Http/Controllers/FailedJobController.php:77
 * @route '/horizon/failed/{job}'
 */
 show.url = (args: { job: string | number } | [job: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -90,7 +90,7 @@ show.url = (args: { job: string | number } | [job: string | number ] | string | 
 
 /**
 * @see \NckRtl\HorizonNewDawn\Http\Controllers\FailedJobController::show
-* @see src/Http/Controllers/FailedJobController.php:45
+* @see src/Http/Controllers/FailedJobController.php:77
 * @route '/horizon/failed/{job}'
 */
 show.get = (args: { job: string | number } | [job: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -100,7 +100,7 @@ show.get = (args: { job: string | number } | [job: string | number ] | string | 
 
 /**
 * @see \NckRtl\HorizonNewDawn\Http\Controllers\FailedJobController::show
-* @see src/Http/Controllers/FailedJobController.php:45
+* @see src/Http/Controllers/FailedJobController.php:77
 * @route '/horizon/failed/{job}'
 */
 show.head = (args: { job: string | number } | [job: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -110,7 +110,7 @@ show.head = (args: { job: string | number } | [job: string | number ] | string |
 
 /**
 * @see \NckRtl\HorizonNewDawn\Http\Controllers\FailedJobController::destroy
-* @see src/Http/Controllers/FailedJobController.php:57
+* @see src/Http/Controllers/FailedJobController.php:89
 * @route '/horizon/failed/{job}'
 */
 export const destroy = (args: { job: string | number } | [job: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
@@ -125,7 +125,7 @@ destroy.definition = {
 
 /**
 * @see \NckRtl\HorizonNewDawn\Http\Controllers\FailedJobController::destroy
-* @see src/Http/Controllers/FailedJobController.php:57
+* @see src/Http/Controllers/FailedJobController.php:89
 * @route '/horizon/failed/{job}'
 */
 destroy.url = (args: { job: string | number } | [job: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -152,7 +152,7 @@ destroy.url = (args: { job: string | number } | [job: string | number ] | string
 
 /**
 * @see \NckRtl\HorizonNewDawn\Http\Controllers\FailedJobController::destroy
-* @see src/Http/Controllers/FailedJobController.php:57
+* @see src/Http/Controllers/FailedJobController.php:89
 * @route '/horizon/failed/{job}'
 */
 destroy.delete = (args: { job: string | number } | [job: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({

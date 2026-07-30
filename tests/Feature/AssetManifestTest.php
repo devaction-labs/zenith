@@ -3,88 +3,156 @@
 declare(strict_types=1);
 
 use Illuminate\Filesystem\Filesystem;
+use Illuminate\Foundation\Vite;
+use Illuminate\Support\Facades\Route;
+use Inertia\Inertia;
 use NckRtl\HorizonNewDawn\Assets\AssetManifest;
 use NckRtl\HorizonNewDawn\Assets\AssetPath;
 
-beforeEach(function (): void {
-    config()->set('horizon-new-dawn.assets_path', 'vendor/horizon-new-dawn-test/build');
+use function Pest\Laravel\get;
 
+$isolatedPublicPath = null;
+
+beforeEach(function () use (&$isolatedPublicPath): void {
+    $publicPath = sys_get_temp_dir().'/horizon-new-dawn-asset-test-'.uniqid('', true);
     $filesystem = app(Filesystem::class);
-    $filesystem->deleteDirectory(public_path('vendor/horizon-new-dawn-test'));
+
+    $filesystem->ensureDirectoryExists($publicPath);
+    app()->usePublicPath($publicPath);
+
+    $isolatedPublicPath = $publicPath;
 });
 
-afterEach(function (): void {
+afterEach(function () use (&$isolatedPublicPath): void {
     $filesystem = app(Filesystem::class);
-    $symlink = public_path('vendor/horizon-new-dawn-assets-link');
 
-    $filesystem->deleteDirectory(public_path('vendor/horizon-new-dawn-test'));
-    $filesystem->deleteDirectory(dirname(public_path()).'/horizon-new-dawn-assets-outside');
-
-    if (is_link($symlink)) {
-        $filesystem->delete($symlink);
+    if (is_string($isolatedPublicPath)) {
+        $filesystem->deleteDirectory($isolatedPublicPath);
+        $filesystem->deleteDirectory(dirname($isolatedPublicPath).'/horizon-new-dawn-assets-outside');
     }
+
+    $isolatedPublicPath = null;
 });
 
 it('resolves hashed entry assets from the published Vite manifest', function (): void {
     $filesystem = app(Filesystem::class);
-    $manifestDirectory = public_path('vendor/horizon-new-dawn-test/build/.vite');
+    $buildDirectory = public_path('vendor/horizon-new-dawn/build');
 
-    $filesystem->ensureDirectoryExists($manifestDirectory);
-    $filesystem->put($manifestDirectory.'/manifest.json', json_encode([
+    $filesystem->ensureDirectoryExists($buildDirectory);
+    $filesystem->put($buildDirectory.'/manifest.json', json_encode([
         'resources/js/app.tsx' => [
             'file' => 'assets/app-abc123.js',
             'css' => ['assets/app-def456.css'],
             'isEntry' => true,
+            'src' => 'resources/js/app.tsx',
+        ],
+        'resources/images/favicon.svg' => [
+            'file' => 'assets/favicon-xyz789.svg',
+            'src' => 'resources/images/favicon.svg',
         ],
     ], JSON_THROW_ON_ERROR));
 
-    $manifest = app(AssetManifest::class);
+    $tags = (string) app(AssetManifest::class)->tags();
 
-    expect($manifest->script())->toBe(url('/vendor/horizon-new-dawn-test/build/assets/app-abc123.js'))
-        ->and($manifest->styles())->toBe([
-            url('/vendor/horizon-new-dawn-test/build/assets/app-def456.css'),
-        ]);
+    expect($tags)
+        ->toContain(url('/vendor/horizon-new-dawn/build/assets/app-abc123.js'))
+        ->toContain(url('/vendor/horizon-new-dawn/build/assets/app-def456.css'))
+        ->toContain('type="module"')
+        ->toContain('rel="stylesheet"');
+    expect($tags)->not->toContain('@vite/client');
 });
 
-it('explains how to repair a missing published manifest', function (): void {
-    expect(fn (): string => app(AssetManifest::class)->script())
+it('resolves the hashed favicon URL from the package-scoped Vite manifest entry', function (): void {
+    $filesystem = app(Filesystem::class);
+    $buildDirectory = public_path('vendor/horizon-new-dawn/build');
+
+    $filesystem->ensureDirectoryExists($buildDirectory.'/assets');
+    $filesystem->put($buildDirectory.'/manifest.json', json_encode([
+        'resources/js/app.tsx' => [
+            'file' => 'assets/app-abc123.js',
+            'css' => [],
+            'isEntry' => true,
+            'src' => 'resources/js/app.tsx',
+        ],
+        'resources/images/favicon.svg' => [
+            'file' => 'assets/favicon-xyz789.svg',
+            'src' => 'resources/images/favicon.svg',
+        ],
+    ], JSON_THROW_ON_ERROR));
+    $filesystem->put($buildDirectory.'/assets/favicon-xyz789.svg', '<svg />');
+
+    expect(app(AssetManifest::class)->favicon())
+        ->toBe(url('/vendor/horizon-new-dawn/build/assets/favicon-xyz789.svg'));
+});
+
+it('explains how to repair a missing published favicon manifest entry', function (): void {
+    $filesystem = app(Filesystem::class);
+    $buildDirectory = public_path('vendor/horizon-new-dawn/build');
+
+    $filesystem->ensureDirectoryExists($buildDirectory);
+    $filesystem->put($buildDirectory.'/manifest.json', json_encode([
+        'resources/js/app.tsx' => [
+            'file' => 'assets/app-abc123.js',
+            'css' => [],
+            'isEntry' => true,
+            'src' => 'resources/js/app.tsx',
+        ],
+    ], JSON_THROW_ON_ERROR));
+
+    expect(fn (): string => app(AssetManifest::class)->favicon())
         ->toThrow(RuntimeException::class, 'php artisan horizon-new-dawn:install');
 });
 
-it('rejects unsafe configured asset paths', function (mixed $path): void {
-    config()->set('horizon-new-dawn.assets_path', $path);
+it('uses the package asset path when cached configuration has no package keys', function (): void {
+    config()->set('horizon-new-dawn', []);
 
-    expect(fn (): string => app(AssetPath::class)->absolute())
-        ->toThrow(RuntimeException::class, 'relative path within the public directory');
-})->with([
-    'null' => null,
-    'empty' => '',
-    'public root' => '.',
-    'parent traversal' => '../storage/horizon-new-dawn',
-    'nested traversal' => 'vendor/../storage/horizon-new-dawn',
-    'absolute path' => '/tmp/horizon-new-dawn',
-    'windows absolute path' => 'C:\\temp\\horizon-new-dawn',
-    'backslash traversal' => '..\\storage\\horizon-new-dawn',
-]);
+    expect(app(AssetPath::class)->relative())->toBe('vendor/horizon-new-dawn/build')
+        ->and(app(AssetPath::class)->absolute())->toBe(resolvedPackageAssetAbsolutePath())
+        ->and(app(AssetPath::class)->manifest())->toBe(
+            resolvedPackageAssetAbsolutePath().DIRECTORY_SEPARATOR.'manifest.json',
+        );
+});
+
+it('ignores a stale assets_path configuration value', function (): void {
+    config()->set('horizon-new-dawn.assets_path', 'vendor/custom-horizon-assets/build');
+
+    expect(app(AssetPath::class)->relative())->toBe('vendor/horizon-new-dawn/build')
+        ->and(app(AssetPath::class)->absolute())->toBe(resolvedPackageAssetAbsolutePath());
+});
+
+it('explains how to repair a missing published manifest', function (): void {
+    expect(fn () => app(AssetManifest::class)->tags())
+        ->toThrow(RuntimeException::class, 'php artisan horizon-new-dawn:install');
+});
 
 it('rejects an asset path whose existing symlink escapes public', function (): void {
     $filesystem = app(Filesystem::class);
     $outsideDirectory = dirname(public_path()).'/horizon-new-dawn-assets-outside';
-    $symlink = public_path('vendor/horizon-new-dawn-assets-link');
+    $symlink = public_path('vendor/horizon-new-dawn');
 
     $filesystem->ensureDirectoryExists($outsideDirectory);
     $filesystem->ensureDirectoryExists(dirname($symlink));
     $filesystem->link($outsideDirectory, $symlink);
-    config()->set('horizon-new-dawn.assets_path', 'vendor/horizon-new-dawn-assets-link/build');
 
     expect(fn (): string => app(AssetPath::class)->absolute())
         ->toThrow(RuntimeException::class, 'resolve within the public directory');
 });
 
+function resolvedPackageAssetAbsolutePath(): string
+{
+    $publicPath = realpath(public_path());
+
+    if (! is_string($publicPath)) {
+        throw new RuntimeException('The test public path could not be resolved.');
+    }
+
+    return $publicPath.DIRECTORY_SEPARATOR.'vendor'.DIRECTORY_SEPARATOR.'horizon-new-dawn'.DIRECTORY_SEPARATOR.'build';
+}
+
 it('ships every file referenced by the production Vite manifest', function (): void {
     $buildPath = dirname(__DIR__, 2).'/dist/build';
     $manifest = json_decode(
-        app(Filesystem::class)->get($buildPath.'/.vite/manifest.json'),
+        app(Filesystem::class)->get($buildPath.'/manifest.json'),
         true,
         flags: JSON_THROW_ON_ERROR,
     );
@@ -92,6 +160,11 @@ it('ships every file referenced by the production Vite manifest', function (): v
     if (! is_array($manifest)) {
         throw new RuntimeException('The production Vite manifest is invalid.');
     }
+
+    expect($manifest)->toHaveKey('resources/images/favicon.svg')
+        ->and($buildPath.'/favicon.svg')->not->toBeFile()
+        ->and($buildPath.'/FONT_LICENSES.md')->not->toBeFile()
+        ->and($buildPath.'/THIRD_PARTY_LICENSES.md')->not->toBeFile();
 
     foreach ($manifest as $entry) {
         if (! is_array($entry)) {
@@ -138,4 +211,119 @@ it('ships every file referenced by the production Vite manifest', function (): v
             }
         }
     }
+});
+
+it('ignores a consumer public/hot file and never mutates the global Vite singleton', function (): void {
+    $filesystem = app(Filesystem::class);
+    $buildDirectory = public_path('vendor/horizon-new-dawn/build');
+    $globalVite = app(Vite::class);
+    $originalHotFile = $globalVite->hotFile();
+
+    $filesystem->ensureDirectoryExists($buildDirectory.'/assets');
+    $filesystem->put($buildDirectory.'/manifest.json', json_encode([
+        'resources/js/app.tsx' => [
+            'file' => 'assets/app-published.js',
+            'css' => ['assets/app-published.css'],
+            'isEntry' => true,
+            'src' => 'resources/js/app.tsx',
+        ],
+        'resources/images/favicon.svg' => [
+            'file' => 'assets/favicon-published.svg',
+            'src' => 'resources/images/favicon.svg',
+        ],
+    ], JSON_THROW_ON_ERROR));
+    $filesystem->put($buildDirectory.'/assets/app-published.js', 'published');
+    $filesystem->put($buildDirectory.'/assets/app-published.css', 'published');
+    $filesystem->put($buildDirectory.'/assets/favicon-published.svg', '<svg />');
+    $filesystem->put(public_path('hot'), 'http://127.0.0.1:5173');
+
+    expect($globalVite->isRunningHot())->toBeTrue()
+        ->and($globalVite->hotFile())->toBe(public_path('/hot'));
+
+    Route::get(
+        '/package-vite-hot-isolation',
+        fn () => Inertia::render('Test')->rootView('horizon-new-dawn::app'),
+    );
+
+    $content = get('/package-vite-hot-isolation')
+        ->assertOk()
+        ->getContent();
+
+    if ($content === false) {
+        throw new RuntimeException('The hot-isolation response content could not be read.');
+    }
+
+    expect($content)
+        ->toContain('/vendor/horizon-new-dawn/build/assets/app-published.js')
+        ->toContain('/vendor/horizon-new-dawn/build/assets/app-published.css')
+        ->toContain('/vendor/horizon-new-dawn/build/assets/favicon-published.svg')
+        ->toContain('data-horizon-favicon');
+    expect($content)
+        ->not->toContain('http://127.0.0.1:5173')
+        ->and($content)->not->toContain('@vite/client')
+        ->and($content)->not->toContain('resources/js/app.tsx')
+        ->and($content)->not->toContain('/vendor/horizon-new-dawn/build/favicon.svg');
+    expect($globalVite->isRunningHot())->toBeTrue()
+        ->and($globalVite->hotFile())->toBe($originalHotFile)
+        ->and($globalVite->hotFile())->toBe(public_path('/hot'));
+});
+
+it('propagates the host Vite CSP nonce onto package Vite tags', function (): void {
+    $filesystem = app(Filesystem::class);
+    $buildDirectory = public_path('vendor/horizon-new-dawn/build');
+
+    $filesystem->ensureDirectoryExists($buildDirectory.'/assets');
+    $filesystem->put($buildDirectory.'/manifest.json', json_encode([
+        'resources/js/app.tsx' => [
+            'file' => 'assets/app-nonce.js',
+            'css' => ['assets/app-nonce.css'],
+            'isEntry' => true,
+            'src' => 'resources/js/app.tsx',
+        ],
+    ], JSON_THROW_ON_ERROR));
+    $filesystem->put($buildDirectory.'/assets/app-nonce.js', 'nonce');
+    $filesystem->put($buildDirectory.'/assets/app-nonce.css', 'nonce');
+
+    app(Vite::class)->useCspNonce('package-vite-csp-nonce');
+
+    $tags = (string) app(AssetManifest::class)->tags();
+
+    expect($tags)
+        ->toContain('nonce="package-vite-csp-nonce"')
+        ->toContain('type="module"')
+        ->toContain('rel="stylesheet"')
+        ->and(app(Vite::class)->cspNonce())->toBe('package-vite-csp-nonce');
+});
+
+it('versions requests with Laravel Vite manifestHash', function (): void {
+    $filesystem = app(Filesystem::class);
+    $buildDirectory = public_path('vendor/horizon-new-dawn/build');
+    $manifestPath = $buildDirectory.'/manifest.json';
+
+    $filesystem->ensureDirectoryExists($buildDirectory);
+
+    $firstManifest = json_encode([
+        'resources/js/app.tsx' => [
+            'file' => 'assets/app-first.js',
+            'css' => [],
+            'isEntry' => true,
+            'src' => 'resources/js/app.tsx',
+        ],
+    ], JSON_THROW_ON_ERROR);
+    $secondManifest = json_encode([
+        'resources/js/app.tsx' => [
+            'file' => 'assets/app-second.js',
+            'css' => [],
+            'isEntry' => true,
+            'src' => 'resources/js/app.tsx',
+        ],
+    ], JSON_THROW_ON_ERROR);
+
+    $filesystem->put($manifestPath, $firstManifest);
+
+    expect(app(AssetManifest::class)->version())->toBe(md5($firstManifest));
+
+    $filesystem->put($manifestPath, $secondManifest);
+
+    expect(app(AssetManifest::class)->version())->toBe(md5($secondManifest));
 });

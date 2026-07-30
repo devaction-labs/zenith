@@ -9,7 +9,7 @@ export function NewEntriesTableRow({ columns, onLoad }: { columns: number; onLoa
       <p className="inline-flex items-center gap-2">
         <RefreshCwIcon aria-hidden="true" className="size-4 shrink-0" />
         <span>
-          New results are available.{" "}
+          Results have changed.{" "}
           <a
             href="#"
             className="font-medium text-new-entries-foreground underline decoration-new-entries-foreground/50 underline-offset-4 transition-colors hover:decoration-new-entries-foreground"

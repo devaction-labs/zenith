@@ -25,11 +25,13 @@ final class QueuePauseController
         $data = $request->getData();
 
         try {
-            $pause->handle($data);
+            $until = $pause->handle($data);
 
             return back()->with(
                 'toast.success',
-                "Paused {$data->queue} {$this->durationDescription($data->durationMinutes)}.",
+                "Paused {$data->queue} {$this->durationDescription(
+                    $until === null ? null : $data->durationMinutes,
+                )}.",
             );
         } catch (Throwable $exception) {
             report($exception);
@@ -47,7 +49,7 @@ final class QueuePauseController
         try {
             $resume->handle($data->connection, $data->queue);
 
-            return back()->with('toast.success', "Resumed {$data->queue}.");
+            return back()->with('toast.success', "The {$data->queue} queue has been signaled to resume.");
         } catch (Throwable $exception) {
             report($exception);
 

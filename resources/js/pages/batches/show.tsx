@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { BatchPendingJobsActions } from "@/components/batches/batch-actions";
 import { BatchJobsTabs } from "@/components/batches/batch-jobs-tabs";
 import { ProgressRing } from "@/components/batches/progress-ring";
+import { DetailList, DetailListItem } from "@/components/detail-list";
 import { Duration } from "@/components/duration";
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -44,7 +45,7 @@ function BatchShow({ horizon, batch }: BatchDetailPageProps) {
   return (
     <>
       <Head title={batch.displayName} />
-      <div className="flex flex-col gap-3.5">
+      <div className="flex flex-col gap-[7px] min-[1140px]:gap-3.5">
         <Card>
           <CardHeader>
             <CardTitle className="truncate" title={batch.displayName}>
@@ -120,6 +121,7 @@ function BatchDetails({ batch, horizonBaseUrl }: { batch: BatchDetail; horizonBa
     label: string;
     value: React.ReactNode;
     href?: string;
+    identifier?: boolean;
   }> = [
     {
       label: "Progress",
@@ -132,10 +134,28 @@ function BatchDetails({ batch, horizonBaseUrl }: { batch: BatchDetail; horizonBa
         />
       ),
     },
-    { label: "ID", value: batch.id },
+    { label: "ID", value: batch.id, identifier: true },
     ...(batch.name ? [{ label: "Name", value: batch.name }] : []),
-    ...(batch.connection ? [{ label: "Connection", value: batch.connection }] : []),
-    ...(batch.queue && queueUrl ? [{ label: "Queue", value: batch.queue, href: queueUrl }] : []),
+    {
+      label: "Connection",
+      value: attributionValue(
+        batch.connection,
+        batch.connectionExplicit === true,
+        batch.attributionCaptured === true,
+      ),
+    },
+    {
+      label: "Queue",
+      value: attributionValue(
+        batch.queue,
+        batch.queueExplicit === true,
+        batch.attributionCaptured === true,
+      ),
+      href:
+        (batch.queueExplicit === true || batch.attributionCaptured === true) && queueUrl
+          ? queueUrl
+          : undefined,
+    },
     { label: "Total jobs", value: numberFormatter.format(batch.totalJobs) },
     { label: "Pending jobs", value: numberFormatter.format(batch.jobs.pending.total) },
     { label: "Failed job attempts", value: numberFormatter.format(batch.failedJobAttempts) },
@@ -157,32 +177,44 @@ function BatchDetails({ batch, horizonBaseUrl }: { batch: BatchDetail; horizonBa
   ];
 
   return (
-    <dl className="pt-1.5 pb-2.5">
+    <DetailList className="text-sm">
       {details.map((detail, index) => (
-        <div
-          className={`flex gap-4 px-6 py-2.5 text-sm ${
-            index > 0 ? "border-t border-dashed border-separator" : ""
-          }`}
+        <DetailListItem
           key={detail.label}
+          label={detail.label}
+          bordered={index > 0}
+          scrollable={detail.identifier}
+          valueTestId={detail.identifier ? "batch-id" : undefined}
         >
-          <dt className="w-40 shrink-0 text-muted-foreground">{detail.label}</dt>
-          <dd>
-            {detail.href ? (
-              <Link
-                className="break-all text-foreground underline decoration-foreground/40 underline-offset-4 transition-colors hover:text-primary hover:decoration-primary"
-                href={detail.href}
-                prefetch
-              >
-                {detail.value}
-              </Link>
-            ) : (
-              <span className="break-all">{detail.value}</span>
-            )}
-          </dd>
-        </div>
+          {detail.href ? (
+            <Link
+              className="break-all text-foreground underline decoration-foreground/40 underline-offset-4 transition-colors hover:text-primary hover:decoration-primary"
+              href={detail.href}
+              prefetch
+            >
+              {detail.value}
+            </Link>
+          ) : (
+            <span className={detail.identifier ? undefined : "break-all"}>{detail.value}</span>
+          )}
+        </DetailListItem>
       ))}
-    </dl>
+    </DetailList>
   );
+}
+
+function attributionValue(value: string | null, explicit: boolean, captured: boolean): string {
+  if (explicit) {
+    return value ?? "Not recorded";
+  }
+
+  if (value === null) {
+    return "Not recorded";
+  }
+
+  return captured
+    ? `Inferred when first discovered: ${value}`
+    : `Not recorded (current default: ${value})`;
 }
 
 function batchTimings(batch: BatchDetail): {

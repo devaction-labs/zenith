@@ -1,131 +1,180 @@
-import { Head, InfiniteScroll, usePage } from "@inertiajs/react";
-import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { Head, InfiniteScroll, router } from "@inertiajs/react";
+import { useCallback, useRef } from "react";
 
-import { JobFilters } from "@/components/jobs/job-filters";
+import {
+  emptyJobFilterValues,
+  JobFilters,
+  jobFilterKeys,
+  type JobFilterKey,
+  type JobFilterOption,
+  type JobFilterValues,
+} from "@/components/jobs/job-filters";
 import { JobTable } from "@/components/jobs/job-table";
 import { JobsPage } from "@/components/jobs/jobs-page";
-import { PendingJobsActions } from "@/components/jobs/pending-jobs-actions";
-import { Skeleton } from "@/components/ui/skeleton";
+import { index as jobsIndex } from "@/generated/routes/horizon-new-dawn/jobs";
 import { useAutoLoad } from "@/hooks/use-auto-load";
-import { useJobFilters } from "@/hooks/use-job-filters";
-import { useScheduledJobClock } from "@/hooks/use-scheduled-job-clock";
+import { useJobFilterCatalogRefresh } from "@/hooks/use-job-filter-catalog-refresh";
+import { useJobQueryControls } from "@/hooks/use-job-query-controls";
+import { useSortableRows, type SortColumn } from "@/hooks/use-sortable-rows";
 import { useAutoLoadPreference } from "@/layouts/horizon-layout";
-import { currentQueryParameter, replaceCurrentQuery } from "@/lib/url-query";
-import type { JobsPageProps } from "@/types/jobs";
+import { resolveHorizonRoute } from "@/lib/horizon-route";
+import { urlWithCurrentQuery } from "@/lib/url-query";
+import type { JobRow, JobsPageProps } from "@/types/jobs";
 
-function JobsIndex({ horizon, type, pendingCounts, jobs }: JobsPageProps) {
+const sortColumns = {
+  pending: [
+    { key: "name", value: (job) => job.name },
+    { key: "pushedAt", value: (job) => job.pushedAt },
+  ],
+  completed: [
+    { key: "name", value: (job) => job.name },
+    { key: "pushedAt", value: (job) => job.pushedAt },
+    { key: "completedAt", value: (job) => job.completedAt },
+    { key: "runtime", value: (job) => job.runtime },
+  ],
+  silenced: [
+    { key: "name", value: (job) => job.name },
+    { key: "pushedAt", value: (job) => job.pushedAt },
+    { key: "completedAt", value: (job) => job.completedAt },
+    { key: "runtime", value: (job) => job.runtime },
+  ],
+} satisfies Record<JobsPageProps["type"], readonly SortColumn<JobRow>[]>;
+const completedAtDescending = { key: "completedAt", direction: "desc" } as const;
+
+function JobsIndex(props: JobsPageProps) {
   return (
     <>
       <Head title="Jobs" />
-      <JobsContent
-        key={type}
-        horizon={horizon}
-        type={type}
-        pendingCounts={pendingCounts}
-        jobs={jobs}
-      />
+      <JobsContent key={props.type} {...props} />
     </>
   );
 }
 
-function JobsContent({ horizon, type, pendingCounts, jobs }: JobsPageProps) {
-  const page = usePage();
-  const [search, setSearch] = useState("");
-  const [hasClientSort, setHasClientSort] = useState(() => currentQueryParameter("sort") !== null);
-  const deferredSearch = useDeferredValue(search);
+function JobsContent({
+  horizon,
+  type,
+  query,
+  filters,
+  filterCatalog,
+  querySignature,
+  listRevision,
+  jobs,
+}: JobsPageProps) {
   const jobItemsRef = useRef<HTMLTableSectionElement>(null);
   const { autoLoad } = useAutoLoadPreference();
+  const refreshFilterCatalog = useJobFilterCatalogRefresh(horizon.pollInterval, filterCatalog);
+  const queryJobs = useCallback(
+    (nextQuery: string, nextFilters: JobsPageProps["filters"]) => {
+      const route = resolveHorizonRoute(jobsIndex(type), horizon.baseUrl);
+      const url = urlWithCurrentQuery(
+        route.url,
+        {
+          query: nextQuery,
+          filter_job: nextFilters.job,
+          filter_queue: nextFilters.queue,
+          filter_connection: nextFilters.connection,
+          filter_state: type === "pending" ? nextFilters.state : null,
+        },
+        ["starting_at"],
+      );
+
+      router.get(
+        url,
+        {},
+        {
+          only: jobQueryProps,
+          preserveScroll: true,
+          preserveState: true,
+          replace: true,
+          reset: ["jobs"],
+        },
+      );
+    },
+    [horizon.baseUrl, type],
+  );
+  const controls = useJobQueryControls({
+    query,
+    filters,
+    onSubmit: queryJobs,
+  });
   const refreshedJobs = useAutoLoad({
     enabled: autoLoad,
     prop: "jobs",
     interval: horizon.pollInterval,
-    items: jobs.data,
+    listRevision,
     additionalProps: type === "pending" ? pendingRefreshProps : undefined,
-    scope: type,
+    scope: querySignature,
+    polling: controls.isCommitted,
+    loadedItemCount: jobs.data.length,
   });
-  const now = useScheduledJobClock(refreshedJobs.items);
-  const jobFilters = useJobFilters(type, refreshedJobs.items, now);
-  const visibleJobs = useMemo(() => {
-    const query = deferredSearch.trim().toLocaleLowerCase();
-
-    if (query === "") {
-      return jobFilters.filteredJobs;
-    }
-
-    return jobFilters.filteredJobs.filter((job) =>
-      [job.id, job.name, job.shortName, job.connection, job.queue, ...job.tags]
-        .join(" ")
-        .toLocaleLowerCase()
-        .includes(query),
-    );
-  }, [deferredSearch, jobFilters.filteredJobs]);
-  const visibleJobIds = useMemo(() => new Set(visibleJobs.map((job) => job.id)), [visibleJobs]);
-  const hasSearch = search.trim().length > 0;
-  const hasFilters = jobFilters.activeFilterCount > 0;
-  let emptyDescription: string | undefined;
-
-  if (hasSearch && hasFilters) {
-    emptyDescription = "No loaded jobs match your search and filters.";
-  } else if (hasSearch) {
-    emptyDescription = "No loaded jobs match your search.";
-  } else if (hasFilters) {
-    emptyDescription = "No loaded jobs match the current filters.";
-  }
-
-  useEffect(() => {
-    if (
-      !hasClientSort ||
-      currentQueryParameter("sort") === null ||
-      currentQueryParameter("starting_at") === null
-    ) {
+  const columns = sortColumns[type];
+  const sortedJobs = useSortableRows(jobs.data, columns, {
+    persist: true,
+    defaultSort: type === "pending" ? undefined : completedAtDescending,
+  });
+  const filterKeys = jobFilterKeys(type);
+  const filterValues: JobFilterValues = {
+    ...emptyJobFilterValues,
+    ...controls.filters,
+  };
+  const hasSearch = query !== "";
+  const hasFilters = filterKeys.some((key) => filterValues[key] !== null);
+  const resolvedCatalog = filterCatalog ?? emptyFilterCatalog;
+  const filterOptions = {
+    job: catalogOptions(resolvedCatalog.jobs, filterValues.job, jobLabel(filterValues.job)),
+    queue: catalogOptions(
+      resolvedCatalog.queues.map((value) => ({ value, label: value })),
+      filterValues.queue,
+      filterValues.queue,
+    ),
+    connection: catalogOptions(
+      resolvedCatalog.connections.map((value) => ({ value, label: value })),
+      filterValues.connection,
+      filterValues.connection,
+    ),
+  };
+  const setFilterValue = (filterKey: JobFilterKey, value: string | null) => {
+    if (!filterKeys.includes(filterKey)) {
       return;
     }
 
-    replaceCurrentQuery({ starting_at: null });
-  }, [hasClientSort, page.url]);
-
+    controls.setFilterValue(filterKey, value);
+  };
   return (
     <JobsPage
       activeTab={type}
-      horizonBaseUrl={horizon.baseUrl}
-      search={search}
-      searchLabel={`Search ${type} jobs`}
-      searchPlaceholder={`Search ${type} jobs`}
-      onSearchChange={setSearch}
+      search={controls.search}
+      searchLabel={`Search ${type} jobs by class or ID`}
+      searchPlaceholder="Search by job class or exact ID"
+      onSearchChange={controls.setSearch}
       filters={
         <JobFilters
-          jobs={refreshedJobs.items}
-          filterKeys={jobFilters.availableFilterKeys}
-          values={jobFilters.values}
-          onFilterChange={jobFilters.setFilterValue}
-          onClearFilters={jobFilters.clearAllFilters}
-          description={`Narrow the loaded ${type} jobs using filters available for this tab.`}
+          filterKeys={filterKeys}
+          options={filterOptions}
+          values={filterValues}
+          onIntent={refreshFilterCatalog}
+          onFilterChange={setFilterValue}
+          onClearFilters={controls.clearFilters}
+          description={
+            resolvedCatalog.available
+              ? (resolvedCatalog.message ??
+                `Narrow all retained ${type} jobs with exact server-side filters.`)
+              : (resolvedCatalog.message ?? "Global job filters are currently unavailable.")
+          }
         />
-      }
-      actions={
-        type === "pending" ? (
-          <PendingJobsActions
-            horizonBaseUrl={horizon.baseUrl}
-            counts={{
-              ready: pendingCounts?.ready ?? null,
-              delayed: pendingCounts?.delayed ?? null,
-            }}
-            disabled={!jobs.available || pendingCounts?.available !== true}
-          />
-        ) : null
       }
     >
       <InfiniteScroll
-        key={`${type}:${jobs.available}`}
+        key={`${type}:${querySignature}:${jobs.available}`}
         data="jobs"
         itemsElement={jobItemsRef}
         onlyNext
-        preserveUrl={hasClientSort}
+        preserveUrl
         buffer={600}
-        loading={<LoadingRows />}
+        params={{ onBefore: refreshedJobs.onBeforeNextPage }}
       >
         <JobTable
-          jobs={refreshedJobs.items}
+          jobs={sortedJobs.rows}
           type={type}
           horizonBaseUrl={horizon.baseUrl}
           available={jobs.available}
@@ -133,9 +182,21 @@ function JobsContent({ horizon, type, pendingCounts, jobs }: JobsPageProps) {
           hasNewEntries={refreshedJobs.hasNewEntries}
           onLoadNewEntries={refreshedJobs.loadNewEntries}
           emptyTitle={hasSearch || hasFilters ? `No matching ${type} jobs` : undefined}
-          emptyDescription={emptyDescription}
-          visibleJobIds={visibleJobIds}
-          onSortedChange={setHasClientSort}
+          emptyDescription={
+            hasSearch && hasFilters
+              ? `No retained ${type} jobs match this search and filters.`
+              : hasSearch
+                ? `No retained ${type} jobs match “${query}”.`
+                : hasFilters
+                  ? `No retained ${type} jobs match the current filters.`
+                  : undefined
+          }
+          sorting={{
+            key: sortedJobs.sort?.key ?? null,
+            direction: sortedJobs.sort?.direction ?? "asc",
+            columns: columns.map((column) => column.key),
+            onSort: sortedJobs.toggle,
+          }}
           bodyRef={jobItemsRef}
         />
       </InfiniteScroll>
@@ -143,15 +204,32 @@ function JobsContent({ horizon, type, pendingCounts, jobs }: JobsPageProps) {
   );
 }
 
-const pendingRefreshProps = ["pendingCounts"];
+const emptyFilterCatalog = {
+  available: false,
+  jobs: [],
+  queues: [],
+  connections: [],
+  message: "Preparing exact server-side filters.",
+} as const;
 
-function LoadingRows() {
-  return (
-    <div className="flex flex-col gap-2 border-t p-4" aria-label="Loading more jobs">
-      <Skeleton className="h-9 w-full" />
-      <Skeleton className="h-9 w-full" />
-    </div>
-  );
+const pendingRefreshProps = ["pendingCounts"];
+const jobQueryProps = ["query", "filters", "querySignature", "listRevision", "jobs", "horizon"];
+
+function catalogOptions(
+  options: readonly JobFilterOption[],
+  activeValue: string | null,
+  activeLabel: string | null,
+): JobFilterOption[] {
+  const resolved =
+    activeValue === null
+      ? options
+      : [...options, { value: activeValue, label: activeLabel ?? activeValue }];
+
+  return Array.from(new Map(resolved.map((option) => [option.value, option])).values());
+}
+
+function jobLabel(job: string | null): string | null {
+  return job?.split("\\").at(-1) ?? null;
 }
 
 export default JobsIndex;

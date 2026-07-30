@@ -23,18 +23,30 @@ import {
   SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
   useSidebar,
 } from "@/components/ui/sidebar";
 import { dashboard } from "@/generated/routes/horizon-new-dawn";
 import { index as batchesIndex } from "@/generated/routes/horizon-new-dawn/batches";
+import { index as failedJobsIndex } from "@/generated/routes/horizon-new-dawn/failed-jobs";
 import { index as jobsIndex } from "@/generated/routes/horizon-new-dawn/jobs";
 import { index as metricsIndex } from "@/generated/routes/horizon-new-dawn/metrics";
 import { index as monitoringIndex } from "@/generated/routes/horizon-new-dawn/monitoring";
 import { index as runningInstancesIndex } from "@/generated/routes/horizon-new-dawn/instances";
 import { index as queuesIndex } from "@/generated/routes/horizon-new-dawn/queues";
+import { formatCount } from "@/lib/format-count";
 import { resolveHorizonRoute } from "@/lib/horizon-route";
 import type { HorizonStatus as HorizonStatusValue } from "@/types/dashboard";
 import type { HorizonNavigation, NavigationCounts } from "@/types/page";
+
+type NavigationChildEntry = {
+  label: string;
+  active: HorizonNavigation;
+  count: keyof NavigationCounts;
+  route: () => { url: string };
+};
 
 type NavigationEntry = {
   label: string;
@@ -42,6 +54,7 @@ type NavigationEntry = {
   icon: typeof DashboardNavigationIcon;
   count: keyof NavigationCounts | Array<keyof NavigationCounts> | null;
   route: () => { url: string };
+  children?: NavigationChildEntry[];
 };
 
 const navigation: NavigationEntry[] = [
@@ -93,6 +106,32 @@ const navigation: NavigationEntry[] = [
     icon: JobsNavigationIcon,
     count: ["pending", "failed", "completed", "silenced"],
     route: () => jobsIndex("pending"),
+    children: [
+      {
+        label: "Pending",
+        active: "pending",
+        count: "pending",
+        route: () => jobsIndex("pending"),
+      },
+      {
+        label: "Failed",
+        active: "failed",
+        count: "failed",
+        route: () => failedJobsIndex(),
+      },
+      {
+        label: "Completed",
+        active: "completed",
+        count: "completed",
+        route: () => jobsIndex("completed"),
+      },
+      {
+        label: "Silenced",
+        active: "silenced",
+        count: "silenced",
+        route: () => jobsIndex("silenced"),
+      },
+    ],
   },
 ];
 
@@ -104,6 +143,7 @@ export function AppSidebar({
   autoLoad,
   onAutoLoadChange,
   navigationCounts,
+  jobNavigationBreakdown = true,
 }: {
   activeNavigation: HorizonNavigation;
   horizonBaseUrl: string;
@@ -112,6 +152,7 @@ export function AppSidebar({
   autoLoad?: boolean;
   onAutoLoadChange?: (enabled: boolean) => void;
   navigationCounts?: NavigationCounts;
+  jobNavigationBreakdown?: boolean;
 }) {
   const { isMobile, setOpenMobile } = useSidebar();
   const closeMobileSidebar = () => setOpenMobile(false);
@@ -151,36 +192,71 @@ export function AppSidebar({
                 const isActive = item.active.includes(activeNavigation);
                 const url = resolveHorizonRoute(item.route(), horizonBaseUrl).url;
                 const count = navigationCount(item.count, navigationCounts);
+                const children = jobNavigationBreakdown ? item.children : undefined;
 
                 return (
                   <SidebarMenuItem key={item.label}>
-                    <SidebarMenuButton
-                      className="h-9 gap-2.5 rounded-lg border-t border-transparent px-2.5 text-sm font-normal data-active:border-nav-top data-active:bg-sidebar-accent data-active:text-sidebar-accent-foreground data-active:font-medium"
-                      isActive={isActive}
-                      tooltip={item.label}
-                      aria-current={isActive ? "page" : undefined}
-                      render={
-                        <Link
-                          href={url}
-                          prefetch={item.active.includes("dashboard") ? ["mount", "hover"] : true}
-                          cacheFor={item.active.includes("dashboard") ? ["5s", "5m"] : undefined}
-                          onClick={closeMobileSidebar}
-                        />
-                      }
-                    >
-                      <item.icon
-                        className={
-                          isActive ? "size-3.5 text-primary" : "size-3.5 text-muted-foreground"
+                    <div className="relative">
+                      <SidebarMenuButton
+                        className="h-9 gap-2.5 rounded-lg border-t border-transparent px-2.5 text-sm font-normal data-active:border-nav-top data-active:bg-sidebar-accent data-active:text-sidebar-accent-foreground data-active:font-medium"
+                        isActive={isActive}
+                        tooltip={item.label}
+                        aria-current={isActive && children === undefined ? "page" : undefined}
+                        render={
+                          <Link
+                            href={url}
+                            prefetch={item.active.includes("dashboard") ? ["mount", "hover"] : true}
+                            cacheFor={item.active.includes("dashboard") ? ["5s", "5m"] : undefined}
+                            onClick={closeMobileSidebar}
+                          />
                         }
-                        strokeWidth={1.75}
-                        aria-hidden="true"
-                      />
-                      <span>{item.label}</span>
-                    </SidebarMenuButton>
-                    {count !== null ? (
-                      <SidebarMenuBadge className="!top-1/2 -translate-x-[2px] -translate-y-1/2 font-normal !text-muted-foreground opacity-60">
-                        {count}
-                      </SidebarMenuBadge>
+                      >
+                        <item.icon
+                          className={
+                            isActive ? "size-3.5 text-primary" : "size-3.5 text-muted-foreground"
+                          }
+                          strokeWidth={1.75}
+                          aria-hidden="true"
+                        />
+                        <span>{item.label}</span>
+                      </SidebarMenuButton>
+                      {count !== null ? (
+                        <SidebarMenuBadge className="!top-1/2 -translate-x-[2px] -translate-y-1/2 font-normal !text-sidebar-muted-foreground">
+                          {formatCount(count)}
+                        </SidebarMenuBadge>
+                      ) : null}
+                    </div>
+                    {children ? (
+                      <SidebarMenuSub className="mt-1 mr-0 pr-0">
+                        {children.map((child) => {
+                          const childIsActive = child.active === activeNavigation;
+                          const childUrl = resolveHorizonRoute(child.route(), horizonBaseUrl).url;
+                          const childCount = navigationCount(child.count, navigationCounts);
+
+                          return (
+                            <SidebarMenuSubItem key={child.label}>
+                              <SidebarMenuSubButton
+                                className="w-full pr-2.5 pl-2.75"
+                                isActive={childIsActive}
+                                aria-current={childIsActive ? "page" : undefined}
+                                render={
+                                  <Link href={childUrl} prefetch onClick={closeMobileSidebar} />
+                                }
+                              >
+                                <span className="min-w-0 truncate">{child.label}</span>
+                                {childCount !== null ? (
+                                  <span
+                                    aria-hidden="true"
+                                    className="ml-auto shrink-0 text-xs font-normal text-sidebar-muted-foreground tabular-nums"
+                                  >
+                                    {formatCount(childCount)}
+                                  </span>
+                                ) : null}
+                              </SidebarMenuSubButton>
+                            </SidebarMenuSubItem>
+                          );
+                        })}
+                      </SidebarMenuSub>
                     ) : null}
                   </SidebarMenuItem>
                 );

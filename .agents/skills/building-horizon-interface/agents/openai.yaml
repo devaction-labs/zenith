@@ -1,0 +1,4 @@
+interface:
+  display_name: "Build Horizon Interface"
+  short_description: "Build consistent responsive Horizon screens"
+  default_prompt: "Use $building-horizon-interface to build a consistent, responsive Horizon New Dawn screen."

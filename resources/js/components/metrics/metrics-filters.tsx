@@ -55,7 +55,7 @@ export function MetricsFilters({
             type="button"
             variant="action"
             size="icon-sm"
-            className="relative"
+            className="relative text-muted-foreground"
             aria-label={
               activeFilterCount > 0
                 ? `Filter ${singular} metrics, ${activeFilterCount} active`
@@ -147,7 +147,7 @@ function MetricFilterSelect<Value extends string>({
         <SelectTrigger id={triggerId} className="w-full">
           <SelectValue />
         </SelectTrigger>
-        <SelectContent alignItemWithTrigger={false}>
+        <SelectContent alignItemWithTrigger={false} listLabel={`${label} options`}>
           <SelectGroup>
             {items.map((item) => (
               <SelectItem key={item.value} value={item.value}>

@@ -57,7 +57,8 @@ Route::delete('/instances/{instance}/pause', [HorizonPauseController::class, 'de
     ->name('instances.pause.destroy');
 
 Route::get('/monitoring', [MonitoringController::class, 'index'])->name('monitoring.index');
-Route::post('/monitoring', [MonitoringController::class, 'store'])->name('monitoring.store');
+Route::post('/monitoring', [MonitoringController::class, 'store'])
+    ->name('monitoring.store');
 Route::delete('/monitoring/actions/clear-jobs/{tag}', [MonitoringRecentJobController::class, 'destroy'])
     ->where('tag', '.+')
     ->name('monitoring.jobs.destroy');
@@ -86,13 +87,16 @@ Route::delete('/batches/{scope}', [BatchClearController::class, 'destroy'])
     ->where('scope', 'incomplete|complete|finished|cancelled')
     ->name('batches.clear.destroy');
 Route::get('/batches/{batch}', [BatchController::class, 'show'])->name('batches.show');
-Route::post('/batches/{batch}/cancel', [BatchCancelController::class, 'store'])->name('batches.cancel.store');
-Route::post('/batches/{batch}/retry', [BatchRetryController::class, 'store'])->name('batches.retry.store');
+Route::post('/batches/{batch}/cancel', [BatchCancelController::class, 'store'])
+    ->name('batches.cancel.store');
+Route::post('/batches/{batch}/retry', [BatchRetryController::class, 'store'])
+    ->name('batches.retry.store');
 Route::delete('/batches/{batch}/failed', [BatchFailedJobClearController::class, 'destroy'])
     ->name('batches.failed.clear.destroy');
 
 Route::get('/queues', [QueueController::class, 'index'])->name('queues.index');
-Route::delete('/queues', [QueueClearAllController::class, 'destroy'])->name('queues.clear-all.destroy');
+Route::delete('/queues', [QueueClearAllController::class, 'destroy'])
+    ->name('queues.clear-all.destroy');
 Route::get('/queues/{queue}', [QueueController::class, 'show'])
     ->where('queue', '.+')
     ->name('queues.show');
@@ -114,13 +118,15 @@ Route::post('/queues/{queue}/batches/retry-failed-jobs', [QueueBatchRetryControl
     ->where('queue', '.+?')
     ->name('queues.batches.retry-failed.store');
 
-Route::delete('/jobs/pending', [PendingJobClearAllController::class, 'destroy'])->name('jobs.pending.clear.destroy');
+Route::delete('/jobs/pending', [PendingJobClearAllController::class, 'destroy'])
+    ->name('jobs.pending.clear.destroy');
 Route::delete('/jobs/pending/cancel/{scope}', [PendingJobsCancellationController::class, 'destroy'])
     ->where('scope', 'ready|delayed|pending')
     ->name('jobs.pending.cancel.destroy');
 Route::post('/jobs/pending/{job}/release', [DelayedJobReleaseController::class, 'store'])
     ->name('jobs.pending.release.store');
-Route::delete('/jobs/pending/{job}', [PendingJobController::class, 'destroy'])->name('jobs.pending.destroy');
+Route::delete('/jobs/pending/{job}', [PendingJobController::class, 'destroy'])
+    ->name('jobs.pending.destroy');
 Route::get('/jobs/{type}', [JobController::class, 'index'])
     ->where('type', 'pending|completed|silenced')
     ->name('jobs.index');
@@ -129,8 +135,12 @@ Route::get('/jobs/{type}/{job}', [JobController::class, 'show'])
     ->name('jobs.show');
 
 Route::get('/failed', [FailedJobController::class, 'index'])->name('failed-jobs.index');
-Route::delete('/failed', [FailedJobClearAllController::class, 'destroy'])->name('failed-jobs.clear-all.destroy');
-Route::post('/failed/retry-all', [FailedJobRetryAllController::class, 'store'])->name('failed-jobs.retry-all.store');
+Route::delete('/failed', [FailedJobClearAllController::class, 'destroy'])
+    ->name('failed-jobs.clear-all.destroy');
+Route::post('/failed/retry-all', [FailedJobRetryAllController::class, 'store'])
+    ->name('failed-jobs.retry-all.store');
 Route::get('/failed/{job}', [FailedJobController::class, 'show'])->name('failed-jobs.show');
-Route::delete('/failed/{job}', [FailedJobController::class, 'destroy'])->name('failed-jobs.destroy');
-Route::post('/failed/{job}/retry', [FailedJobRetryController::class, 'store'])->name('failed-jobs.retry.store');
+Route::delete('/failed/{job}', [FailedJobController::class, 'destroy'])
+    ->name('failed-jobs.destroy');
+Route::post('/failed/{job}/retry', [FailedJobRetryController::class, 'store'])
+    ->name('failed-jobs.retry.store');

@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 
 import SupervisorShow from "@/pages/supervisors/show";
 import type { SupervisorDetailsPageProps } from "@/types/supervisors";

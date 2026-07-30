@@ -13,6 +13,8 @@ final class BatchFilterCatalogData extends Data
      */
     public function __construct(
         public readonly bool $available,
+        public readonly bool $complete,
+        public readonly ?string $message,
         public readonly array $queues,
         public readonly array $connections,
     ) {}

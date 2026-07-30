@@ -4,27 +4,51 @@ declare(strict_types=1);
 
 namespace NckRtl\HorizonNewDawn;
 
+use Illuminate\Contracts\Bus\Dispatcher;
+use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Illuminate\Contracts\Foundation\CachesRoutes;
 use Illuminate\Contracts\Redis\Factory as RedisFactory;
 use Illuminate\Routing\Router;
 use Illuminate\Support\ServiceProvider;
+use Inertia\Inertia;
+use Inertia\Ssr\ExcludesSsrPaths;
+use Inertia\Ssr\Gateway;
 use Laravel\Horizon\Console\WorkCommand as HorizonWorkCommand;
 use Laravel\Horizon\Contracts\JobRepository;
 use Laravel\Horizon\Contracts\MasterSupervisorRepository;
 use Laravel\Horizon\Contracts\WorkloadRepository;
+use Laravel\Horizon\Http\Controllers\BatchesController as HorizonBatchesController;
 use Laravel\Horizon\Http\Controllers\HomeController as HorizonHomeController;
 use Laravel\Horizon\Http\Controllers\MonitoringController as HorizonMonitoringController;
 use Laravel\Horizon\Http\Middleware\Authenticate;
 use Laravel\Horizon\WaitTimeCalculator;
 use NckRtl\HorizonNewDawn\Assets\AssetPath;
+use NckRtl\HorizonNewDawn\Batches\DatabaseBatchCapability;
+use NckRtl\HorizonNewDawn\Batches\DatabaseBatchMetadataSynchronizer;
+use NckRtl\HorizonNewDawn\Batches\DatabaseBatchQuery;
+use NckRtl\HorizonNewDawn\BulkOperations\BulkOperationSnapshot;
+use NckRtl\HorizonNewDawn\Console\AssetsCommand;
 use NckRtl\HorizonNewDawn\Console\InstallCommand;
+use NckRtl\HorizonNewDawn\Console\WarmBatchMetadataCommand;
+use NckRtl\HorizonNewDawn\Console\WarmRetainedJobsCommand;
 use NckRtl\HorizonNewDawn\Dashboard\DashboardPendingState;
+use NckRtl\HorizonNewDawn\FailedJobs\Actions\RetryAllFailedJobs;
+use NckRtl\HorizonNewDawn\FailedJobs\Actions\RetryFailedJob;
+use NckRtl\HorizonNewDawn\FailedJobs\FailedJobRetryEligibility;
+use NckRtl\HorizonNewDawn\FailedJobs\FailedJobRetryLock;
+use NckRtl\HorizonNewDawn\Http\Controllers\BatchesApiController;
 use NckRtl\HorizonNewDawn\Http\Controllers\HomeController;
 use NckRtl\HorizonNewDawn\Http\Controllers\MonitoringApiController;
 use NckRtl\HorizonNewDawn\Http\Middleware\HandleInertiaRequests;
+use NckRtl\HorizonNewDawn\Jobs\Actions\CancelPendingJob;
+use NckRtl\HorizonNewDawn\Jobs\Actions\CancelPendingJobs;
 use NckRtl\HorizonNewDawn\Jobs\ForgetsPendingJob;
 use NckRtl\HorizonNewDawn\Jobs\JobsData;
-use NckRtl\HorizonNewDawn\Jobs\PendingJobPaginator;
+use NckRtl\HorizonNewDawn\Jobs\PendingJobEntryScanner;
+use NckRtl\HorizonNewDawn\Jobs\PendingJobStateIndex;
+use NckRtl\HorizonNewDawn\Jobs\RetainedJobFilterCatalog;
+use NckRtl\HorizonNewDawn\Jobs\RetainedJobIndex;
+use NckRtl\HorizonNewDawn\Jobs\RetainedJobQuery;
 use NckRtl\HorizonNewDawn\Queues\ClearQueueMetadata;
 use NckRtl\HorizonNewDawn\Queues\ClearsQueueMetadata;
 use NckRtl\HorizonNewDawn\Support\FrameworkCapabilities;
@@ -33,6 +57,33 @@ use NckRtl\HorizonNewDawn\Support\HorizonWorkCommandCompatibility;
 
 final class HorizonNewDawnServiceProvider extends ServiceProvider
 {
+    /** @var list<string> */
+    private const array ROOT_PATH_SSR_EXCLUSIONS = [
+        '/',
+        'dashboard',
+        'instances',
+        'supervisors/*',
+        'monitoring',
+        'monitoring/*',
+        'metrics',
+        'metrics/jobs',
+        'metrics/jobs/*',
+        'metrics/queues',
+        'metrics/queues/*',
+        'batches',
+        'batches/*',
+        'queues',
+        'queues/*',
+        'jobs/pending',
+        'jobs/pending/*',
+        'jobs/completed',
+        'jobs/completed/*',
+        'jobs/silenced',
+        'jobs/silenced/*',
+        'failed',
+        'failed/*',
+    ];
+
     public function register(): void
     {
         $this->mergeConfigFrom(
@@ -40,16 +91,60 @@ final class HorizonNewDawnServiceProvider extends ServiceProvider
             'horizon-new-dawn',
         );
 
+        $this->app->bind(HorizonBatchesController::class, BatchesApiController::class);
         $this->app->bind(HorizonHomeController::class, HomeController::class);
         $this->app->bind(HorizonMonitoringController::class, MonitoringApiController::class);
         $this->app->bind(ClearsQueueMetadata::class, ClearQueueMetadata::class);
         $this->app->bind(ForgetsPendingJob::class, ClearQueueMetadata::class);
+        $this->app->scoped(DatabaseBatchCapability::class);
+        $this->app->scoped(DatabaseBatchMetadataSynchronizer::class);
+        $this->app->scoped(DatabaseBatchQuery::class);
+        $this->app->scoped(PendingJobStateIndex::class);
+        $this->app->bind(
+            PendingJobEntryScanner::class,
+            fn (): PendingJobEntryScanner => $this->app->make(PendingJobStateIndex::class),
+        );
+        $this->app->scoped(RetainedJobIndex::class);
+        $this->app->scoped(RetainedJobQuery::class);
+        $this->app->scoped(
+            RetainedJobFilterCatalog::class,
+            fn (): RetainedJobFilterCatalog => new RetainedJobFilterCatalog(
+                index: $this->app->make(RetainedJobIndex::class),
+                cache: $this->app->make(CacheFactory::class),
+            ),
+        );
+        $this->app->bind(
+            RetryFailedJob::class,
+            fn (): RetryFailedJob => new RetryFailedJob(
+                bus: $this->app->make(Dispatcher::class),
+                jobs: $this->app->make(JobRepository::class),
+                eligibility: $this->app->make(FailedJobRetryEligibility::class),
+                lock: $this->app->make(FailedJobRetryLock::class),
+            ),
+        );
+        $this->app->bind(
+            CancelPendingJobs::class,
+            fn (): CancelPendingJobs => new CancelPendingJobs(
+                jobs: $this->app->make(JobRepository::class),
+                cancel: $this->app->make(CancelPendingJob::class),
+                snapshots: $this->app->make(BulkOperationSnapshot::class),
+            ),
+        );
+        $this->app->bind(
+            RetryAllFailedJobs::class,
+            fn (): RetryAllFailedJobs => new RetryAllFailedJobs(
+                jobs: $this->app->make(JobRepository::class),
+                retry: $this->app->make(RetryFailedJob::class),
+                snapshots: $this->app->make(BulkOperationSnapshot::class),
+            ),
+        );
         $this->app->bind(
             JobsData::class,
             fn (): JobsData => new JobsData(
-                $this->app->make(JobRepository::class),
-                $this->app->make(RedisFactory::class),
-                $this->app->make(PendingJobPaginator::class),
+                jobs: $this->app->make(JobRepository::class),
+                redis: $this->app->make(RedisFactory::class),
+                retainedQuery: $this->app->make(RetainedJobQuery::class),
+                filterCatalog: $this->app->make(RetainedJobFilterCatalog::class),
             ),
         );
         $this->app->resolving(
@@ -78,6 +173,9 @@ final class HorizonNewDawnServiceProvider extends ServiceProvider
 
     public function boot(AssetPath $assetPath): void
     {
+        $this->excludeHorizonFromSsr($this->app->make(Gateway::class));
+
+        $this->loadMigrationsFrom(dirname(__DIR__).'/database/migrations');
         $this->loadViewsFrom(__DIR__.'/../resources/views', 'horizon-new-dawn');
 
         $this->publishes([
@@ -89,8 +187,34 @@ final class HorizonNewDawnServiceProvider extends ServiceProvider
         ], 'horizon-new-dawn-assets');
 
         if ($this->app->runningInConsole()) {
-            $this->commands([InstallCommand::class]);
+            $this->commands([
+                AssetsCommand::class,
+                InstallCommand::class,
+                WarmBatchMetadataCommand::class,
+                WarmRetainedJobsCommand::class,
+            ]);
         }
+    }
+
+    private function excludeHorizonFromSsr(Gateway $gateway): void
+    {
+        if (! $gateway instanceof ExcludesSsrPaths) {
+            return;
+        }
+
+        $configuredPath = config('horizon.path', 'horizon');
+
+        if (! is_string($configuredPath)) {
+            return;
+        }
+
+        $path = trim($configuredPath, '/');
+
+        Inertia::withoutSsr(
+            $path === ''
+                ? self::ROOT_PATH_SSR_EXCLUSIONS
+                : [$path, "{$path}/*"],
+        );
     }
 
     private function registerRoutes(): void

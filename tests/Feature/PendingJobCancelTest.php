@@ -2,19 +2,56 @@
 
 declare(strict_types=1);
 
+use Illuminate\Contracts\Queue\Queue;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
+use Illuminate\Queue\QueueManager;
+use Illuminate\Queue\SyncQueue;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\Exceptions;
 use Laravel\Horizon\Contracts\JobRepository;
 use Laravel\Horizon\Horizon;
+use NckRtl\HorizonNewDawn\BulkOperations\Jobs\CancelPendingJobsJob;
+use NckRtl\HorizonNewDawn\Jobs\PendingJobCancellationScope;
 
 use function NckRtl\HorizonNewDawn\Tests\Support\bindBrowserPageFixtures;
+use function NckRtl\HorizonNewDawn\Tests\Support\dashboardExpects;
 use function NckRtl\HorizonNewDawn\Tests\Support\dashboardReturns;
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardReturnsFor;
 use function NckRtl\HorizonNewDawn\Tests\Support\horizonJob;
 use function NckRtl\HorizonNewDawn\Tests\Support\mockDashboardContract;
 use function Pest\Laravel\delete;
 use function Pest\Laravel\withoutMiddleware;
+
+/** @param 'never'|'once'|'twice'|'zeroOrMoreTimes' $times */
+function bindPendingCancellationAsyncBulkQueue(string $times = 'once'): void
+{
+    config()->set('horizon-new-dawn.bulk_operations.connection', 'operations');
+    config()->set('horizon-new-dawn.bulk_operations.queue', 'horizon-maintenance');
+
+    $manager = Mockery::mock(QueueManager::class);
+    dashboardExpects($manager, 'connection', ['operations'], times: $times, value: Mockery::mock(Queue::class));
+    app()->instance(QueueManager::class, $manager);
+}
+
+function bindPendingCancellationSyncBulkQueue(): void
+{
+    config()->set('horizon-new-dawn.bulk_operations.connection', 'sync');
+    config()->set('horizon-new-dawn.bulk_operations.queue', null);
+
+    $manager = Mockery::mock(QueueManager::class);
+    dashboardExpects($manager, 'connection', ['sync'], value: new SyncQueue);
+    app()->instance(QueueManager::class, $manager);
+}
+
+/** @param array<int, object> $pendingJobs */
+function bindPendingCancellationJobs(array $pendingJobs): void
+{
+    $jobs = mockDashboardContract(JobRepository::class);
+    dashboardReturns($jobs, 'countPending', count($pendingJobs));
+    dashboardReturns($jobs, 'getPending', new Collection($pendingJobs));
+    app()->instance(JobRepository::class, $jobs);
+}
 
 beforeEach(function (): void {
     withoutMiddleware([PreventRequestForgery::class, ValidateCsrfToken::class]);
@@ -28,20 +65,63 @@ it('cancels an individual pending job', function (): void {
         ->assertRedirect('/horizon/jobs/pending');
 });
 
-it('cancels all pending jobs in the requested state', function (): void {
-    $job = horizonJob(0, 'pending-1');
-    $job->status = 'pending';
-    $job->completed_at = null;
+it('queues cancelling pending jobs in the requested state and queue', function (): void {
+    Bus::fake();
+    bindPendingCancellationAsyncBulkQueue();
 
-    $jobs = mockDashboardContract(JobRepository::class);
-    dashboardReturns($jobs, 'countPending', 1);
-    dashboardReturnsFor($jobs, 'getPending', ['-1'], new Collection([$job]));
-    dashboardReturnsFor($jobs, 'getJobs', [[$job->id]], new Collection([$job]));
-    app()->instance(JobRepository::class, $jobs);
+    $pending = horizonJob(0, 'pending-reports');
+    $pending->queue = 'reports';
+    bindPendingCancellationJobs([$pending]);
 
-    delete('/horizon/jobs/pending/cancel/delayed')
-        ->assertSessionHas('toast.success', 'Cancelled 1 delayed job.')
+    delete('/horizon/jobs/pending/cancel/delayed?queue=reports')
+        ->assertSessionHas('toast.success', 'Cancelling delayed jobs from reports was queued.')
         ->assertRedirect();
+
+    Bus::assertDispatched(
+        CancelPendingJobsJob::class,
+        fn (CancelPendingJobsJob $job): bool => $job->scope === PendingJobCancellationScope::Delayed
+            && $job->queueName === 'reports'
+            && $job->connection === 'operations'
+            && $job->queue === 'horizon-maintenance',
+    );
+    Bus::assertDispatchedTimes(CancelPendingJobsJob::class, 1);
+});
+
+it('reports bulk queue configuration failures without cancelling pending jobs', function (): void {
+    Bus::fake();
+    Exceptions::fake();
+    bindPendingCancellationSyncBulkQueue();
+
+    bindPendingCancellationJobs([]);
+
+    delete('/horizon/jobs/pending/cancel/pending')
+        ->assertRedirect()
+        ->assertSessionHas(
+            'toast.error',
+            'The bulk operation could not be queued. Check the application logs and try again.',
+        );
+
+    Bus::assertNothingDispatched();
+    Exceptions::assertReportedCount(1);
+});
+
+it('queues cancellation when the requested queue scope exceeds the former ceiling', function (): void {
+    Bus::fake();
+    bindPendingCancellationAsyncBulkQueue();
+
+    $first = horizonJob(0, 'pending-reports-1');
+    $first->queue = 'reports';
+    $second = horizonJob(1, 'pending-reports-2');
+    $second->queue = 'reports';
+    $other = horizonJob(2, 'pending-default');
+    $other->queue = 'default';
+    bindPendingCancellationJobs([$first, $second, $other]);
+
+    delete('/horizon/jobs/pending/cancel/pending?queue=reports')
+        ->assertRedirect()
+        ->assertSessionHas('toast.success', 'Cancelling pending jobs from reports was queued.');
+
+    Bus::assertDispatched(CancelPendingJobsJob::class);
 });
 
 it('rejects unsupported pending cancellation scopes', function (): void {

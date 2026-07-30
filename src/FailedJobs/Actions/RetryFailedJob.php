@@ -8,6 +8,7 @@ use Illuminate\Contracts\Bus\Dispatcher;
 use Laravel\Horizon\Contracts\JobRepository;
 use Laravel\Horizon\Jobs\RetryFailedJob as HorizonRetryFailedJob;
 use NckRtl\HorizonNewDawn\FailedJobs\FailedJobRetryEligibility;
+use NckRtl\HorizonNewDawn\FailedJobs\FailedJobRetryLock;
 
 final readonly class RetryFailedJob
 {
@@ -15,6 +16,7 @@ final readonly class RetryFailedJob
         private Dispatcher $bus,
         private JobRepository $jobs,
         private FailedJobRetryEligibility $eligibility,
+        private ?FailedJobRetryLock $lock = null,
     ) {}
 
     public function handle(string $id, ?object $job = null): bool
@@ -28,6 +30,18 @@ final readonly class RetryFailedJob
     }
 
     private function handleWithPolicy(string $id, ?object $job, bool $bulk): bool
+    {
+        if ($this->lock !== null) {
+            return $this->lock->run(
+                $id,
+                fn (): bool => $this->retry($id, null, $bulk),
+            );
+        }
+
+        return $this->retry($id, $job, $bulk);
+    }
+
+    private function retry(string $id, ?object $job, bool $bulk): bool
     {
         $job ??= $this->jobs->findFailed($id);
 

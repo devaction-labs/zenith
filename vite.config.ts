@@ -1,12 +1,28 @@
-import path from "node:path";
 import { wayfinder } from "@laravel/vite-plugin-wayfinder";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
-import { defineConfig } from "vite";
+import laravel from "laravel-vite-plugin";
+import { defineConfig } from "vite-plus";
 
 export default defineConfig({
+  lint: {
+    ignorePatterns: ["resources/js/generated/**"],
+    options: {
+      typeAware: true,
+      typeCheck: true,
+    },
+  },
+  fmt: {
+    ignorePatterns: ["resources/js/generated"],
+  },
+  // Relative base keeps CSS/font/chunk URLs valid after publish under vendor/horizon-new-dawn/build.
   base: "./",
   plugins: [
+    laravel({
+      input: "resources/js/app.tsx",
+      publicDirectory: "dist",
+      assets: "resources/images/favicon.svg",
+    }),
     wayfinder({
       actions: false,
       command: "node scripts/generate-wayfinder.mjs",
@@ -16,20 +32,4 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
-  resolve: {
-    alias: {
-      "@": path.resolve(import.meta.dirname, "resources/js"),
-    },
-  },
-  build: {
-    license: {
-      fileName: "THIRD_PARTY_LICENSES.md",
-    },
-    manifest: true,
-    outDir: "dist/build",
-    emptyOutDir: true,
-    rollupOptions: {
-      input: "resources/js/app.tsx",
-    },
-  },
 });

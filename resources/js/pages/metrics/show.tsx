@@ -16,7 +16,7 @@ function MetricShow({ horizon, name, preview }: MetricPreviewPageProps) {
   return (
     <>
       <Head title={`Metrics for ${name}`} />
-      <div className="flex flex-col gap-3.5">
+      <div className="flex flex-col gap-[7px] min-[1140px]:gap-3.5">
         {!preview.available ? (
           <Alert variant="destructive">
             <TriangleAlertIcon aria-hidden="true" />

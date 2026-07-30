@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
 import {
   HorizonInstanceActions,
@@ -16,10 +16,9 @@ vi.mock("@inertiajs/react", () => ({
   router: inertia,
 }));
 
-vi.mock("sonner", () => ({
+vi.mock("@/components/ui/toast", () => ({
   toast: {
-    error: vi.fn(),
-    success: vi.fn(),
+    add: vi.fn(),
   },
 }));
 

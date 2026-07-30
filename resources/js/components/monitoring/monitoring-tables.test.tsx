@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 
 import { MonitoredTagsTable } from "@/components/monitoring/monitored-tags-table";
 import { MonitoringJobTable } from "@/components/monitoring/monitoring-job-table";
@@ -111,6 +111,29 @@ describe("monitoring tables", () => {
       "/horizon/jobs/pending/pending-1",
     );
     expect(screen.getByRole("button", { name: "Monitor checkout" })).toBeVisible();
+    expect(screen.queryByRole("button", { name: /Sort by/ })).not.toBeInTheDocument();
+  });
+
+  it("renders the server-filtered monitored rows without additional client filtering", () => {
+    render(
+      <MonitoringJobTable
+        jobs={[
+          {
+            ...job,
+            id: "pending-2",
+            name: "App\\Jobs\\DifferentJob",
+            shortName: "DifferentJob",
+            queue: "other",
+          },
+        ]}
+        status="jobs"
+        horizonBaseUrl="/horizon"
+      />,
+    );
+
+    expect(screen.getByRole("link", { name: "DifferentJob" })).toBeVisible();
+    expect(screen.queryByRole("link", { name: "DelayedExport" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Sort by/ })).not.toBeInTheDocument();
   });
 
   it("uses the Monitoring navigation icon for the monitored-tags empty state", () => {

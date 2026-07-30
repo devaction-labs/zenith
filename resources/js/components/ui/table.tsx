@@ -7,7 +7,7 @@ function Table({ className, ...props }: React.ComponentProps<"table">) {
   return (
     <div
       data-slot="table-container"
-      className="relative w-full overflow-x-auto min-[1140px]:overflow-x-visible"
+      className="relative -mt-px w-full overflow-x-auto min-[1140px]:overflow-x-visible"
     >
       <table
         data-slot="table"
@@ -23,7 +23,7 @@ function TableHeader({ className, ...props }: React.ComponentProps<"thead">) {
     <thead
       data-slot="table-header"
       className={cn(
-        "sticky top-0 z-10 [&_tr]:border-0 [&_th]:shadow-[inset_0_-1px_0_var(--separator)]",
+        "sticky top-0 z-10 [&_tr]:border-0 [&_th]:shadow-[inset_0_1px_0_var(--separator),inset_0_-1px_0_var(--separator)]",
         className,
       )}
       {...props}
@@ -57,7 +57,7 @@ function TableRow({ className, onClick, ...props }: React.ComponentProps<"tr">) 
       data-slot="table-row"
       data-clickable-row={onClick ? "" : undefined}
       className={cn(
-        "border-b border-separator transition-colors has-aria-expanded:bg-table-row-hover data-[state=selected]:bg-muted",
+        "border-b border-separator transition-colors data-[state=selected]:bg-muted",
         onClick && "cursor-pointer hover:bg-table-row-hover",
         className,
       )}
@@ -72,7 +72,7 @@ function TableHead({ className, ...props }: React.ComponentProps<"th">) {
     <th
       data-slot="table-head"
       className={cn(
-        "h-10 bg-th px-6 text-left align-middle text-[13px] font-medium whitespace-nowrap text-muted-foreground [&:has([role=checkbox])]:pr-0",
+        "bg-th px-4 py-3 text-left align-middle text-[13px] font-medium whitespace-nowrap text-muted-foreground sm:px-6 [&:has([role=checkbox])]:pr-0",
         className,
       )}
       {...props}
@@ -81,7 +81,7 @@ function TableHead({ className, ...props }: React.ComponentProps<"th">) {
 }
 
 const tableCellVariants = cva(
-  "px-6 py-3 align-top whitespace-nowrap md:align-middle [&:has([role=checkbox])]:pr-0",
+  "px-4 py-3 align-top whitespace-nowrap sm:px-6 md:align-middle [&:has([role=checkbox])]:pr-0",
   {
     variants: {
       tone: {

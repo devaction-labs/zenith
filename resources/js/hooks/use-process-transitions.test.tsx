@@ -1,12 +1,12 @@
 import { act, renderHook } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 
 import { useProcessTransitions } from "@/hooks/use-process-transitions";
 import type { DashboardSupervisors } from "@/types/dashboard";
 
-const toast = vi.hoisted(() => ({ error: vi.fn() }));
+const toast = vi.hoisted(() => ({ add: vi.fn() }));
 
-vi.mock("sonner", () => ({ toast }));
+vi.mock("@/components/ui/toast", () => ({ toast }));
 
 const supervisors: DashboardSupervisors = {
   available: true,
@@ -43,7 +43,7 @@ const supervisors: DashboardSupervisors = {
 describe("useProcessTransitions", () => {
   afterEach(() => {
     vi.useRealTimers();
-    toast.error.mockReset();
+    toast.add.mockReset();
   });
 
   it("restores server state when an accepted command does not converge", () => {
@@ -69,9 +69,10 @@ describe("useProcessTransitions", () => {
 
     expect(result.current.hasPendingTransitions).toBe(false);
     expect(result.current.transitions.supervisors).toEqual({});
-    expect(toast.error).toHaveBeenCalledWith(
-      "Horizon did not report the requested state. Showing the latest status.",
-    );
+    expect(toast.add).toHaveBeenCalledWith({
+      title: "Horizon did not report the requested state. Showing the latest status.",
+      type: "error",
+    });
   });
 
   it("acquires parent and child transitions atomically", () => {
@@ -145,13 +146,13 @@ describe("useProcessTransitions", () => {
     expect(result.current.transitions.supervisors).toEqual({
       "horizon-web-01:supervisor-2": "continuing",
     });
-    expect(toast.error).toHaveBeenCalledTimes(1);
+    expect(toast.add).toHaveBeenCalledTimes(1);
 
     act(() => {
       vi.advanceTimersByTime(20_000);
     });
 
     expect(result.current.hasPendingTransitions).toBe(false);
-    expect(toast.error).toHaveBeenCalledTimes(2);
+    expect(toast.add).toHaveBeenCalledTimes(2);
   });
 });

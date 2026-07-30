@@ -13,6 +13,11 @@ final class WorkbenchServiceProvider extends ServiceProvider
 {
     public function boot(): void
     {
+        config()->set('inertia.devtools.except', [
+            'telescope*',
+            '_inertia/devtools*',
+        ]);
+
         if (str_starts_with((string) config('app.url'), 'https://')) {
             URL::forceScheme('https');
         }

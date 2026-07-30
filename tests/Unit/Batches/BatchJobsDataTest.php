@@ -2,13 +2,21 @@
 
 declare(strict_types=1);
 
+use Carbon\CarbonImmutable;
+use Illuminate\Bus\Batch;
+use Illuminate\Bus\BatchRepository;
+use Illuminate\Contracts\Queue\Factory as QueueFactory;
 use Illuminate\Support\Collection;
 use Laravel\Horizon\Contracts\JobRepository;
 use NckRtl\HorizonNewDawn\Batches\BatchJobsData;
+use NckRtl\HorizonNewDawn\Batches\DatabaseBatchMetadata;
 use NckRtl\HorizonNewDawn\Jobs\JobsData;
+use NckRtl\HorizonNewDawn\Jobs\PendingJobEntryScanner;
 use NckRtl\HorizonNewDawn\Tests\Support\HorizonJob;
 
+use function NckRtl\HorizonNewDawn\Tests\Support\dashboardNeverReceives;
 use function NckRtl\HorizonNewDawn\Tests\Support\dashboardReturnsFor;
+use function NckRtl\HorizonNewDawn\Tests\Support\dashboardReturnsUsing;
 use function NckRtl\HorizonNewDawn\Tests\Support\dashboardThrows;
 use function NckRtl\HorizonNewDawn\Tests\Support\horizonBatch;
 use function NckRtl\HorizonNewDawn\Tests\Support\horizonJob;
@@ -126,7 +134,7 @@ describe('BatchJobsData', function (): void {
             ->and($pending->rows[0]->id)->toBe('pending-1');
     });
 
-    it('stops scanning after 250 retained jobs', function (): void {
+    it('continues scanning retained jobs past the former 250 ceiling until the page ends', function (): void {
         $repository = mockDashboardContract(JobRepository::class);
         $batch = horizonBatch('batch-42', totalJobs: 1, pendingJobs: 1);
 
@@ -137,12 +145,316 @@ describe('BatchJobsData', function (): void {
                 range($start, $start + 49),
             )));
         }
+        dashboardReturnsFor($repository, 'getPending', ['249'], collect([
+            retainedBatchJob(250, 'pending-1', 'batch-42', 'pending'),
+        ]));
 
         $pending = (new BatchJobsData($repository, new JobsData($repository)))->forBatch($batch)->pending;
 
         expect($pending->available)->toBeTrue()
+            ->and($pending->complete)->toBeTrue()
+            ->and($pending->rows)->toHaveCount(1)
+            ->and($pending->rows[0]->id)->toBe('pending-1');
+    });
+
+    it('lists live queue-backed pending jobs without scanning retained pending history', function (): void {
+        $repository = mockDashboardContract(JobRepository::class);
+        $batch = horizonBatch('batch-42', totalJobs: 3, pendingJobs: 2);
+        dashboardNeverReceives($repository, 'getPending');
+        dashboardReturnsFor($repository, 'getCompleted', [null], collect([
+            retainedBatchJob(0, 'completed-1', 'batch-42', 'completed'),
+        ]));
+        dashboardReturnsUsing($repository, 'getJobs', static fn (array $ids): Collection => collect());
+
+        $pendingStates = fakePendingJobEntryScanner([
+            [
+                'id' => 'queue-pending-1',
+                'state' => 'ready',
+                'connection' => 'redis',
+                'queue' => 'imports',
+                'score' => null,
+                'payload' => queueBatchPayload('queue-pending-1', 'batch-42', 'App\\Jobs\\ImportFeed'),
+            ],
+            [
+                'id' => 'queue-pending-2',
+                'state' => 'ready',
+                'connection' => 'redis',
+                'queue' => 'imports',
+                'score' => null,
+                'payload' => queueBatchPayload('queue-pending-2', 'batch-42', 'App\\Jobs\\ExportFeed'),
+            ],
+        ]);
+
+        $pending = (new BatchJobsData(
+            $repository,
+            new JobsData($repository),
+            $pendingStates,
+        ))->forBatch($batch)->pending;
+
+        expect($pending->available)->toBeTrue()
+            ->and($pending->complete)->toBeTrue()
+            ->and($pending->total)->toBe(2)
+            ->and($pending->rows)->toHaveCount(2)
+            ->and($pending->rows[0]->id)->toBe('queue-pending-1')
+            ->and($pending->rows[0]->status)->toBe('pending')
+            ->and($pending->rows[0]->inspectable)->toBeFalse()
+            ->and($pending->rows[0]->name)->toBe('App\\Jobs\\ImportFeed')
+            ->and($pending->rows[0]->queue)->toBe('imports')
+            ->and($pending->rows[1]->id)->toBe('queue-pending-2')
+            ->and($pending->message)->toBeNull()
+            ->and(json_encode($pending->rows))->not->toContain('serialized-secret-command');
+    });
+
+    it('hydrates still-retained pending IDs via getJobs without calling getPending', function (): void {
+        $repository = mockDashboardContract(JobRepository::class);
+        $batch = horizonBatch('batch-42', totalJobs: 4, pendingJobs: 3);
+        dashboardNeverReceives($repository, 'getPending');
+        dashboardReturnsFor($repository, 'getCompleted', [null], collect([
+            retainedBatchJob(0, 'completed-1', 'batch-42', 'completed'),
+        ]));
+        dashboardReturnsUsing($repository, 'getJobs', static function (array $ids): Collection {
+            expect($ids)->toBe(['retained-pending', 'queue-reserved', 'queue-delayed']);
+
+            return collect([
+                retainedBatchJob(0, 'retained-pending', 'batch-42', 'pending'),
+            ]);
+        });
+
+        $pendingStates = fakePendingJobEntryScanner([
+            [
+                'id' => 'retained-pending',
+                'state' => 'ready',
+                'connection' => 'redis',
+                'queue' => 'imports',
+                'score' => null,
+                'payload' => queueBatchPayload('retained-pending', 'batch-42'),
+            ],
+            [
+                'id' => 'queue-reserved',
+                'state' => 'reserved',
+                'connection' => 'redis',
+                'queue' => 'imports',
+                'score' => 1_784_281_100.0,
+                'payload' => queueBatchPayload('queue-reserved', 'batch-42', 'App\\Jobs\\ReservedFeed'),
+            ],
+            [
+                'id' => 'queue-delayed',
+                'state' => 'delayed',
+                'connection' => 'redis',
+                'queue' => 'imports',
+                'score' => 1_784_281_900.0,
+                'payload' => queueBatchPayload(
+                    'queue-delayed',
+                    'batch-42',
+                    'App\\Jobs\\DelayedFeed',
+                    delay: 600,
+                    createdAt: 1_784_281_000.0,
+                ),
+            ],
+        ]);
+
+        $pending = (new BatchJobsData(
+            $repository,
+            new JobsData($repository),
+            $pendingStates,
+        ))->forBatch($batch)->pending;
+
+        expect($pending->complete)->toBeTrue()
+            ->and($pending->rows)->toHaveCount(3)
+            ->and(array_map(static fn ($row): string => $row->id, $pending->rows))->toBe([
+                'retained-pending',
+                'queue-reserved',
+                'queue-delayed',
+            ])
+            ->and($pending->rows[0]->status)->toBe('pending')
+            ->and($pending->rows[0]->inspectable)->toBeTrue()
+            ->and($pending->rows[1]->status)->toBe('reserved')
+            ->and($pending->rows[1]->reservedAt)->toBeNull()
+            ->and($pending->rows[1]->runtime)->toBeNull()
+            ->and($pending->rows[1]->inspectable)->toBeFalse()
+            ->and($pending->rows[2]->status)->toBe('pending')
+            ->and($pending->rows[2]->scheduledAt)->toBe(1_784_281_900.0)
+            ->and($pending->message)->toBeNull();
+    });
+
+    it('keeps the queue-snapshot row when a hydrated hash is no longer pending or reserved', function (): void {
+        $repository = mockDashboardContract(JobRepository::class);
+        $batch = horizonBatch('batch-42', totalJobs: 1, pendingJobs: 1);
+        dashboardNeverReceives($repository, 'getPending');
+        dashboardReturnsUsing($repository, 'getJobs', static fn (array $ids): Collection => collect([
+            retainedBatchJob(0, 'race-completed', 'batch-42', 'completed'),
+        ]));
+
+        $pending = (new BatchJobsData(
+            $repository,
+            new JobsData($repository),
+            fakePendingJobEntryScanner([[
+                'id' => 'race-completed',
+                'state' => 'ready',
+                'connection' => 'redis',
+                'queue' => 'imports',
+                'score' => null,
+                'payload' => queueBatchPayload('race-completed', 'batch-42'),
+            ]]),
+        ))->forBatch($batch)->pending;
+
+        expect($pending->rows)->toHaveCount(1)
+            ->and($pending->rows[0]->id)->toBe('race-completed')
+            ->and($pending->rows[0]->status)->toBe('pending')
+            ->and($pending->rows[0]->inspectable)->toBeFalse()
+            ->and($pending->rows[0]->completedAt)->toBeNull();
+    });
+
+    it('uses stored sidecar attribution for the live pending queue target', function (): void {
+        $repository = mockDashboardContract(JobRepository::class);
+        // Options omit destination so only the sidecar can resolve the historical queue.
+        $batch = new Batch(
+            queue: mockDashboardContract(QueueFactory::class),
+            repository: mockDashboardContract(BatchRepository::class),
+            id: 'batch-42',
+            name: 'Import customer records',
+            totalJobs: 1,
+            pendingJobs: 1,
+            failedJobs: 0,
+            failedJobIds: [],
+            options: [],
+            createdAt: CarbonImmutable::createFromTimestampUTC(1_784_281_000),
+        );
+        dashboardNeverReceives($repository, 'getPending');
+        dashboardReturnsUsing($repository, 'getJobs', static fn (array $ids): Collection => collect());
+        config([
+            'queue.default' => 'redis',
+            'queue.connections.redis.queue' => 'default',
+        ]);
+
+        $pendingStates = new class implements PendingJobEntryScanner
+        {
+            /** @var array{connection: string, queue: string}|null */
+            public ?array $target = null;
+
+            public function pendingQueueEntries(array $target): array
+            {
+                $this->target = $target;
+
+                return [[
+                    'id' => 'queue-only',
+                    'state' => 'ready',
+                    'connection' => $target['connection'],
+                    'queue' => $target['queue'],
+                    'score' => null,
+                    'payload' => queueBatchPayload('queue-only', 'batch-42'),
+                ]];
+            }
+        };
+
+        $attribution = new DatabaseBatchMetadata(
+            batchId: 'batch-42',
+            queue: 'historical-imports',
+            connection: 'redis',
+            queueIsExplicit: false,
+            connectionIsExplicit: false,
+        );
+
+        $pending = (new BatchJobsData(
+            $repository,
+            new JobsData($repository),
+            $pendingStates,
+        ))->forBatch($batch, $attribution)->pending;
+
+        expect($pending->complete)->toBeTrue()
+            ->and($pending->rows)->toHaveCount(1)
+            ->and($pending->rows[0]->queue)->toBe('historical-imports')
+            ->and($pendingStates->target)->toBe([
+                'connection' => 'redis',
+                'queue' => 'historical-imports',
+            ]);
+    });
+
+    it('prefers the delayed snapshot score as scheduledAt for released queue-only rows', function (): void {
+        $repository = mockDashboardContract(JobRepository::class);
+        $batch = horizonBatch('batch-42', totalJobs: 1, pendingJobs: 1);
+        dashboardNeverReceives($repository, 'getPending');
+        dashboardReturnsUsing($repository, 'getJobs', static fn (array $ids): Collection => collect());
+
+        $pending = (new BatchJobsData(
+            $repository,
+            new JobsData($repository),
+            fakePendingJobEntryScanner([[
+                'id' => 'queue-released',
+                'state' => 'released',
+                'connection' => 'redis',
+                'queue' => 'imports',
+                'score' => 1_784_281_050.0,
+                'payload' => queueBatchPayload(
+                    'queue-released',
+                    'batch-42',
+                    delay: 50,
+                    createdAt: 1_784_281_000.0,
+                ),
+            ]]),
+        ))->forBatch($batch)->pending;
+
+        expect($pending->rows)->toHaveCount(1)
+            ->and($pending->rows[0]->status)->toBe('pending')
+            ->and($pending->rows[0]->scheduledAt)->toBe(1_784_281_050.0)
+            ->and($pending->rows[0]->reservedAt)->toBeNull()
+            ->and($pending->rows[0]->runtime)->toBeNull()
+            ->and($pending->rows[0]->inspectable)->toBeFalse();
+    });
+
+    it('falls back to the retained pending scan when the live queue snapshot fails', function (): void {
+        $repository = mockDashboardContract(JobRepository::class);
+        $batch = horizonBatch('batch-42', totalJobs: 1, pendingJobs: 1);
+        dashboardReturnsFor($repository, 'getPending', [null], collect([
+            retainedBatchJob(0, 'retained-after-queue-failure', 'batch-42', 'pending'),
+        ]));
+
+        $pendingStates = new class implements PendingJobEntryScanner
+        {
+            public function pendingQueueEntries(array $target): array
+            {
+                throw new RuntimeException('Pending state is unavailable for [sync].');
+            }
+        };
+
+        $pending = (new BatchJobsData(
+            $repository,
+            new JobsData($repository),
+            $pendingStates,
+        ))->forBatch($batch)->pending;
+
+        expect($pending->available)->toBeTrue()
+            ->and($pending->complete)->toBeTrue()
+            ->and($pending->rows)->toHaveCount(1)
+            ->and($pending->rows[0]->id)->toBe('retained-after-queue-failure')
+            ->and($pending->message)->toBeNull();
+    });
+
+    it('reports unavailable pending jobs when both the live queue and retained scans fail', function (): void {
+        $repository = mockDashboardContract(JobRepository::class);
+        $batch = horizonBatch('batch-42', totalJobs: 1, pendingJobs: 1);
+        dashboardThrows($repository, 'getPending', new RuntimeException('redis password leaked'));
+
+        $pendingStates = new class implements PendingJobEntryScanner
+        {
+            public function pendingQueueEntries(array $target): array
+            {
+                throw new RuntimeException('Pending state is unavailable for [sync].');
+            }
+        };
+
+        $pending = (new BatchJobsData(
+            $repository,
+            new JobsData($repository),
+            $pendingStates,
+        ))->forBatch($batch)->pending;
+
+        expect($pending->available)->toBeFalse()
             ->and($pending->complete)->toBeFalse()
-            ->and($pending->rows)->toBe([]);
+            ->and($pending->rows)->toBe([])
+            ->and($pending->message)->toBe('Pending jobs for this batch are currently unavailable.')
+            ->and($pending->message)->not->toContain('sync')
+            ->and($pending->message)->not->toContain('password');
     });
 
     it('stops safely when Horizon returns a non-advancing cursor', function (): void {
@@ -315,4 +627,67 @@ function retainedBatchRetry(
         ], JSON_THROW_ON_ERROR);
 
     return $job;
+}
+
+/**
+ * @return array<string, mixed>
+ */
+function queueBatchPayload(
+    string $id,
+    string $batchId,
+    string $name = 'App\\Jobs\\ImportFeed',
+    ?int $delay = null,
+    ?float $createdAt = null,
+): array {
+    return array_filter([
+        'uuid' => $id,
+        'id' => $id,
+        'displayName' => $name,
+        'job' => 'Illuminate\\Queue\\CallQueuedHandler@call',
+        'pushedAt' => 1_784_281_000.25,
+        'createdAt' => $createdAt,
+        'delay' => $delay,
+        'attempts' => 0,
+        'tags' => ['tenant:1'],
+        'data' => [
+            'commandName' => $name,
+            'batchId' => $batchId,
+            'command' => 'serialized-secret-command',
+        ],
+    ], static fn (mixed $value): bool => $value !== null);
+}
+
+/**
+ * @param  list<array{
+ *     id: string,
+ *     state: 'ready'|'reserved'|'delayed'|'released',
+ *     connection: string,
+ *     queue: string,
+ *     payload: array<string, mixed>,
+ *     score: float|null
+ * }>  $entries
+ */
+function fakePendingJobEntryScanner(array $entries): PendingJobEntryScanner
+{
+    return new class($entries) implements PendingJobEntryScanner
+    {
+        /**
+         * @param  list<array{
+         *     id: string,
+         *     state: 'ready'|'reserved'|'delayed'|'released',
+         *     connection: string,
+         *     queue: string,
+         *     payload: array<string, mixed>,
+         *     score: float|null
+         * }>  $entries
+         */
+        public function __construct(private array $entries) {}
+
+        public function pendingQueueEntries(array $target): array
+        {
+            expect($target)->toBe(['connection' => 'redis', 'queue' => 'imports']);
+
+            return $this->entries;
+        }
+    };
 }

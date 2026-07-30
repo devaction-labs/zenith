@@ -15,6 +15,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
+import { formatDuration } from "@/lib/format-duration";
 import type { MetricSnapshot } from "@/types/metrics";
 
 type MetricKind = "throughput" | "runtime";
@@ -28,7 +29,7 @@ const metricChartConfigs = {
   },
   runtime: {
     value: {
-      label: "Seconds",
+      label: "Runtime",
       color: "var(--chart-1)",
     },
   },
@@ -38,7 +39,10 @@ const timeFormatter = new Intl.DateTimeFormat(undefined, {
   hour: "2-digit",
   minute: "2-digit",
 });
-const runtimeFormatter = new Intl.NumberFormat(undefined, { maximumFractionDigits: 3 });
+
+export function formatMetricRuntime(seconds: number) {
+  return formatDuration(seconds, "precise");
+}
 
 function formatTime(timestamp: number) {
   return timeFormatter.format(new Date(timestamp * 1000));
@@ -100,7 +104,7 @@ export function MetricChart({
       ? `Latest throughput: ${integer(latest?.throughput ?? 0)} jobs per minute.`
       : latest?.runtime === null || latest?.runtime === undefined
         ? "Latest runtime: no observation."
-        : `Latest runtime: ${runtimeFormatter.format(latest.runtime)} seconds.`;
+        : `Latest runtime: ${formatMetricRuntime(latest.runtime)}.`;
 
   return (
     <div>
@@ -133,15 +137,30 @@ export function MetricChart({
             tickLine={false}
             tickMargin={10}
             width={64}
-            tick={{ dx: -24, textAnchor: "start" }}
+            tick={{ textAnchor: "end" }}
             tickFormatter={(value: number) =>
-              kind === "throughput" ? integer(value) : `${runtimeFormatter.format(value)}s`
+              kind === "throughput" ? integer(value) : formatMetricRuntime(value)
             }
           />
           <ChartTooltip
             cursor={false}
             content={
-              <ChartTooltipContent indicator="line" labelFormatter={formatMetricTooltipLabel} />
+              <ChartTooltipContent
+                indicator="line"
+                labelFormatter={formatMetricTooltipLabel}
+                formatter={
+                  kind === "runtime"
+                    ? (value) => (
+                        <div className="flex flex-1 items-center justify-between gap-4 leading-none">
+                          <span className="text-muted-foreground">Runtime</span>
+                          <span className="font-mono font-medium text-foreground tabular-nums">
+                            {formatMetricRuntime(Number(value))}
+                          </span>
+                        </div>
+                      )
+                    : undefined
+                }
+              />
             }
           />
           <Bar

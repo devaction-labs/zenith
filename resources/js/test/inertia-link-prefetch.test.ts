@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 
 const sources = import.meta.glob<string>("/resources/js/**/*.tsx", {
   eager: true,

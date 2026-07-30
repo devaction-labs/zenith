@@ -9,8 +9,15 @@ use NckRtl\HorizonNewDawn\Jobs\Data\ClearPendingJobsResultData;
 use NckRtl\HorizonNewDawn\Queues\Actions\ClearQueue;
 use NckRtl\HorizonNewDawn\Queues\Data\QueueTargetData;
 use NckRtl\HorizonNewDawn\Queues\QueuesData;
+use RuntimeException;
 use Throwable;
 
+/**
+ * Discovers unique queue targets from the supervisor catalog and a bounded
+ * walk of retained pending jobs, then clears each target with the repository-
+ * native queue clear primitive. Target discovery stores O(queues) memory, not
+ * an unbounded pending-ID list.
+ */
 final readonly class ClearPendingJobs
 {
     private const int PAGE_SIZE = 50;
@@ -25,8 +32,9 @@ final readonly class ClearPendingJobs
     {
         $cleared = 0;
         $failedTargets = [];
+        $targets = $this->targets();
 
-        foreach ($this->targets() as $target) {
+        foreach ($targets as $target) {
             try {
                 $cleared += $this->clearQueue->handle($target);
             } catch (Throwable $exception) {
@@ -41,39 +49,79 @@ final readonly class ClearPendingJobs
     /** @return array<int, QueueTargetData> */
     private function targets(): array
     {
+        $sourceTotal = max(0, (int) $this->jobs->countPending());
+        $bulkOperationTarget = $this->bulkOperationTarget();
         $targets = [];
 
         foreach ($this->queues->targets() as $target) {
+            if ($this->sameTarget($target, $bulkOperationTarget)) {
+                continue;
+            }
+
             $targets[$this->targetKey($target)] = $target;
         }
 
-        try {
-            $sourceTotal = max(0, (int) $this->jobs->countPending());
+        for ($inspected = 0; $inspected < $sourceTotal; $inspected += self::PAGE_SIZE) {
+            $rawPageSize = min(self::PAGE_SIZE, $sourceTotal - $inspected);
+            $pendingJobs = $this->jobs->getPending((string) ($inspected - 1));
 
-            for ($inspected = 0; $inspected < $sourceTotal; $inspected += self::PAGE_SIZE) {
-                $pendingJobs = $this->jobs->getPending((string) ($inspected - 1));
-
-                foreach ($pendingJobs as $job) {
-                    if (! is_object($job) || ! in_array($job->status ?? null, ['pending', 'reserved'], true)) {
-                        continue;
-                    }
-
-                    $connection = $job->connection ?? null;
-                    $queue = $job->queue ?? null;
-
-                    if (! is_string($connection) || $connection === '' || ! is_string($queue) || $queue === '') {
-                        continue;
-                    }
-
-                    $target = new QueueTargetData($connection, $queue);
-                    $targets[$this->targetKey($target)] = $target;
-                }
+            if ($pendingJobs->count() !== $rawPageSize) {
+                throw new RuntimeException(
+                    'The full retained pending history could not be verified before clearing queues.',
+                );
             }
-        } catch (Throwable $exception) {
-            report($exception);
+
+            foreach ($pendingJobs->take($rawPageSize) as $job) {
+                if (! is_object($job) || ! in_array($job->status ?? null, ['pending', 'reserved'], true)) {
+                    continue;
+                }
+
+                $connection = $job->connection ?? null;
+                $queue = $job->queue ?? null;
+
+                if (! is_string($connection) || $connection === '' || ! is_string($queue) || $queue === '') {
+                    continue;
+                }
+
+                $target = new QueueTargetData($connection, $queue);
+
+                if ($this->sameTarget($target, $bulkOperationTarget)) {
+                    continue;
+                }
+
+                $targets[$this->targetKey($target)] = $target;
+            }
         }
 
         return array_values($targets);
+    }
+
+    private function bulkOperationTarget(): ?QueueTargetData
+    {
+        $connection = config('horizon-new-dawn.bulk_operations.connection')
+            ?? config('queue.default');
+
+        if (! is_string($connection) || trim($connection) === '') {
+            return null;
+        }
+
+        $queue = config('horizon-new-dawn.bulk_operations.queue')
+            ?? config("queue.connections.{$connection}.queue");
+
+        if (! is_string($queue) || trim($queue) === '') {
+            return null;
+        }
+
+        return new QueueTargetData(trim($connection), trim($queue));
+    }
+
+    private function sameTarget(
+        QueueTargetData $target,
+        ?QueueTargetData $other,
+    ): bool {
+        return $other !== null
+            && $target->connection === $other->connection
+            && $target->queue === $other->queue;
     }
 
     private function targetKey(QueueTargetData $target): string

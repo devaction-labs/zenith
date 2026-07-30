@@ -5,15 +5,23 @@ declare(strict_types=1);
 namespace NckRtl\HorizonNewDawn\FailedJobs;
 
 use Illuminate\Contracts\Redis\Factory as RedisFactory;
+use Illuminate\Redis\Connections\PhpRedisConnection;
+use Illuminate\Redis\Connections\PredisConnection;
 use Illuminate\Support\Collection;
 use JsonException;
 use Laravel\Horizon\Contracts\JobRepository;
 use Laravel\Horizon\Contracts\TagRepository;
+use NckRtl\HorizonNewDawn\FailedJobs\Data\FailedJobBulkActionsData;
 use NckRtl\HorizonNewDawn\FailedJobs\Data\FailedJobDetailData;
 use NckRtl\HorizonNewDawn\FailedJobs\Data\FailedJobRetryData;
+use NckRtl\HorizonNewDawn\Jobs\Data\JobFilterCatalogData;
+use NckRtl\HorizonNewDawn\Jobs\Data\JobIndexFiltersData;
 use NckRtl\HorizonNewDawn\Jobs\Data\JobPageData;
 use NckRtl\HorizonNewDawn\Jobs\Data\JobRowData;
 use NckRtl\HorizonNewDawn\Jobs\JobsData;
+use NckRtl\HorizonNewDawn\Jobs\RetainedJobFilterCatalog;
+use NckRtl\HorizonNewDawn\Jobs\RetainedJobQuery;
+use NckRtl\HorizonNewDawn\Jobs\RetainedJobType;
 use Throwable;
 
 final readonly class FailedJobsData
@@ -26,21 +34,60 @@ final readonly class FailedJobsData
         private JobsData $jobs,
         private FailedJobRetryEligibility $retryEligibility,
         private ?RedisFactory $redis = null,
+        private ?RetainedJobQuery $retainedQuery = null,
+        private ?RetainedJobFilterCatalog $filterCatalog = null,
     ) {}
 
-    public function page(int $afterIndex, ?string $tag = null): JobPageData
-    {
+    public function page(
+        int|string|null $afterIndex,
+        ?string $tag = null,
+        ?JobIndexFiltersData $filters = null,
+    ): JobPageData {
+        $filters ??= JobIndexFiltersData::none();
+
+        if ($this->retainedQuery !== null && $filters->hasAny()) {
+            try {
+                $page = $this->retainedQuery->page(
+                    RetainedJobType::Failed,
+                    $filters,
+                    $afterIndex,
+                    $tag,
+                );
+
+                return $this->pageData(
+                    $page->jobs,
+                    $page->total,
+                    $page->current,
+                    $page->next,
+                );
+            } catch (Throwable $exception) {
+                report($exception);
+
+                return new JobPageData(
+                    available: false,
+                    items: [],
+                    total: 0,
+                    current: $afterIndex,
+                    next: null,
+                    message: 'Global failed-job filters are currently unavailable.',
+                );
+            }
+        }
+
         try {
+            $numericAfterIndex = is_numeric($afterIndex)
+                ? (int) $afterIndex
+                : -1;
             $tag = trim($tag ?? '');
 
             if ($tag === '') {
-                $page = $this->oldestFailed($afterIndex);
+                $page = $this->oldestFailed($numericAfterIndex);
                 $failed = $page['jobs'];
                 $total = $this->repository->countFailed();
-                $current = $afterIndex;
+                $current = $numericAfterIndex;
                 $next = $page['next'];
             } else {
-                $current = max(0, $afterIndex);
+                $current = max(0, $numericAfterIndex);
                 $ids = $this->oldestTaggedFailed($tag, $current);
                 $hasMore = count($ids) > self::PAGE_SIZE;
                 $jobIds = array_values(array_filter(
@@ -52,28 +99,7 @@ final readonly class FailedJobsData
                 $next = $hasMore ? $current + self::PAGE_SIZE : null;
             }
 
-            $items = [];
-
-            foreach ($failed as $job) {
-                if (! is_object($job)) {
-                    continue;
-                }
-
-                $row = $this->row($job);
-
-                if ($row !== null) {
-                    $items[] = $row;
-                }
-            }
-
-            return new JobPageData(
-                available: true,
-                items: $items,
-                total: $total,
-                current: $current,
-                next: $next,
-                message: null,
-            );
+            return $this->pageData($failed, $total, $current, $next);
         } catch (Throwable $exception) {
             report($exception);
 
@@ -88,44 +114,87 @@ final readonly class FailedJobsData
         }
     }
 
+    public function filters(): JobFilterCatalogData
+    {
+        if ($this->filterCatalog === null) {
+            return JobFilterCatalogData::unavailable();
+        }
+
+        try {
+            return $this->filterCatalog->for(RetainedJobType::Failed);
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return JobFilterCatalogData::unavailable();
+        }
+    }
+
+    public function querySignature(
+        JobIndexFiltersData $filters,
+        ?string $tag,
+    ): string {
+        if ($this->retainedQuery !== null) {
+            return $this->retainedQuery->signature(
+                RetainedJobType::Failed,
+                $filters,
+                $tag,
+            );
+        }
+
+        return hash('sha256', json_encode([
+            'type' => RetainedJobType::Failed->value,
+            'filters' => $filters->signatureValues(),
+            'tag' => $tag,
+        ], JSON_THROW_ON_ERROR));
+    }
+
     public function hasRetryable(): bool
     {
         try {
-            if ($this->redis !== null) {
-                return $this->hasRetryableFromRawIndex();
-            }
-
-            $afterIndex = -1;
-
-            while (true) {
-                $failed = $this->repository->getFailed((string) $afterIndex);
-
-                if ($failed->isEmpty()) {
-                    return false;
-                }
-
-                foreach ($failed as $job) {
-                    if (is_object($job) && $this->retryEligibility->allowsBulk($job)) {
-                        return true;
-                    }
-                }
-
-                if ($failed->count() < self::PAGE_SIZE) {
-                    return false;
-                }
-
-                $nextIndex = $this->lastIndex($failed);
-
-                if ($nextIndex === null || $nextIndex <= $afterIndex) {
-                    return false;
-                }
-
-                $afterIndex = $nextIndex;
-            }
+            return $this->hasRetryableJob();
         } catch (Throwable $exception) {
             report($exception);
 
             return false;
+        }
+    }
+
+    public function bulkActions(): FailedJobBulkActionsData
+    {
+        try {
+            $sourceTotal = max(0, (int) $this->repository->countFailed());
+
+            if ($sourceTotal === 0) {
+                return new FailedJobBulkActionsData(
+                    hasFailedJobs: false,
+                    retryable: false,
+                    retryUnavailableReason: null,
+                    clearable: false,
+                    clearUnavailableReason: null,
+                );
+            }
+
+            $retryable = $this->hasRetryableJob();
+
+            return new FailedJobBulkActionsData(
+                hasFailedJobs: true,
+                retryable: $retryable,
+                retryUnavailableReason: $retryable
+                    ? null
+                    : 'No retained failed jobs are eligible for bulk retry.',
+                clearable: true,
+                clearUnavailableReason: null,
+            );
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return new FailedJobBulkActionsData(
+                hasFailedJobs: false,
+                retryable: false,
+                retryUnavailableReason: 'Failed-job bulk actions are currently unavailable.',
+                clearable: false,
+                clearUnavailableReason: 'Failed-job bulk actions are currently unavailable.',
+            );
         }
     }
 
@@ -229,6 +298,37 @@ final readonly class FailedJobsData
         ];
     }
 
+    /** @param Collection<int, mixed> $failed */
+    private function pageData(
+        Collection $failed,
+        int $total,
+        int|string|null $current,
+        int|string|null $next,
+    ): JobPageData {
+        $items = [];
+
+        foreach ($failed as $job) {
+            if (! is_object($job)) {
+                continue;
+            }
+
+            $row = $this->row($job);
+
+            if ($row !== null) {
+                $items[] = $row;
+            }
+        }
+
+        return new JobPageData(
+            available: true,
+            items: $items,
+            total: $total,
+            current: $current,
+            next: $next,
+            message: null,
+        );
+    }
+
     /** @return array<int, mixed> */
     private function oldestTaggedFailed(string $tag, int $startingAt): array
     {
@@ -254,6 +354,10 @@ final readonly class FailedJobsData
             return false;
         }
 
+        if (! $connection instanceof PhpRedisConnection && ! $connection instanceof PredisConnection) {
+            return false;
+        }
+
         while (true) {
             $ids = $connection->zrevrange(
                 'failed_jobs',
@@ -270,10 +374,28 @@ final readonly class FailedJobsData
                 array_slice($ids, 0, self::PAGE_SIZE),
                 is_string(...),
             ));
-            $failed = $this->repository->getJobs($pageIds, $startingAt);
+            $failed = $connection->pipeline(static function (mixed $pipeline) use ($pageIds): void {
+                foreach ($pageIds as $id) {
+                    $pipeline->hmget($id, ['payload', 'retried_by']);
+                }
+            });
+
+            if (! is_array($failed)) {
+                return false;
+            }
 
             foreach ($failed as $job) {
-                if (is_object($job) && $this->retryEligibility->allowsBulk($job)) {
+                if (! is_array($job)) {
+                    continue;
+                }
+
+                $fields = array_values($job);
+                $retryCandidate = (object) [
+                    'payload' => $fields[0] ?? null,
+                    'retried_by' => $fields[1] ?? null,
+                ];
+
+                if ($this->retryEligibility->allowsBulk($retryCandidate)) {
                     return true;
                 }
             }
@@ -283,6 +405,41 @@ final readonly class FailedJobsData
             }
 
             $startingAt += self::PAGE_SIZE;
+        }
+    }
+
+    private function hasRetryableJob(): bool
+    {
+        if ($this->redis !== null) {
+            return $this->hasRetryableFromRawIndex();
+        }
+
+        $afterIndex = -1;
+
+        while (true) {
+            $failed = $this->repository->getFailed((string) $afterIndex);
+
+            if ($failed->isEmpty()) {
+                return false;
+            }
+
+            foreach ($failed as $job) {
+                if (is_object($job) && $this->retryEligibility->allowsBulk($job)) {
+                    return true;
+                }
+            }
+
+            if ($failed->count() < self::PAGE_SIZE) {
+                return false;
+            }
+
+            $nextIndex = $this->lastIndex($failed);
+
+            if ($nextIndex === null || $nextIndex <= $afterIndex) {
+                return false;
+            }
+
+            $afterIndex = $nextIndex;
         }
     }
 

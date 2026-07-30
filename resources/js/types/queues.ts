@@ -1,6 +1,6 @@
 import type { BatchRow } from "@/types/batches";
-import type { JobRow } from "@/types/jobs";
 import type { HorizonStatus } from "@/types/dashboard";
+import type { JobRow } from "@/types/jobs";
 import type { MetricPreview } from "@/types/metrics";
 
 export type QueueWaitThresholdStatus = "exceeded" | "calculating" | "within_bounds" | "disabled";
@@ -62,6 +62,7 @@ export type QueueSummary = {
   pauseTargets: QueueTarget[];
   pendingJobs: number | null;
   pendingComplete: boolean;
+  retainedJobsWarming: boolean;
   pendingReserved: number | null;
   pendingReadyNow: number | null;
   pendingDelayed: number | null;
@@ -76,6 +77,7 @@ export type QueueSummary = {
   failedRetentionMinutes: number;
   completedJobs: number | null;
   completedComplete: boolean;
+  completedAvailable: boolean;
   completedJobsPerMinute: number | null;
   completedJobsPerMinuteComplete: boolean;
   completedJobsPastHour: number | null;
@@ -95,16 +97,19 @@ export type QueueSummary = {
   }>;
   processes: number | null;
   waitThreshold: QueueWaitThreshold | null;
+  /** Projected from queue throughput since Horizon's last metrics snapshot; null when metrics fail. */
+  jobsPerMinute: number | null;
   throughput: number | null;
   averageRuntime: number | null;
   message: string | null;
 };
 
 export type QueueActivity = {
-  data: Array<JobRow | BatchRow>;
+  data: readonly (JobRow | BatchRow)[];
   total: number;
   complete: boolean;
   available: boolean;
+  warming: boolean;
   message: string | null;
 };
 
@@ -114,6 +119,7 @@ type QueuesHorizon = {
   status: HorizonStatus;
   capabilities?: {
     queuePausing: boolean;
+    timedQueuePausing: boolean;
   };
 };
 
@@ -126,8 +132,11 @@ export type QueueShowPageProps = {
   horizon: QueuesHorizon;
   queue: string;
   view: QueueDetailView;
-  summary: QueueSummary;
+  summary?: QueueSummary;
   tab: QueueActivityTab;
-  preview: MetricPreview | null;
-  activity: QueueActivity;
+  querySignature: string;
+  listRevision?: string;
+  preview?: MetricPreview | null;
+  activity?: QueueActivity;
+  batchAttributionAvailable?: boolean;
 };

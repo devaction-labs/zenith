@@ -62,7 +62,9 @@ describe("AppSidebar", () => {
       </TooltipProvider>,
     );
 
-    act(() => vi.advanceTimersByTime(100));
+    act(() => {
+      void vi.advanceTimersByTime(100);
+    });
 
     expect(prefetch).toHaveBeenCalledOnce();
     expect(prefetch).toHaveBeenCalledWith(
@@ -83,14 +85,18 @@ describe("AppSidebar", () => {
       </TooltipProvider>,
     );
 
-    act(() => vi.advanceTimersByTime(100));
+    act(() => {
+      void vi.advanceTimersByTime(100);
+    });
     prefetch.mockClear();
 
     navigationLabels.forEach((label, index) => {
       const link = screen.getByRole("link", { name: label });
 
       fireEvent.mouseEnter(link);
-      act(() => vi.advanceTimersByTime(100));
+      act(() => {
+        void vi.advanceTimersByTime(100);
+      });
 
       expect(prefetch).toHaveBeenCalledTimes(index + 1);
       expect(prefetch).toHaveBeenLastCalledWith(
@@ -125,7 +131,7 @@ describe("AppSidebar", () => {
       expect(counter).toBeVisible();
       expect(counter).toHaveAttribute("data-slot", "sidebar-menu-badge");
       expect(counter).not.toHaveAttribute("data-variant");
-      expect(counter).toHaveClass("!top-1/2", "-translate-y-1/2", "!text-muted-foreground");
+      expect(counter).toHaveClass("!top-1/2", "-translate-y-1/2", "!text-sidebar-muted-foreground");
     });
   });
 

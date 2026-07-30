@@ -10,11 +10,12 @@ import {
   useState,
 } from "react";
 import { useEffect } from "react";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/toast";
 
 import { AppSidebar } from "@/components/app-sidebar";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { SidebarInset, SidebarProvider, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
+import { useHorizonFavicon } from "@/hooks/use-horizon-favicon";
 import { NavigationCountsProvider } from "@/hooks/use-navigation-counts";
 import { cn } from "@/lib/utils";
 import type { HorizonPageProps, NavigationCounts } from "@/types/page";
@@ -147,6 +148,8 @@ export function HorizonLayout({ children }: { children: ReactNode }) {
     () => navigationCounts ?? storedNavigationCounts(horizon.baseUrl),
   );
   const autoLoadValue = useMemo(() => ({ autoLoad }), [autoLoad]);
+  useHorizonFavicon(horizon.status);
+
   const updateAutoLoad = useCallback((enabled: boolean) => {
     setAutoLoad(enabled);
 
@@ -166,11 +169,11 @@ export function HorizonLayout({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (flash?.success) {
-      toast.success(flash.success);
+      toast.add({ title: flash.success, type: "success" });
     }
 
     if (flash?.error) {
-      toast.error(flash.error);
+      toast.add({ title: flash.error, type: "error" });
     }
   }, [flash?.error, flash?.success]);
 
@@ -193,12 +196,13 @@ export function HorizonLayout({ children }: { children: ReactNode }) {
             autoLoad={autoLoad}
             onAutoLoadChange={updateAutoLoad}
             navigationCounts={resolvedNavigationCounts}
+            jobNavigationBreakdown={horizon.jobNavigationBreakdown ?? false}
           />
           <SidebarInset className="min-w-0 overflow-clip">
             <div className="flex w-full flex-1 flex-col gap-3.5 p-[7px] min-[1140px]:pt-3.5 min-[1140px]:pr-3.5 min-[1140px]:pb-3.5 min-[1140px]:pl-6">
               {horizon.maintenanceMode ? (
-                <Alert className="mb-4 border-warn/30">
-                  <TriangleAlertIcon className="text-warn" aria-hidden="true" />
+                <Alert variant="warning" className="mb-4">
+                  <TriangleAlertIcon aria-hidden="true" />
                   <AlertTitle>Application maintenance mode</AlertTitle>
                   <AlertDescription>
                     Queued jobs may not be processed unless the worker is using the force flag.

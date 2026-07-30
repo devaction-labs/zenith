@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 
 import { store as retryBatch } from "@/generated/routes/horizon-new-dawn/batches/retry";
 import { index as dashboardIndex } from "@/generated/routes/horizon-new-dawn/dashboard";

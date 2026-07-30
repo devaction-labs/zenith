@@ -59,7 +59,6 @@ export function MetricsTable({
             columnKey="name"
             direction={directionFor("name", sorted.sort)}
             onSort={sorted.toggle}
-            className="px-6"
           />
         </TableRow>
       </TableHeader>
@@ -94,7 +93,7 @@ export function MetricsTable({
               }}
               onMouseEnter={() => router.prefetch(detailUrl)}
             >
-              <TableCell className="px-6">
+              <TableCell>
                 <Link className="text-foreground" href={detailUrl} prefetch>
                   {metric.name}
                 </Link>

@@ -5,6 +5,10 @@ declare(strict_types=1);
 use Illuminate\Contracts\Redis\Factory as RedisFactory;
 use Laravel\Horizon\Contracts\JobRepository;
 use Laravel\Horizon\Horizon;
+use NckRtl\HorizonNewDawn\BulkOperations\Jobs\ClearFailedJobsJob;
+use NckRtl\HorizonNewDawn\Jobs\Data\JobIndexFiltersData;
+use NckRtl\HorizonNewDawn\Jobs\RetainedJobQuery;
+use NckRtl\HorizonNewDawn\Jobs\RetainedJobType;
 use Symfony\Component\Process\Process;
 use Workbench\App\Jobs\FailingJob;
 use Workbench\App\Jobs\SucceedingJob;
@@ -45,6 +49,34 @@ it('processes successful and failing jobs through a real Horizon worker', functi
         expect(app(JobRepository::class)->countCompleted())->toBe(1)
             ->and(app(JobRepository::class)->countFailed())->toBe(1)
             ->and(app(JobRepository::class)->countPending())->toBe(0);
+
+        $filtered = app(RetainedJobQuery::class)->page(
+            RetainedJobType::Completed,
+            new JobIndexFiltersData(
+                job: SucceedingJob::class,
+                queue: 'default',
+                connection: 'redis',
+                state: null,
+            ),
+            -1,
+        );
+
+        expect($filtered->total)->toBe(1)
+            ->and($filtered->jobs)->toHaveCount(1)
+            ->and($filtered->jobs->pluck('name')->all())->toBe([SucceedingJob::class]);
+
+        dispatch((new ClearFailedJobsJob)->onConnection('redis')->onQueue('default'));
+
+        waitForHorizon(
+            fn (): bool => app(JobRepository::class)->countCompleted() >= 2
+                && app(JobRepository::class)->countFailed() === 0
+                && app(JobRepository::class)->countPending() === 0,
+            $horizon,
+        );
+
+        expect(app(JobRepository::class)->countCompleted())->toBeGreaterThanOrEqual(2)
+            ->and(app(JobRepository::class)->countFailed())->toBe(0)
+            ->and(app(JobRepository::class)->countPending())->toBe(0);
     } finally {
         if ($horizonStarted) {
             $horizon->stop(10, SIGTERM);
@@ -79,6 +111,7 @@ function compatibilityEnvironment(): array
         'APP_ENV' => 'local',
         'HORIZON_PREFIX' => $prefix.'horizon:',
         'QUEUE_CONNECTION' => 'redis',
+        'QUEUE_FAILED_DRIVER' => 'null',
         'REDIS_CLIENT' => 'predis',
         'REDIS_DB' => $database,
         'REDIS_HOST' => $host,

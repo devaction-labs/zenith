@@ -5,7 +5,14 @@ declare(strict_types=1);
 namespace NckRtl\HorizonNewDawn\Batches\Actions;
 
 use Illuminate\Bus\BatchRepository;
+use Laravel\Horizon\Contracts\JobRepository;
 use NckRtl\HorizonNewDawn\Batches\BatchesData;
+use NckRtl\HorizonNewDawn\Batches\DatabaseBatchQuery;
+use NckRtl\HorizonNewDawn\Batches\RetainedBatchScanner;
+use NckRtl\HorizonNewDawn\BulkOperations\BulkOperationChunkResult;
+use NckRtl\HorizonNewDawn\BulkOperations\BulkOperationSnapshot;
+use NckRtl\HorizonNewDawn\FailedJobs\Actions\RetryFailedJob;
+use Throwable;
 
 final readonly class RetryQueueBatches
 {
@@ -14,51 +21,99 @@ final readonly class RetryQueueBatches
     public function __construct(
         private BatchRepository $batches,
         private BatchesData $data,
-        private RetryBatch $retry,
+        private JobRepository $jobs,
+        private RetryFailedJob $retry,
+        private BulkOperationSnapshot $snapshots,
+        private ?DatabaseBatchQuery $databaseQuery = null,
     ) {}
 
-    public function handle(string $queue): int
+    public function processChunk(string $queue, ?string $operationId = null): BulkOperationChunkResult
     {
-        $cursor = null;
-        $scheduled = 0;
+        $operationId ??= $this->createSnapshot($queue);
 
-        while (true) {
-            $source = $this->batches->get(self::PAGE_SIZE, $cursor);
+        $ids = $this->snapshots->nextChunk($operationId);
 
-            if ($source === []) {
-                return $scheduled;
+        if ($ids === []) {
+            return BulkOperationChunkResult::completed(
+                $operationId,
+                $this->snapshots->finish($operationId),
+            );
+        }
+
+        $hydrated = [];
+
+        foreach ($this->jobs->getJobs($ids) as $job) {
+            if (! is_object($job) || ! is_string($job->id ?? null) || $job->id === '') {
+                continue;
             }
 
-            $nextCursor = $this->advanceCursor($source, $cursor);
+            $hydrated[$job->id] = $job;
+        }
 
-            if ($nextCursor === null) {
-                return $scheduled;
+        try {
+            foreach ($ids as $id) {
+                $job = $hydrated[$id] ?? null;
+
+                if ($job === null) {
+                    $this->snapshots->acknowledge($operationId, $id);
+
+                    continue;
+                }
+
+                if ($this->retry->handleBulk($id, $job)) {
+                    $this->snapshots->addAffected($operationId, 1);
+                }
+
+                $this->snapshots->acknowledge($operationId, $id);
             }
+        } catch (Throwable $exception) {
+            $this->snapshots->renew($operationId);
 
-            foreach ($source as $batch) {
+            throw $exception;
+        }
+
+        $totalAffected = $this->snapshots->totalAffected($operationId);
+
+        if ($this->snapshots->hasMore($operationId)) {
+            return BulkOperationChunkResult::continuing($operationId, $totalAffected);
+        }
+
+        return BulkOperationChunkResult::completed(
+            $operationId,
+            $this->snapshots->finish($operationId),
+        );
+    }
+
+    private function createSnapshot(string $queue): string
+    {
+        if ($this->databaseQuery instanceof DatabaseBatchQuery) {
+            return $this->snapshots->createFromIds(
+                $this->databaseQuery->failedJobIdsForQueue($queue),
+            );
+        }
+
+        return $this->snapshots->createFromIds(
+            $this->failedJobIdsFromRepository($queue),
+        );
+    }
+
+    /** @return \Generator<int, string> */
+    private function failedJobIdsFromRepository(string $queue): \Generator
+    {
+        foreach ((new RetainedBatchScanner($this->batches))->pages(self::PAGE_SIZE) as $page) {
+            foreach ($page as $batch) {
                 if ($batch->failedJobs === 0 || $this->data->queue($batch) !== $queue) {
                     continue;
                 }
 
-                $scheduled += $this->retry->handle($batch->id);
+                foreach ($batch->failedJobIds as $jobId) {
+                    if (! is_string($jobId) || trim($jobId) === '') {
+                        continue;
+                    }
+
+                    yield $jobId;
+                }
             }
-
-            $cursor = $nextCursor;
         }
-    }
-
-    /**
-     * @param  array<int, object>  $batches
-     */
-    private function advanceCursor(array $batches, ?string $current): ?string
-    {
-        $last = end($batches);
-        $cursor = is_object($last) && is_string($last->id ?? null) ? $last->id : null;
-
-        if ($cursor === null || $cursor === '' || ($current !== null && strcmp($cursor, $current) >= 0)) {
-            return null;
-        }
-
-        return $cursor;
     }
 }

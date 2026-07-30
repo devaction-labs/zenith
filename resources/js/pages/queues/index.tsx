@@ -67,7 +67,7 @@ function QueuesIndex({ horizon, queues }: QueuesPageProps) {
           }
         />
         <CardContent className="p-0">
-          <div className="flex min-h-10 items-center border-y border-separator px-6 py-1.5">
+          <div className="flex min-h-10 items-center border-y border-separator py-1.5 pr-2.5 pl-4 sm:px-6">
             <Field className="min-w-0 flex-1">
               <FieldLabel className="sr-only">Search queues</FieldLabel>
               <InputGroup className="gap-1.5 border-0 bg-transparent! shadow-none has-[[data-slot=input-group-control]:focus-visible]:ring-0!">
@@ -91,7 +91,7 @@ function QueuesIndex({ horizon, queues }: QueuesPageProps) {
                       aria-label="Clear search"
                       onClick={() => setSearch("")}
                     >
-                      <XIcon data-icon="inline-start" />
+                      <XIcon />
                     </InputGroupButton>
                   </InputGroupAddon>
                 ) : null}
@@ -105,6 +105,7 @@ function QueuesIndex({ horizon, queues }: QueuesPageProps) {
             queues={{ ...queues, queues: visibleQueues }}
             horizonBaseUrl={horizon.baseUrl}
             queuePausing={horizon.capabilities?.queuePausing ?? false}
+            timedQueuePausing={horizon.capabilities?.timedQueuePausing ?? false}
             emptyTitle={hasQuery ? "No matching queues" : undefined}
             emptyDescription={
               hasQuery ? "No supervised queues match your search and filters." : undefined

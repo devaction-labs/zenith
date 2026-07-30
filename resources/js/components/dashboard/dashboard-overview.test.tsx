@@ -1,5 +1,5 @@
 import { render, screen, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 
 import { DashboardOverview } from "@/components/dashboard/dashboard-overview";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -14,14 +14,17 @@ const summary: DashboardSummary = {
   pendingReserved: 2,
   pendingReadyNow: 7,
   pendingDelayed: 3,
-  failedJobsPerMinute: 0.1,
   failedJobsPastHour: 6,
   failedJobsPastDay: 18,
-  failedRetentionMinutes: 10_080,
-  completedJobsPerMinute: 1.25,
-  completedJobsPastHour: 75,
-  completedJobsPastDay: 982,
+  recentlyFailedJobs: 5,
+  recentlyFailedPeriodMinutes: 60,
+  jobsPerMinute: 1.25,
+  recentJobs: 75,
+  recentJobsPeriodMinutes: 60,
+  processedSinceSnapshot: 982,
+  silencedJobs: 4,
   completedRetentionMinutes: 60,
+  batchesAvailable: true,
   activeBatches: 3,
   batchPreviews: [
     { id: "batch-3", name: "Archive audit logs", progress: 48 },
@@ -60,14 +63,23 @@ describe("DashboardOverview", () => {
     expect(pending).toHaveAttribute("href", "/horizon/jobs/pending");
     expect(within(pending).getByText("12")).toBeVisible();
     expect(within(pending).getByText("Reserved")).toBeVisible();
+    expect(within(pending).getByText("2")).toBeVisible();
     expect(within(pending).getByText("Ready")).toBeVisible();
+    expect(within(pending).getByText("7")).toBeVisible();
     expect(within(pending).getByText("Delayed")).toBeVisible();
-    expect(within(failed).getByText("Average/minute")).toBeVisible();
-    expect(within(failed).getByText("0.1")).toBeVisible();
+    expect(within(pending).getByText("3")).toBeVisible();
+    expect(within(failed).getByText("Past hour")).toBeVisible();
+    expect(within(failed).getByText("Past 24 hours")).toBeVisible();
+    expect(within(failed).getByText("Past Hour")).toBeVisible();
+    expect(failed).toHaveTextContent("6");
+    expect(failed).toHaveTextContent("18");
+    expect(failed).toHaveTextContent("5");
+    expect(within(completed).getByText("Jobs per minute")).toBeVisible();
     expect(within(completed).getByText("1.25")).toBeVisible();
-    expect(within(completed).getByText("75")).toBeVisible();
+    expect(within(completed).getByText("Throughput")).toBeVisible();
     expect(within(completed).getByText("982")).toBeVisible();
-    expect(within(completed).getByText("Retained 1 hour")).toBeVisible();
+    expect(within(completed).getByText("Silenced Jobs")).toBeVisible();
+    expect(within(completed).getByText("4")).toBeVisible();
 
     expect(screen.getByRole("link", { name: /Archive audit logs/ })).toHaveAttribute(
       "href",
@@ -95,6 +107,35 @@ describe("DashboardOverview", () => {
     );
 
     expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
+  });
+
+  it("does not render a retained-batch lower bound as an exact count", () => {
+    render(
+      <TooltipProvider>
+        <DashboardOverview summary={{ ...summary, activeBatches: null }} links={links} />
+      </TooltipProvider>,
+    );
+
+    const batches = screen.getByRole("link", { name: /Batches in progress/ });
+
+    expect(within(batches).getByText("—")).toBeVisible();
+    expect(within(batches).getByText("history incomplete")).toBeVisible();
+  });
+
+  it("hides the batches overview segment when batch storage is unavailable", () => {
+    render(
+      <TooltipProvider>
+        <DashboardOverview
+          summary={{ ...summary, batchesAvailable: false, activeBatches: null, batchPreviews: [] }}
+          links={links}
+        />
+      </TooltipProvider>,
+    );
+
+    expect(screen.getByRole("link", { name: /Pending Jobs/ })).toBeVisible();
+    expect(screen.getByRole("link", { name: /Failed Jobs/ })).toBeVisible();
+    expect(screen.getByRole("link", { name: /Completed Jobs/ })).toBeVisible();
+    expect(screen.queryByRole("link", { name: /Batches in progress/ })).not.toBeInTheDocument();
   });
 
   it("surfaces summary failures", () => {

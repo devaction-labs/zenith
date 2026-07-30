@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 
 import { BatchFailedJobsTable } from "@/components/batches/batch-failed-jobs-table";
 import type { JobRow } from "@/types/jobs";
@@ -83,6 +83,24 @@ describe("BatchFailedJobsTable", () => {
     const row = screen.getByRole("row", { name: "No failed jobs" });
 
     expect(row.querySelector('[data-slot="empty-icon"] svg')).toHaveClass("lucide-layers3");
+  });
+
+  it("preserves source order and hides sorting when retained history is incomplete", () => {
+    render(
+      <BatchFailedJobsTable
+        jobs={[
+          failedJob("failed-2", "App\\Jobs\\SlowExport", 1_784_282_000, 5),
+          failedJob("failed-1", "App\\Jobs\\FastImport", 1_784_281_000, 2),
+        ]}
+        horizonBaseUrl="/horizon"
+        sortable={false}
+      />,
+    );
+
+    expect(screen.queryByRole("button", { name: /Sort by/ })).not.toBeInTheDocument();
+    expect(within(screen.getAllByRole("rowgroup")[1]).getAllByRole("row")[0]).toHaveTextContent(
+      "SlowExport",
+    );
   });
 
   it("supports batch-retention empty-state copy", () => {

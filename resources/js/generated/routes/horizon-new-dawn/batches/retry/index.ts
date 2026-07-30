@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../../../wayfinder'
 /**
 * @see \NckRtl\HorizonNewDawn\Http\Controllers\BatchRetryController::store
-* @see src/Http/Controllers/BatchRetryController.php:14
+* @see src/Http/Controllers/BatchRetryController.php:15
 * @route '/horizon/batches/{batch}/retry'
 */
 export const store = (args: { batch: string | number } | [batch: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -16,7 +16,7 @@ store.definition = {
 
 /**
 * @see \NckRtl\HorizonNewDawn\Http\Controllers\BatchRetryController::store
-* @see src/Http/Controllers/BatchRetryController.php:14
+* @see src/Http/Controllers/BatchRetryController.php:15
 * @route '/horizon/batches/{batch}/retry'
 */
 store.url = (args: { batch: string | number } | [batch: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -43,7 +43,7 @@ store.url = (args: { batch: string | number } | [batch: string | number ] | stri
 
 /**
 * @see \NckRtl\HorizonNewDawn\Http\Controllers\BatchRetryController::store
-* @see src/Http/Controllers/BatchRetryController.php:14
+* @see src/Http/Controllers/BatchRetryController.php:15
 * @route '/horizon/batches/{batch}/retry'
 */
 store.post = (args: { batch: string | number } | [batch: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({

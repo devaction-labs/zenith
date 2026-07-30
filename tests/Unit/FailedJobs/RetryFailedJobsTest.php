@@ -3,18 +3,127 @@
 declare(strict_types=1);
 
 use Illuminate\Contracts\Bus\Dispatcher;
-use Illuminate\Support\Collection;
+use Illuminate\Contracts\Redis\Factory as RedisFactory;
+use Illuminate\Redis\Connections\Connection;
 use Illuminate\Support\Facades\Bus;
 use Laravel\Horizon\Contracts\JobRepository;
 use Laravel\Horizon\Jobs\RetryFailedJob as HorizonRetryFailedJob;
-use NckRtl\HorizonNewDawn\FailedJobs\Actions\RetryAllFailedJobs;
 use NckRtl\HorizonNewDawn\FailedJobs\Actions\RetryFailedJob;
 use NckRtl\HorizonNewDawn\FailedJobs\FailedJobRetryEligibility;
+use NckRtl\HorizonNewDawn\FailedJobs\FailedJobRetryLock;
 
+use function NckRtl\HorizonNewDawn\Tests\Support\dashboardExpects;
+use function NckRtl\HorizonNewDawn\Tests\Support\dashboardNeverReceives;
 use function NckRtl\HorizonNewDawn\Tests\Support\dashboardReturns;
 use function NckRtl\HorizonNewDawn\Tests\Support\dashboardReturnsFor;
 use function NckRtl\HorizonNewDawn\Tests\Support\horizonJob;
 use function NckRtl\HorizonNewDawn\Tests\Support\mockDashboardContract;
+
+function failedJobRetryLock(
+    FailedJobRetryLockRedisConnection $connection,
+): FailedJobRetryLock {
+    $redis = mockDashboardContract(RedisFactory::class);
+    dashboardReturns($redis, 'connection', $connection);
+
+    return new FailedJobRetryLock($redis);
+}
+
+it('serializes overlapping retries for the same retained failed job', function (): void {
+    $connection = new FailedJobRetryLockRedisConnection;
+    $job = horizonJob(0, 'failed-1');
+    $repository = mockDashboardContract(JobRepository::class);
+    dashboardReturnsFor($repository, 'findFailed', ['failed-1'], $job);
+
+    $nestedResult = true;
+    $holder = new FailedJobRetryActionHolder;
+    $bus = mockDashboardContract(Dispatcher::class);
+    dashboardExpects(
+        $bus,
+        'dispatch',
+        returnUsing: function (mixed $command) use ($holder, &$nestedResult): void {
+            expect($command)->toBeInstanceOf(HorizonRetryFailedJob::class)
+                ->and($command->id)->toBe('failed-1');
+
+            if (! $holder->action instanceof RetryFailedJob) {
+                throw new LogicException('The retry action was not initialized.');
+            }
+
+            $nestedResult = $holder->action->handleBulk('failed-1');
+        },
+    );
+
+    $holder->action = new RetryFailedJob(
+        $bus,
+        $repository,
+        new FailedJobRetryEligibility,
+        failedJobRetryLock($connection),
+    );
+
+    expect($holder->action->handleBulk('failed-1'))->toBeTrue();
+    expect($nestedResult)->toBeFalse();
+    expect($connection->locks)->toBe([]);
+});
+
+it('rechecks retry eligibility inside the distributed lock', function (): void {
+    $supplied = horizonJob(0, 'failed-1');
+    $current = clone $supplied;
+    $current->retried_by = json_encode([
+        ['id' => 'active-retry', 'status' => 'pending'],
+    ], JSON_THROW_ON_ERROR);
+
+    $repository = mockDashboardContract(JobRepository::class);
+    dashboardReturnsFor($repository, 'findFailed', ['failed-1'], $current);
+    $bus = mockDashboardContract(Dispatcher::class);
+    $bus->shouldNotReceive('dispatch');
+
+    $action = new RetryFailedJob(
+        $bus,
+        $repository,
+        new FailedJobRetryEligibility,
+        failedJobRetryLock(new FailedJobRetryLockRedisConnection),
+    );
+
+    expect($action->handleBulk('failed-1', $supplied))->toBeFalse();
+});
+
+it('fails closed when the retry lock cannot be acquired', function (): void {
+    $connection = new FailedJobRetryLockRedisConnection;
+    $connection->failAcquisition = true;
+    $repository = mockDashboardContract(JobRepository::class);
+    dashboardNeverReceives($repository, 'findFailed');
+    $bus = mockDashboardContract(Dispatcher::class);
+    $bus->shouldNotReceive('dispatch');
+
+    $action = new RetryFailedJob(
+        $bus,
+        $repository,
+        new FailedJobRetryEligibility,
+        failedJobRetryLock($connection),
+    );
+
+    expect(fn (): bool => $action->handleBulk('failed-1'))
+        ->toThrow(RuntimeException::class, 'Retry lock acquisition failed.');
+});
+
+it('does not report a completed retry as failed when lock cleanup fails', function (): void {
+    $connection = new FailedJobRetryLockRedisConnection;
+    $connection->failRelease = true;
+    $job = horizonJob(0, 'failed-1');
+    $repository = mockDashboardContract(JobRepository::class);
+    dashboardReturnsFor($repository, 'findFailed', ['failed-1'], $job);
+    $bus = mockDashboardContract(Dispatcher::class);
+    dashboardExpects($bus, 'dispatch');
+
+    $action = new RetryFailedJob(
+        $bus,
+        $repository,
+        new FailedJobRetryEligibility,
+        failedJobRetryLock($connection),
+    );
+
+    expect($action->handleBulk('failed-1'))->toBeTrue()
+        ->and($connection->locks)->not->toBe([]);
+});
 
 it('dispatches one supported Horizon retry job', function (): void {
     Bus::fake();
@@ -112,153 +221,56 @@ it('allows individual retries after prior retries failed and blocks active or su
     );
 });
 
-it('walks failed chunks deduplicates ids and includes retry leaves', function (): void {
-    Bus::fake();
+final class FailedJobRetryLockRedisConnection extends Connection
+{
+    /** @var array<string, string> */
+    public array $locks = [];
 
-    $first = new Collection(array_map(
-        function (int $index): object {
-            $job = horizonJob($index, "failed-{$index}");
+    public bool $failAcquisition = false;
 
-            if ($index === 1) {
-                $payload = json_decode((string) $job->payload, true, flags: JSON_THROW_ON_ERROR);
-                $job->payload = json_encode([...$payload, 'retry_of' => 'original-1'], JSON_THROW_ON_ERROR);
+    public bool $failRelease = false;
+
+    public function __construct() {}
+
+    /** @param array<int, string>|string $channels */
+    public function createSubscription($channels, $callback, $method = 'subscribe'): void {}
+
+    public function eval(
+        string $script,
+        int $keyCount,
+        string $key,
+        string $token,
+        string $seconds = '',
+    ): int|string|false {
+        if (str_contains($script, "'set'")) {
+            if ($this->failAcquisition) {
+                throw new RuntimeException('Retry lock acquisition failed.');
             }
 
-            return $job;
-        },
-        range(0, 49),
-    ));
-    $second = new Collection([
-        horizonJob(50, 'failed-50'),
-        horizonJob(51, 'failed-2'),
-    ]);
+            if (isset($this->locks[$key])) {
+                return false;
+            }
 
-    $repository = mockDashboardContract(JobRepository::class);
-    dashboardReturnsFor($repository, 'countFailed', [], 52);
-    dashboardReturnsFor($repository, 'getFailed', ['-1'], $first);
-    dashboardReturnsFor($repository, 'getFailed', ['49'], $second);
+            $this->locks[$key] = $token;
 
-    $action = new RetryAllFailedJobs(
-        $repository,
-        new RetryFailedJob(app(Dispatcher::class), $repository, new FailedJobRetryEligibility),
-    );
+            return 'OK';
+        }
 
-    expect($action->handle())->toBe(51);
-    Bus::assertDispatchedTimes(HorizonRetryFailedJob::class, 51);
-    Bus::assertDispatched(
-        HorizonRetryFailedJob::class,
-        fn (HorizonRetryFailedJob $job): bool => $job->id === 'failed-1',
-    );
-});
+        if ($this->failRelease) {
+            throw new RuntimeException('Retry lock release failed.');
+        }
 
-it('retries only failures from the requested connection and queue', function (): void {
-    Bus::fake();
+        if (($this->locks[$key] ?? null) !== $token) {
+            return 0;
+        }
 
-    $matching = horizonJob(0, 'failed-batches');
-    $matching->queue = 'batches';
+        unset($this->locks[$key]);
 
-    $otherQueue = horizonJob(1, 'failed-reports');
-    $otherQueue->queue = 'reports';
+        return 1;
+    }
+}
 
-    $otherConnection = horizonJob(2, 'failed-sqs-batches');
-    $otherConnection->connection = 'sqs';
-    $otherConnection->queue = 'batches';
-
-    $repository = mockDashboardContract(JobRepository::class);
-    dashboardReturnsFor($repository, 'countFailed', [], 3);
-    dashboardReturns($repository, 'getFailed', new Collection([
-        $matching,
-        $otherQueue,
-        $otherConnection,
-    ]));
-
-    $action = new RetryAllFailedJobs(
-        $repository,
-        new RetryFailedJob(app(Dispatcher::class), $repository, new FailedJobRetryEligibility),
-    );
-
-    expect($action->handle('redis', 'batches'))->toBe(1);
-    Bus::assertDispatched(
-        HorizonRetryFailedJob::class,
-        fn (HorizonRetryFailedJob $job): bool => $job->id === 'failed-batches',
-    );
-    Bus::assertDispatchedTimes(HorizonRetryFailedJob::class, 1);
-});
-
-it('stops retry-all when a full chunk does not advance', function (): void {
-    Bus::fake();
-
-    $first = new Collection(array_map(
-        fn (int $index): object => horizonJob(0, "failed-{$index}"),
-        range(0, 49),
-    ));
-    $second = new Collection(array_map(
-        fn (int $index): object => horizonJob(0, "next-failed-{$index}"),
-        range(0, 49),
-    ));
-
-    $repository = mockDashboardContract(JobRepository::class);
-    dashboardReturnsFor($repository, 'countFailed', [], 100);
-    dashboardReturnsFor($repository, 'getFailed', ['-1'], $first);
-    dashboardReturnsFor($repository, 'getFailed', ['49'], $second);
-
-    $action = new RetryAllFailedJobs(
-        $repository,
-        new RetryFailedJob(app(Dispatcher::class), $repository, new FailedJobRetryEligibility),
-    );
-
-    expect($action->handle())->toBe(100);
-    Bus::assertDispatchedTimes(HorizonRetryFailedJob::class, 100);
-});
-
-it('bulk retries the failed leaf instead of branching again from its parent', function (): void {
-    Bus::fake();
-
-    $parent = horizonJob(0, 'parent');
-    $parent->retried_by = json_encode([
-        ['id' => 'retry-leaf', 'status' => 'failed'],
-    ], JSON_THROW_ON_ERROR);
-    $retryLeaf = horizonJob(1, 'retry-leaf');
-    $payload = json_decode($retryLeaf->payload, true, flags: JSON_THROW_ON_ERROR);
-    $retryLeaf->payload = json_encode([...$payload, 'retry_of' => 'parent'], JSON_THROW_ON_ERROR);
-
-    $repository = mockDashboardContract(JobRepository::class);
-    dashboardReturnsFor($repository, 'countFailed', [], 2);
-    dashboardReturns($repository, 'getFailed', new Collection([$parent, $retryLeaf]));
-
-    $scheduled = (new RetryAllFailedJobs(
-        $repository,
-        new RetryFailedJob(app(Dispatcher::class), $repository, new FailedJobRetryEligibility),
-    ))->handle();
-
-    expect($scheduled)->toBe(1);
-    Bus::assertDispatchedTimes(HorizonRetryFailedJob::class, 1);
-    Bus::assertDispatched(
-        HorizonRetryFailedJob::class,
-        fn (HorizonRetryFailedJob $job): bool => $job->id === 'retry-leaf',
-    );
-});
-
-it('scans raw failed-job windows and respects the final raw allowance', function (): void {
-    Bus::fake();
-
-    $repository = mockDashboardContract(JobRepository::class);
-    dashboardReturnsFor($repository, 'countFailed', [], 51);
-    dashboardReturnsFor($repository, 'getFailed', ['-1'], new Collection);
-    dashboardReturnsFor($repository, 'getFailed', ['49'], new Collection([
-        horizonJob(50, 'failed-50'),
-        horizonJob(51, 'failed-51'),
-    ]));
-
-    $scheduled = (new RetryAllFailedJobs(
-        $repository,
-        new RetryFailedJob(app(Dispatcher::class), $repository, new FailedJobRetryEligibility),
-    ))->handle();
-
-    expect($scheduled)->toBe(1);
-    Bus::assertDispatchedTimes(HorizonRetryFailedJob::class, 1);
-    Bus::assertDispatched(
-        HorizonRetryFailedJob::class,
-        fn (HorizonRetryFailedJob $job): bool => $job->id === 'failed-50',
-    );
-});
+final class FailedJobRetryActionHolder
+{
+    public ?RetryFailedJob $action = null;
+}

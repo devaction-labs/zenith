@@ -38,6 +38,7 @@ import {
   store as pauseQueue,
 } from "@/generated/routes/horizon-new-dawn/queues/pause";
 import { store as retryFailedQueueJobs } from "@/generated/routes/horizon-new-dawn/queues/retry-failed";
+import { formatDuration } from "@/lib/format-duration";
 import { resolveHorizonRoute } from "@/lib/horizon-route";
 
 const deadlineFormatter = new Intl.DateTimeFormat(undefined, {
@@ -48,9 +49,9 @@ const deadlineFormatter = new Intl.DateTimeFormat(undefined, {
 });
 
 const durations = [
-  { label: "15 min", minutes: 15 },
-  { label: "1 hour", minutes: 60 },
-  { label: "4 hours", minutes: 240 },
+  { label: formatDuration(15 * 60, "precise"), minutes: 15 },
+  { label: formatDuration(60 * 60, "precise"), minutes: 60 },
+  { label: formatDuration(4 * 60 * 60, "precise"), minutes: 240 },
 ] as const;
 
 function queueRouteParameters(target: QueueActionTarget, queue: string) {
@@ -103,6 +104,7 @@ export function QueueActionsMenu({
   failedJobs,
   horizonBaseUrl,
   queuePausing = true,
+  timedQueuePausing = true,
   scope = "all",
 }: {
   connection?: string;
@@ -114,6 +116,7 @@ export function QueueActionsMenu({
   failedJobs?: number | null;
   horizonBaseUrl: string;
   queuePausing?: boolean;
+  timedQueuePausing?: boolean;
   scope?: QueueActionScope;
 }) {
   const actionTargets =
@@ -225,6 +228,12 @@ export function QueueActionsMenu({
     }
   };
 
+  const confirmBasicPause = () => {
+    if (activeTarget) {
+      pause(activeTarget, null);
+    }
+  };
+
   const pauseIndefinitelyId = `pause-indefinitely-${activeTarget?.connection ?? "queue"}-${queue}`;
   const pauseDurationId = `pause-duration-${activeTarget?.connection ?? "queue"}-${queue}`;
   const duration = Number.parseInt(durationMinutes, 10);
@@ -290,77 +299,102 @@ export function QueueActionsMenu({
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
-          <form onSubmit={submitPause}>
-            <DialogHeader>
-              <DialogTitle>Pause {queue}</DialogTitle>
-              <DialogDescription>
-                Choose when Horizon should resume processing this queue
-                {actionTargets.length > 1 && activeTarget ? ` on ${activeTarget.connection}` : ""}.
-              </DialogDescription>
-            </DialogHeader>
+          {timedQueuePausing ? (
+            <form onSubmit={submitPause}>
+              <DialogHeader>
+                <DialogTitle>Pause {queue}</DialogTitle>
+                <DialogDescription>
+                  Choose when Horizon should resume processing this queue
+                  {actionTargets.length > 1 && activeTarget ? ` on ${activeTarget.connection}` : ""}
+                  .
+                </DialogDescription>
+              </DialogHeader>
 
-            <FieldGroup className="gap-5 py-5">
-              <Field orientation="horizontal" className="items-center justify-between gap-4">
-                <FieldLabel htmlFor={pauseIndefinitelyId}>Pause indefinitely</FieldLabel>
-                <Switch
-                  id={pauseIndefinitelyId}
-                  checked={pauseIndefinitely}
-                  onCheckedChange={setPauseIndefinitely}
-                />
-              </Field>
-
-              {!pauseIndefinitely ? (
-                <Field className="gap-2.5">
-                  <div className="flex items-center justify-between gap-4">
-                    <FieldLabel htmlFor={pauseDurationId}>Pause for</FieldLabel>
-                    <div className="flex items-center gap-1.5" aria-label="Pause duration presets">
-                      {durations.map((preset, index) => (
-                        <span key={preset.minutes} className="flex items-center gap-1.5">
-                          {index > 0 ? (
-                            <span aria-hidden="true" className="text-muted-foreground/50">
-                              |
-                            </span>
-                          ) : null}
-                          <Button
-                            type="button"
-                            variant="link"
-                            size="xs"
-                            className="h-auto p-0 text-xs font-normal"
-                            onClick={() => setDurationMinutes(String(preset.minutes))}
-                          >
-                            {preset.label}
-                          </Button>
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                  <InputGroup className="h-9 has-[>[data-align=inline-end]]:[&>input]:pr-2.5">
-                    <InputGroupInput
-                      className="h-full px-2.5 py-1.5"
-                      id={pauseDurationId}
-                      type="number"
-                      inputMode="numeric"
-                      min={1}
-                      max={525600}
-                      required
-                      value={durationMinutes}
-                      onChange={(event) => setDurationMinutes(event.target.value)}
-                    />
-                    <InputGroupAddon align="inline-end" className="py-0 pr-2.5">
-                      <InputGroupText className="leading-none">minutes</InputGroupText>
-                    </InputGroupAddon>
-                  </InputGroup>
+              <FieldGroup className="gap-5 py-5">
+                <Field orientation="horizontal" className="items-center justify-between gap-4">
+                  <FieldLabel htmlFor={pauseIndefinitelyId}>Pause indefinitely</FieldLabel>
+                  <Switch
+                    id={pauseIndefinitelyId}
+                    checked={pauseIndefinitely}
+                    onCheckedChange={setPauseIndefinitely}
+                  />
                 </Field>
-              ) : null}
-            </FieldGroup>
 
-            <DialogFooter>
-              <DialogClose render={<Button type="button" variant="ghost" />}>Cancel</DialogClose>
-              <Button type="submit" disabled={working || durationInvalid}>
-                {working ? "Pausing…" : "Pause queue"}
-              </Button>
-            </DialogFooter>
-          </form>
+                {!pauseIndefinitely ? (
+                  <Field className="gap-2.5">
+                    <div className="flex items-center justify-between gap-4">
+                      <FieldLabel htmlFor={pauseDurationId}>Pause for</FieldLabel>
+                      <div
+                        className="flex items-center gap-1.5"
+                        aria-label="Pause duration presets"
+                      >
+                        {durations.map((preset, index) => (
+                          <span key={preset.minutes} className="flex items-center gap-1.5">
+                            {index > 0 ? (
+                              <span aria-hidden="true" className="text-muted-foreground/50">
+                                |
+                              </span>
+                            ) : null}
+                            <Button
+                              type="button"
+                              variant="link"
+                              size="xs"
+                              className="h-auto p-0 text-xs font-normal"
+                              onClick={() => setDurationMinutes(String(preset.minutes))}
+                            >
+                              {preset.label}
+                            </Button>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                    <InputGroup className="h-9 has-[>[data-align=inline-end]]:[&>input]:pr-2.5">
+                      <InputGroupInput
+                        className="h-full px-2.5 py-1.5"
+                        id={pauseDurationId}
+                        type="number"
+                        inputMode="numeric"
+                        min={1}
+                        max={525600}
+                        required
+                        value={durationMinutes}
+                        onChange={(event) => setDurationMinutes(event.target.value)}
+                      />
+                      <InputGroupAddon align="inline-end" className="py-0 pr-2.5">
+                        <InputGroupText className="leading-none">m</InputGroupText>
+                      </InputGroupAddon>
+                    </InputGroup>
+                  </Field>
+                ) : null}
+              </FieldGroup>
+
+              <DialogFooter>
+                <DialogClose render={<Button type="button" variant="ghost" />}>Cancel</DialogClose>
+                <Button type="submit" disabled={working || durationInvalid}>
+                  {working ? "Pausing…" : "Pause queue"}
+                </Button>
+              </DialogFooter>
+            </form>
+          ) : (
+            <>
+              <DialogHeader>
+                <DialogTitle>Pause {queue}?</DialogTitle>
+                <DialogDescription>Are you sure you want to pause this queue?</DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <DialogClose render={<Button type="button" variant="ghost" disabled={working} />}>
+                  Cancel
+                </DialogClose>
+                <Button
+                  type="button"
+                  disabled={working || !activeTarget}
+                  onClick={confirmBasicPause}
+                >
+                  {working ? "Pausing…" : "Pause queue"}
+                </Button>
+              </DialogFooter>
+            </>
+          )}
         </DialogContent>
       </Dialog>
 

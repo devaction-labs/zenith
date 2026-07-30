@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../../../../wayfinder'
 /**
 * @see \NckRtl\HorizonNewDawn\Http\Controllers\QueueBatchRetryController::store
-* @see src/Http/Controllers/QueueBatchRetryController.php:14
+* @see src/Http/Controllers/QueueBatchRetryController.php:16
 * @route '/horizon/queues/{queue}/batches/retry-failed-jobs'
 */
 export const store = (args: { queue: string | number } | [queue: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -16,7 +16,7 @@ store.definition = {
 
 /**
 * @see \NckRtl\HorizonNewDawn\Http\Controllers\QueueBatchRetryController::store
-* @see src/Http/Controllers/QueueBatchRetryController.php:14
+* @see src/Http/Controllers/QueueBatchRetryController.php:16
 * @route '/horizon/queues/{queue}/batches/retry-failed-jobs'
 */
 store.url = (args: { queue: string | number } | [queue: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -43,7 +43,7 @@ store.url = (args: { queue: string | number } | [queue: string | number ] | stri
 
 /**
 * @see \NckRtl\HorizonNewDawn\Http\Controllers\QueueBatchRetryController::store
-* @see src/Http/Controllers/QueueBatchRetryController.php:14
+* @see src/Http/Controllers/QueueBatchRetryController.php:16
 * @route '/horizon/queues/{queue}/batches/retry-failed-jobs'
 */
 store.post = (args: { queue: string | number } | [queue: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({

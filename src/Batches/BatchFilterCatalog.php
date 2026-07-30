@@ -4,11 +4,10 @@ declare(strict_types=1);
 
 namespace NckRtl\HorizonNewDawn\Batches;
 
-use Illuminate\Bus\Batch;
 use Illuminate\Bus\BatchRepository;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use NckRtl\HorizonNewDawn\Batches\Data\BatchFilterCatalogData;
-use RuntimeException;
+use NckRtl\HorizonNewDawn\Support\PollInterval;
 use Throwable;
 
 final readonly class BatchFilterCatalog
@@ -21,11 +20,12 @@ final readonly class BatchFilterCatalog
         private BatchRepository $batches,
         private BatchesData $data,
         private CacheFactory $cache,
+        private ?DatabaseBatchQuery $databaseQuery = null,
     ) {}
 
     public function get(): BatchFilterCatalogData
     {
-        $cacheSeconds = intdiv(max(0, (int) config('horizon-new-dawn.poll_interval', 0)), 1000);
+        $cacheSeconds = PollInterval::cacheSeconds();
 
         if ($cacheSeconds === 0) {
             return $this->build();
@@ -55,38 +55,56 @@ final readonly class BatchFilterCatalog
     private function build(): BatchFilterCatalogData
     {
         try {
-            $cursor = null;
-            $queues = [];
-            $connections = [];
-
-            while (true) {
-                $page = $this->batches->get(self::PAGE_SIZE, $cursor);
-
-                if ($page === []) {
-                    return new BatchFilterCatalogData(
-                        available: true,
-                        queues: $this->sortedValues($queues),
-                        connections: $this->sortedValues($connections),
-                    );
+            if ($this->databaseQuery !== null) {
+                if ($this->databaseQuery->attributionSupported()) {
+                    return $this->databaseQuery->catalog();
                 }
 
+                return new BatchFilterCatalogData(
+                    available: false,
+                    complete: false,
+                    message: $this->databaseQuery->attributionMessage()
+                        ?? 'Batch queue and connection filters are unavailable.',
+                    queues: [],
+                    connections: [],
+                );
+            }
+
+            /** @var array<string, true> $queues */
+            $queues = [];
+            /** @var array<string, true> $connections */
+            $connections = [];
+
+            foreach ((new RetainedBatchScanner($this->batches))->pages(self::PAGE_SIZE) as $page) {
                 foreach ($page as $batch) {
-                    $queues[] = $this->data->queue($batch);
+                    $queue = $this->data->queue($batch);
+
+                    if ($queue !== '') {
+                        $queues[$queue] = true;
+                    }
 
                     $connection = $this->data->connection($batch);
 
-                    if ($connection !== null) {
-                        $connections[] = $connection;
+                    if (is_string($connection) && $connection !== '') {
+                        $connections[$connection] = true;
                     }
                 }
-
-                $cursor = $this->advanceCursor($page, $cursor);
             }
+
+            return new BatchFilterCatalogData(
+                available: true,
+                complete: true,
+                message: null,
+                queues: $this->sortedKeys($queues),
+                connections: $this->sortedKeys($connections),
+            );
         } catch (Throwable $exception) {
             report($exception);
 
             return new BatchFilterCatalogData(
                 available: false,
+                complete: false,
+                message: 'Batch filter options are currently unavailable.',
                 queues: [],
                 connections: [],
             );
@@ -94,23 +112,15 @@ final readonly class BatchFilterCatalog
     }
 
     /**
-     * @param  array<int, Batch>  $batches
+     * @param  array<string, true>  $values
+     * @return list<string>
      */
-    private function advanceCursor(array $batches, ?string $current): string
+    private function sortedKeys(array $values): array
     {
-        $batch = end($batches);
+        $keys = array_keys($values);
+        usort($keys, static fn (string $left, string $right): int => strcasecmp($left, $right));
 
-        if (! $batch instanceof Batch) {
-            throw new RuntimeException('The batch repository returned an empty page.');
-        }
-
-        $cursor = $batch->id;
-
-        if ($cursor === '' || ($current !== null && strcmp($cursor, $current) >= 0)) {
-            throw new RuntimeException('The batch repository did not advance its pagination cursor.');
-        }
-
-        return $cursor;
+        return $keys;
     }
 
     /**
@@ -119,19 +129,26 @@ final readonly class BatchFilterCatalog
      */
     private function sortedValues(array $values): array
     {
-        $values = array_values(array_unique(array_filter(
-            $values,
-            static fn (mixed $value): bool => is_string($value) && $value !== '',
-        )));
+        $normalized = [];
 
-        usort($values, static fn (string $left, string $right): int => strcasecmp($left, $right));
+        foreach ($values as $value) {
+            if (! is_string($value) || $value === '') {
+                continue;
+            }
 
-        return $values;
+            $normalized[$value] = true;
+        }
+
+        return $this->sortedKeys($normalized);
     }
 
     private function normalize(mixed $payload): ?BatchFilterCatalogData
     {
-        if (! is_array($payload) || ! is_bool($payload['available'] ?? null)) {
+        if (! is_array($payload)
+            || ! is_bool($payload['available'] ?? null)
+            || ! is_bool($payload['complete'] ?? null)
+            || (! is_string($payload['message'] ?? null) && ($payload['message'] ?? null) !== null)
+        ) {
             return null;
         }
 
@@ -144,6 +161,8 @@ final readonly class BatchFilterCatalog
 
         return new BatchFilterCatalogData(
             available: $payload['available'],
+            complete: $payload['complete'],
+            message: $payload['message'] ?? null,
             queues: $queues,
             connections: $connections,
         );

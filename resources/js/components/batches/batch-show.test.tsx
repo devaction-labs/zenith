@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 
 import BatchShow from "@/pages/batches/show";
 import type { BatchDetail, BatchDetailPageProps, BatchJobList } from "@/types/batches";
@@ -69,6 +69,8 @@ const props: BatchDetailPageProps = {
     finishedAt: null,
     connection: "redis",
     queue: "imports",
+    connectionExplicit: true,
+    queueExplicit: true,
     jobs: {
       pending: { total: 1, rows: [pending], available: true, complete: true, message: null },
       completed: {
@@ -106,6 +108,51 @@ describe("BatchShow", () => {
     expect(screen.getByText("Failed job attempts")).toBeVisible();
     expect(screen.getByText("Failed job attempts").parentElement).toHaveTextContent("4");
     expect(screen.queryByText("Processed jobs")).not.toBeInTheDocument();
+  });
+
+  it("labels inherited queue defaults as current defaults instead of recorded attribution", () => {
+    render(
+      <BatchShow
+        {...pageProps({
+          connection: "redis",
+          queue: "default",
+          connectionExplicit: false,
+          queueExplicit: false,
+        })}
+      />,
+    );
+
+    expect(screen.getByText("Connection").parentElement).toHaveTextContent(
+      "Not recorded (current default: redis)",
+    );
+    expect(screen.getByText("Queue").parentElement).toHaveTextContent(
+      "Not recorded (current default: default)",
+    );
+    expect(screen.queryByRole("link", { name: "default" })).not.toBeInTheDocument();
+  });
+
+  it("labels and links immutable first-discovery attribution", () => {
+    render(
+      <BatchShow
+        {...pageProps({
+          connection: "redis",
+          queue: "default",
+          connectionExplicit: false,
+          queueExplicit: false,
+          attributionCaptured: true,
+        })}
+      />,
+    );
+
+    expect(screen.getByText("Connection").parentElement).toHaveTextContent(
+      "Inferred when first discovered: redis",
+    );
+    expect(screen.getByText("Queue").parentElement).toHaveTextContent(
+      "Inferred when first discovered: default",
+    );
+    expect(
+      screen.getByRole("link", { name: "Inferred when first discovered: default" }),
+    ).toHaveAttribute("href", "/horizon/queues/default");
   });
 
   it("switches contextual job headers and scopes actions to the failed tab", () => {

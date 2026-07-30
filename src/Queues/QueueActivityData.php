@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace NckRtl\HorizonNewDawn\Queues;
 
+use Closure;
 use NckRtl\HorizonNewDawn\Queues\Data\QueueActivityPageData;
 
 final readonly class QueueActivityData
@@ -25,12 +26,43 @@ final readonly class QueueActivityData
             QueueActivityTab::Silenced => $this->jobs->page(
                 $queue,
                 $tab,
-                is_numeric($cursor) ? (int) $cursor : -1,
+                $cursor,
             ),
             QueueActivityTab::Batches => $this->batches->page(
                 $queue,
                 is_string($cursor) ? $cursor : null,
             ),
         };
+    }
+
+    public function querySignature(
+        string $queue,
+        QueueActivityTab $tab,
+    ): string {
+        return $this->jobs->querySignature($queue, $tab);
+    }
+
+    /** @param  (Closure(): QueueActivityPageData)|null  $fallbackPageResolver */
+    public function listRevision(
+        string $queue,
+        QueueActivityTab $tab,
+        ?Closure $fallbackPageResolver = null,
+    ): string {
+        if ($tab !== QueueActivityTab::Batches) {
+            return $this->jobs->listRevision(
+                $queue,
+                $tab,
+                $fallbackPageResolver,
+            );
+        }
+
+        $page = $fallbackPageResolver !== null
+            ? $fallbackPageResolver()
+            : $this->batches->page($queue, null);
+
+        return json_encode([
+            $page->total,
+            $page->rows[0]->id ?? null,
+        ], JSON_THROW_ON_ERROR);
     }
 }

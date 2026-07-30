@@ -20,20 +20,21 @@ final readonly class PauseQueue
 
     public function handle(PauseQueueData $data): ?CarbonImmutable
     {
-        ($this->capabilities ?? FrameworkCapabilities::detect())->ensureQueuePausing();
+        $capabilities = $this->capabilities ?? FrameworkCapabilities::detect();
+        $capabilities->ensureQueuePausing();
 
-        if ($data->durationMinutes === null) {
-            $this->queues->pause($data->connection, $data->queue);
-            $this->metadata->forget($data->connection, $data->queue);
+        if ($data->durationMinutes !== null && $capabilities->timedQueuePausing) {
+            $until = CarbonImmutable::now()->addMinutes($data->durationMinutes);
 
-            return null;
+            $this->queues->pauseFor($data->connection, $data->queue, $until);
+            $this->metadata->storeUntil($data->connection, $data->queue, $until);
+
+            return $until;
         }
 
-        $until = CarbonImmutable::now()->addMinutes($data->durationMinutes);
+        $this->queues->pause($data->connection, $data->queue);
+        $this->metadata->forget($data->connection, $data->queue);
 
-        $this->queues->pauseFor($data->connection, $data->queue, $until);
-        $this->metadata->storeUntil($data->connection, $data->queue, $until);
-
-        return $until;
+        return null;
     }
 }

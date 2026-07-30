@@ -4,7 +4,19 @@ import { TriangleAlertIcon } from "lucide-react";
 import { ProgressRing } from "@/components/batches/progress-ring";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Statistic,
+  StatisticDetail,
+  StatisticDetails,
+  StatisticGrid,
+  StatisticLabel,
+  StatisticLink,
+  StatisticUnit,
+  StatisticValue,
+} from "@/components/ui/statistic";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { formatDuration } from "@/lib/format-duration";
+import { livePendingTotal } from "@/lib/live-pending-total";
 import type { DashboardSummary } from "@/types/dashboard";
 
 const numberFormatter = new Intl.NumberFormat(undefined, {
@@ -16,19 +28,48 @@ function formatRetention(minutes: number) {
     return "no retained history";
   }
 
-  if (minutes % 1440 === 0) {
-    const days = minutes / 1440;
+  return formatDuration(minutes * 60, "precise");
+}
 
-    return `${days} ${days === 1 ? "day" : "days"}`;
+export function completedRetentionTooltip(minutes: number): string {
+  if (minutes <= 0) {
+    return "Completed jobs have no retained history according to Horizon's configured trim settings.";
   }
 
-  if (minutes % 60 === 0) {
-    const hours = minutes / 60;
+  return `Completed jobs are retained for ${formatRetention(minutes)} according to Horizon's configured trim settings.`;
+}
 
-    return `${hours} ${hours === 1 ? "hour" : "hours"}`;
-  }
+export const THROUGHPUT_SINCE_SNAPSHOT_TOOLTIP =
+  "Jobs processed since Horizon's most recent metrics snapshot.";
 
-  return `${minutes} ${minutes === 1 ? "minute" : "minutes"}`;
+export const SILENCED_JOBS_TOOLTIP =
+  "Silenced completions use the same retention window as completed jobs.";
+
+export const AVERAGE_RUNTIME_SINCE_SNAPSHOT_TOOLTIP =
+  "Average runtime for jobs processed on this queue since Horizon's most recent metrics snapshot.";
+
+export function CompletedJobsValue({
+  value,
+  retentionMinutes,
+}: {
+  value: React.ReactNode;
+  retentionMinutes: number;
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <span
+            className="cursor-help rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            tabIndex={0}
+          />
+        }
+      >
+        {typeof value === "number" ? numberFormatter.format(value) : value}
+      </TooltipTrigger>
+      <TooltipContent side="top">{completedRetentionTooltip(retentionMinutes)}</TooltipContent>
+    </Tooltip>
+  );
 }
 
 export function retainedPeriodLabel(retentionMinutes: number, periodMinutes: 60 | 1440) {
@@ -41,6 +82,35 @@ export function retainedPeriodLabel(retentionMinutes: number, periodMinutes: 60 
     : `Retained ${formatRetention(retentionMinutes)}`;
 }
 
+/** Readable retention window for overview period labels (Hour / N Minutes / Day / …). */
+export function determinePeriod(minutes: number): string {
+  if (!Number.isFinite(minutes) || minutes <= 0) {
+    return "Hour";
+  }
+
+  if (minutes < 60) {
+    return `${Math.round(minutes)} Minutes`;
+  }
+
+  if (minutes === 60) {
+    return "Hour";
+  }
+
+  if (minutes < 1440) {
+    const hours = Math.round(minutes / 60);
+
+    return hours === 1 ? "Hour" : `${hours} Hours`;
+  }
+
+  if (minutes === 1440) {
+    return "Day";
+  }
+
+  const days = Math.round(minutes / 1440);
+
+  return days === 1 ? "Day" : `${days} Days`;
+}
+
 export function OverviewDetail({
   label,
   value,
@@ -51,12 +121,12 @@ export function OverviewDetail({
   tooltip?: string;
 }) {
   const detail = (
-    <div className="flex justify-between gap-3 border-t border-dashed border-separator py-[7px] text-[13px]">
+    <StatisticDetail>
       <span className="text-muted-foreground">{label}</span>
       <span className="font-normal text-muted-foreground">
         {value === null ? "—" : typeof value === "number" ? numberFormatter.format(value) : value}
       </span>
-    </div>
+    </StatisticDetail>
   );
 
   if (!tooltip) {
@@ -80,25 +150,19 @@ export function OverviewStatLink({
 }: {
   href: string;
   title: string;
-  value: number | string;
-  unit?: string;
+  value: React.ReactNode;
+  unit?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
-    <Link
-      href={href}
-      prefetch
-      className="block min-w-0 bg-card px-6 pt-4 pb-2.5 outline-none transition-colors hover:bg-table-row-hover focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
-    >
-      <p className="text-[13px] font-medium text-muted-foreground">{title}</p>
-      <p className="mt-3 text-[1.375rem] font-semibold tracking-tight tabular-nums">
+    <StatisticLink href={href} prefetch>
+      <StatisticLabel>{title}</StatisticLabel>
+      <StatisticValue>
         {typeof value === "number" ? numberFormatter.format(value) : value}
-        {unit ? (
-          <span className="ml-2 text-[13px] font-medium text-muted-foreground">{unit}</span>
-        ) : null}
-      </p>
-      <div className="mt-3.5">{children}</div>
-    </Link>
+        {typeof unit === "string" ? <StatisticUnit>{unit}</StatisticUnit> : (unit ?? null)}
+      </StatisticValue>
+      <StatisticDetails>{children}</StatisticDetails>
+    </StatisticLink>
   );
 }
 
@@ -127,86 +191,109 @@ export function DashboardOverview({
     );
   }
 
+  const showBatches = summary.batchesAvailable !== false;
+  const failedPeriodLabel = `Past ${determinePeriod(summary.recentlyFailedPeriodMinutes)}`;
+  const pendingTotal = livePendingTotal(
+    summary.pendingReserved,
+    summary.pendingReadyNow,
+    summary.pendingDelayed,
+  );
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>Overview</CardTitle>
       </CardHeader>
-      <CardContent className="grid gap-px bg-separator p-0 sm:grid-cols-2 md:grid-cols-4">
-        <OverviewStatLink href={links.pending} title="Pending Jobs" value={summary.pendingJobs}>
-          <OverviewDetail
-            label="Reserved"
-            value={summary.pendingReserved}
-            tooltip="Jobs currently being worked on."
-          />
-          <OverviewDetail
-            label="Ready"
-            value={summary.pendingReadyNow}
-            tooltip="Jobs waiting for an available worker."
-          />
-          <OverviewDetail
-            label="Delayed"
-            value={summary.pendingDelayed}
-            tooltip="Jobs scheduled to run later."
-          />
-        </OverviewStatLink>
-        <OverviewStatLink href={links.failed} title="Failed Jobs" value={summary.failedJobs}>
-          <OverviewDetail label="Average/minute" value={summary.failedJobsPerMinute} />
-          <OverviewDetail
-            label={retainedPeriodLabel(summary.failedRetentionMinutes, 60)}
-            value={summary.failedJobsPastHour}
-          />
-          <OverviewDetail
-            label={retainedPeriodLabel(summary.failedRetentionMinutes, 1440)}
-            value={summary.failedJobsPastDay}
-          />
-        </OverviewStatLink>
-        <OverviewStatLink
-          href={links.completed}
-          title="Completed Jobs"
-          value={summary.completedJobs}
+      <CardContent className="p-0">
+        <StatisticGrid
+          className={
+            showBatches ? "sm:grid-cols-2 md:grid-cols-4" : "sm:grid-cols-2 md:grid-cols-3"
+          }
         >
-          <OverviewDetail label="Average/minute" value={summary.completedJobsPerMinute} />
-          <OverviewDetail
-            label={retainedPeriodLabel(summary.completedRetentionMinutes, 60)}
-            value={summary.completedJobsPastHour}
-          />
-          <OverviewDetail
-            label={retainedPeriodLabel(summary.completedRetentionMinutes, 1440)}
-            value={summary.completedJobsPastDay}
-          />
-        </OverviewStatLink>
-        <div className="min-w-0 bg-card px-6 pt-4 pb-2.5 outline-none transition-colors hover:bg-table-row-hover">
-          <Link
-            href={links.batches}
-            prefetch
-            className="block outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          <OverviewStatLink
+            href={links.pending}
+            title="Pending Jobs"
+            value={pendingTotal === null ? "—" : pendingTotal}
           >
-            <p className="text-[13px] font-medium text-muted-foreground">Batches in progress</p>
-            <p className="mt-3 text-[1.375rem] font-semibold tracking-tight tabular-nums">
-              {numberFormatter.format(summary.activeBatches)}
-              <span className="ml-2 text-[13px] font-medium text-muted-foreground">
-                in progress
-              </span>
-            </p>
-          </Link>
-          <div className="mt-3.5">
-            {summary.batchPreviews.slice(0, 3).map((batch) => (
+            <OverviewDetail
+              label="Reserved"
+              value={summary.pendingReserved}
+              tooltip="Jobs currently being worked on."
+            />
+            <OverviewDetail
+              label="Ready"
+              value={summary.pendingReadyNow}
+              tooltip="Jobs waiting for an available worker."
+            />
+            <OverviewDetail
+              label="Delayed"
+              value={summary.pendingDelayed}
+              tooltip="Jobs scheduled to run later."
+            />
+          </OverviewStatLink>
+          <OverviewStatLink href={links.failed} title="Failed Jobs" value={summary.failedJobs}>
+            <OverviewDetail label="Past hour" value={summary.failedJobsPastHour} />
+            <OverviewDetail label="Past 24 hours" value={summary.failedJobsPastDay} />
+            <OverviewDetail label={failedPeriodLabel} value={summary.recentlyFailedJobs} />
+          </OverviewStatLink>
+          <OverviewStatLink
+            href={links.completed}
+            title="Completed Jobs"
+            value={
+              <CompletedJobsValue
+                value={summary.completedJobs}
+                retentionMinutes={summary.completedRetentionMinutes}
+              />
+            }
+          >
+            <OverviewDetail label="Jobs per minute" value={summary.jobsPerMinute} />
+            <OverviewDetail
+              label="Throughput"
+              value={summary.processedSinceSnapshot}
+              tooltip={THROUGHPUT_SINCE_SNAPSHOT_TOOLTIP}
+            />
+            <OverviewDetail
+              label="Silenced Jobs"
+              value={summary.silencedJobs}
+              tooltip={SILENCED_JOBS_TOOLTIP}
+            />
+          </OverviewStatLink>
+          {showBatches ? (
+            <Statistic className="outline-none transition-colors hover:bg-table-row-hover">
               <Link
-                className="flex items-center justify-between gap-2 border-t border-dashed border-separator py-[7px] text-[13px] outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                href={links.batch(batch.id)}
-                key={batch.id}
+                href={links.batches}
                 prefetch
+                className="block outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
-                <span className="truncate text-muted-foreground">{batch.name}</span>
-                <ProgressRing
-                  className="shrink-0 gap-1.5 [&_span]:text-[13px]"
-                  value={batch.progress}
-                />
+                <StatisticLabel>Batches in progress</StatisticLabel>
+                <StatisticValue>
+                  {summary.activeBatches === null
+                    ? "—"
+                    : numberFormatter.format(summary.activeBatches)}
+                  {summary.activeBatches === null ? (
+                    <StatisticUnit>history incomplete</StatisticUnit>
+                  ) : null}
+                </StatisticValue>
               </Link>
-            ))}
-          </div>
-        </div>
+              <StatisticDetails>
+                {summary.batchPreviews.slice(0, 3).map((batch) => (
+                  <Link
+                    className="flex items-center justify-between gap-2 border-t border-dashed border-separator py-[7px] text-[13px] outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    href={links.batch(batch.id)}
+                    key={batch.id}
+                    prefetch
+                  >
+                    <span className="truncate text-muted-foreground">{batch.name}</span>
+                    <ProgressRing
+                      className="shrink-0 gap-1.5 [&_span]:text-[13px]"
+                      value={batch.progress}
+                    />
+                  </Link>
+                ))}
+              </StatisticDetails>
+            </Statistic>
+          ) : null}
+        </StatisticGrid>
       </CardContent>
     </Card>
   );

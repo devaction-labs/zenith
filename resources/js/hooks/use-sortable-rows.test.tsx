@@ -1,5 +1,5 @@
 import { act, renderHook } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vite-plus/test";
 
 import { useSortableRows, type SortColumn } from "@/hooks/use-sortable-rows";
 
@@ -26,6 +26,35 @@ const columns: SortColumn<Row>[] = [
 ];
 
 describe("useSortableRows", () => {
+  beforeEach(() => {
+    window.history.replaceState({}, "", "/horizon/jobs/completed");
+  });
+
+  it("uses a default sort while allowing an explicit URL sort to override it", () => {
+    const defaultSort = { key: "timestamp", direction: "desc" } as const;
+    const first = renderHook(() =>
+      useSortableRows(rows, columns, {
+        persist: true,
+        defaultSort,
+      }),
+    );
+
+    expect(first.result.current.sort).toEqual(defaultSort);
+    expect(first.result.current.rows.map((row) => row.id)).toEqual(["beta", "gamma", "alpha"]);
+
+    first.unmount();
+    window.history.replaceState({}, "", "/horizon/jobs/completed?sort=name&direction=asc");
+    const overridden = renderHook(() =>
+      useSortableRows(rows, columns, {
+        persist: true,
+        defaultSort,
+      }),
+    );
+
+    expect(overridden.result.current.sort).toEqual({ key: "name", direction: "asc" });
+    expect(overridden.result.current.rows.map((row) => row.id)).toEqual(["beta", "gamma", "alpha"]);
+  });
+
   it("toggles stable, case-insensitive text sorting", () => {
     const { result } = renderHook(() => useSortableRows(rows, columns));
 

@@ -1,7 +1,7 @@
 import type { Page } from "@inertiajs/core";
 import { App } from "@inertiajs/react";
 import { render, screen } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { HorizonLayout } from "@/layouts/horizon-layout";

@@ -12,6 +12,7 @@ use Illuminate\Queue\RedisQueue;
 use Illuminate\Redis\Connections\Connection;
 use Illuminate\Support\Collection;
 use Laravel\Horizon\Contracts\JobRepository;
+use NckRtl\HorizonNewDawn\BulkOperations\BulkOperationSnapshot;
 use NckRtl\HorizonNewDawn\Jobs\Actions\CancelPendingJob;
 use NckRtl\HorizonNewDawn\Jobs\Actions\CancelPendingJobs;
 use NckRtl\HorizonNewDawn\Jobs\Actions\ReleaseCancelledJobLocks;
@@ -19,9 +20,10 @@ use NckRtl\HorizonNewDawn\Jobs\ForgetsPendingJob;
 use NckRtl\HorizonNewDawn\Jobs\PendingJobCancellationResult;
 use NckRtl\HorizonNewDawn\Jobs\PendingJobCancellationScope;
 
+use function NckRtl\HorizonNewDawn\Tests\Support\bulkSnapshotRedis;
 use function NckRtl\HorizonNewDawn\Tests\Support\dashboardNeverReceives;
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardReturns;
 use function NckRtl\HorizonNewDawn\Tests\Support\dashboardReturnsFor;
+use function NckRtl\HorizonNewDawn\Tests\Support\dashboardReturnsUsing;
 use function NckRtl\HorizonNewDawn\Tests\Support\horizonJob;
 use function NckRtl\HorizonNewDawn\Tests\Support\mockDashboardContract;
 
@@ -158,11 +160,17 @@ describe('CancelPendingJob', function (): void {
         ], JSON_THROW_ON_ERROR);
 
         $jobs = mockDashboardContract(JobRepository::class);
-        dashboardReturns($jobs, 'countPending', 3);
-        dashboardReturnsFor($jobs, 'getPending', ['-1'], new Collection([$ready, $reserved, $batched]));
-        dashboardReturnsFor($jobs, 'getJobs', [[$ready->id]], new Collection([$ready]));
-        dashboardReturnsFor($jobs, 'getJobs', [[$reserved->id]], new Collection([$reserved]));
-        dashboardReturnsFor($jobs, 'getJobs', [[$batched->id]], new Collection([$batched]));
+        dashboardReturnsUsing($jobs, 'getJobs', function (array $ids) use ($ready, $reserved, $batched): Collection {
+            $map = [
+                $ready->id => $ready,
+                $reserved->id => $reserved,
+                $batched->id => $batched,
+            ];
+
+            return new Collection(array_values(array_filter(
+                array_map(static fn (string $id): ?object => $map[$id] ?? null, $ids),
+            )));
+        });
 
         $connection = new CancelPendingJobRedisConnectionStub(1);
         $cancel = new CancelPendingJob(
@@ -175,15 +183,28 @@ describe('CancelPendingJob', function (): void {
             new ReleaseCancelledJobLocks(app(CacheFactory::class), app(Encrypter::class)),
         );
 
-        $result = (new CancelPendingJobs($jobs, $cancel))->handle(PendingJobCancellationScope::Ready);
+        $redis = bulkSnapshotRedis();
+        $redis->seedSortedSet('pending_jobs', [
+            $ready->id => -3.0,
+            $reserved->id => -2.0,
+            $batched->id => -1.0,
+        ]);
 
-        expect($result->cancelled)->toBe(1)
-            ->and($result->batched)->toBe(1)
-            ->and($result->failed)->toBe(0)
+        $result = (new CancelPendingJobs(
+            $jobs,
+            $cancel,
+            app(BulkOperationSnapshot::class),
+        ))->processChunk(PendingJobCancellationScope::Ready);
+
+        expect($result->complete)->toBeTrue()
+            ->and($result->totalCancelled)->toBe(1)
+            ->and($result->chunkBatched)->toBe(1)
+            ->and($result->chunkFailed)->toBe(0)
             ->and($connection->commands)->toHaveCount(1);
     });
 
     it('limits bulk cancellation to the requested queue', function (): void {
+
         $imports = horizonJob(0, 'imports-1');
         $imports->status = 'pending';
         $imports->completed_at = null;
@@ -195,9 +216,16 @@ describe('CancelPendingJob', function (): void {
         $reports->queue = 'reports';
 
         $jobs = mockDashboardContract(JobRepository::class);
-        dashboardReturns($jobs, 'countPending', 2);
-        dashboardReturnsFor($jobs, 'getPending', ['-1'], new Collection([$imports, $reports]));
-        dashboardReturnsFor($jobs, 'getJobs', [[$imports->id]], new Collection([$imports]));
+        dashboardReturnsUsing($jobs, 'getJobs', function (array $ids) use ($imports, $reports): Collection {
+            $map = [
+                $imports->id => $imports,
+                $reports->id => $reports,
+            ];
+
+            return new Collection(array_values(array_filter(
+                array_map(static fn (string $id): ?object => $map[$id] ?? null, $ids),
+            )));
+        });
 
         $connection = new CancelPendingJobRedisConnectionStub(1);
         $cancel = new CancelPendingJob(
@@ -210,14 +238,25 @@ describe('CancelPendingJob', function (): void {
             new ReleaseCancelledJobLocks(app(CacheFactory::class), app(Encrypter::class)),
         );
 
-        $result = (new CancelPendingJobs($jobs, $cancel))->handle(
+        $redis = bulkSnapshotRedis();
+        $redis->seedSortedSet('pending_jobs', [
+            $imports->id => -2.0,
+            $reports->id => -1.0,
+        ]);
+
+        $result = (new CancelPendingJobs(
+            $jobs,
+            $cancel,
+            app(BulkOperationSnapshot::class),
+        ))->processChunk(
             PendingJobCancellationScope::Pending,
             'imports',
         );
 
-        expect($result->cancelled)->toBe(1)
-            ->and($result->batched)->toBe(0)
-            ->and($result->failed)->toBe(0)
+        expect($result->complete)->toBeTrue()
+            ->and($result->totalCancelled)->toBe(1)
+            ->and($result->chunkBatched)->toBe(0)
+            ->and($result->chunkFailed)->toBe(0)
             ->and($connection->commands)->toHaveCount(1);
     });
 
@@ -311,6 +350,65 @@ describe('ReleaseCancelledJobLocks', function (): void {
 
         expect($lock->acquire($job))->toBeTrue();
     });
+
+    it('does not instantiate job payload classes unless they are explicitly allowed', function (): void {
+        foreach ([[], [CancelPendingUniqueJob::class]] as $allowedClasses) {
+            CancelPendingPayloadWithWakeup::$wakeups = 0;
+            config()->set('horizon-new-dawn.job_payload_allowed_classes', $allowedClasses);
+
+            (new ReleaseCancelledJobLocks(
+                app(CacheFactory::class),
+                app(Encrypter::class),
+            ))->handle([
+                'data' => [
+                    'command' => serialize(new CancelPendingPayloadWithWakeup),
+                ],
+            ]);
+
+            expect(CancelPendingPayloadWithWakeup::$wakeups)->toBe(0);
+        }
+    });
+
+    it('releases legacy unique locks only for an exactly allowed job class', function (): void {
+        $job = new CancelPendingUniqueJob('customer-42');
+        $cache = app(CacheFactory::class);
+        $lock = new UniqueLock($cache->store('array'));
+
+        config()->set('horizon-new-dawn.job_payload_allowed_classes', [
+            CancelPendingUniqueJob::class,
+        ]);
+
+        expect($lock->acquire($job))->toBeTrue();
+
+        (new ReleaseCancelledJobLocks($cache, app(Encrypter::class)))->handle([
+            'data' => [
+                'command' => serialize($job),
+            ],
+        ]);
+
+        expect($lock->acquire($job))->toBeTrue();
+    });
+
+    it('decrypts and unwraps an encrypted command before releasing an allowlisted unique lock', function (): void {
+        $job = new CancelPendingUniqueJob('customer-42');
+        $cache = app(CacheFactory::class);
+        $encrypter = app(Encrypter::class);
+        $lock = new UniqueLock($cache->store('array'));
+
+        config()->set('horizon-new-dawn.job_payload_allowed_classes', [
+            CancelPendingUniqueJob::class,
+        ]);
+
+        expect($lock->acquire($job))->toBeTrue();
+
+        (new ReleaseCancelledJobLocks($cache, $encrypter))->handle([
+            'data' => [
+                'command' => $encrypter->encrypt(serialize($job)),
+            ],
+        ]);
+
+        expect($lock->acquire($job))->toBeTrue();
+    });
 });
 
 final class CancelPendingJobQueueManagerStub extends QueueManager
@@ -383,5 +481,15 @@ final readonly class CancelPendingUniqueJob implements ShouldBeUnique
     public function uniqueId(): string
     {
         return $this->customerId;
+    }
+}
+
+final class CancelPendingPayloadWithWakeup
+{
+    public static int $wakeups = 0;
+
+    public function __wakeup(): void
+    {
+        self::$wakeups++;
     }
 }

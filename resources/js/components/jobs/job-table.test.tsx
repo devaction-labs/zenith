@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 
 import { JobTable } from "@/components/jobs/job-table";
 import type { JobRow } from "@/types/jobs";
@@ -70,17 +70,42 @@ describe("JobTable", () => {
     vi.useRealTimers();
   });
 
-  it("sorts normalized runtime values and links through the dedicated route", () => {
+  it("does not advertise loaded-row sorting by default", () => {
     render(<JobTable jobs={jobs} type="completed" horizonBaseUrl="/horizon" />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Sort by Runtime ascending" }));
     const rows = within(screen.getAllByRole("rowgroup")[1]).getAllByRole("row");
 
-    expect(rows[0]).toHaveTextContent("FastJob");
-    expect(rows[1]).toHaveTextContent("SlowJob");
+    expect(screen.queryByRole("button", { name: /Sort by/ })).not.toBeInTheDocument();
+    expect(rows[0]).toHaveTextContent("SlowJob");
+    expect(rows[1]).toHaveTextContent("FastJob");
     expect(screen.getByRole("link", { name: "FastJob" })).toHaveAttribute(
       "href",
       "/horizon/jobs/completed/job-fast",
+    );
+  });
+
+  it("delegates explicitly controlled source sorting without reordering supplied rows", () => {
+    const onSort = vi.fn();
+
+    render(
+      <JobTable
+        jobs={jobs}
+        type="completed"
+        horizonBaseUrl="/horizon"
+        sorting={{
+          key: "completedAt",
+          direction: "asc",
+          columns: ["completedAt"],
+          onSort,
+        }}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Sort by Completed descending" }));
+
+    expect(onSort).toHaveBeenCalledWith("completedAt");
+    expect(within(screen.getAllByRole("rowgroup")[1]).getAllByRole("row")[0]).toHaveTextContent(
+      "SlowJob",
     );
   });
 
@@ -107,6 +132,30 @@ describe("JobTable", () => {
     expect(screen.queryByRole("columnheader", { name: /runtime/i })).not.toBeInTheDocument();
     expect(screen.getByText("Delayed")).toBeVisible();
     expect(screen.getByText(/\+1 more/)).toBeVisible();
+  });
+
+  it("hides individual pending actions and detail links for non-inspectable batch rows", () => {
+    render(
+      <JobTable
+        jobs={[
+          {
+            ...jobs[0],
+            id: "batch-pending",
+            status: "pending",
+            scheduledAt: null,
+            inspectable: false,
+          },
+        ]}
+        type="pending"
+        horizonBaseUrl="/horizon"
+        showPendingActions={false}
+      />,
+    );
+
+    expect(screen.queryByRole("columnheader", { name: "Actions" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Pending job actions/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "SlowJob" })).not.toBeInTheDocument();
+    expect(screen.getByText("SlowJob")).toBeVisible();
   });
 
   it("presents a scheduled job as released once its release time passes", () => {
@@ -172,6 +221,7 @@ describe("JobTable", () => {
       />,
     );
 
+    expect(screen.getByText("Results have changed.")).toBeVisible();
     fireEvent.click(screen.getByRole("link", { name: "Reload" }));
 
     expect(loadNewEntries).toHaveBeenCalledOnce();

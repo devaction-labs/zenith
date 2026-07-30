@@ -262,23 +262,19 @@ export function JsonPayload({
   };
 
   if (value === null || value === undefined) {
-    return <p className="px-6 py-4 text-sm text-muted-foreground">Payload unavailable</p>;
+    return <p className="px-4 py-4 text-sm text-muted-foreground sm:px-6">Payload unavailable</p>;
   }
 
   const contents = serializeJson(value);
 
   if (contents === null) {
-    return <p className="px-6 py-4 text-sm text-muted-foreground">Payload unavailable</p>;
+    return <p className="px-4 py-4 text-sm text-muted-foreground sm:px-6">Payload unavailable</p>;
   }
 
   const normalizedValue = typeof value === "string" ? value : JSON.parse(contents);
 
   return (
-    <CodeBlock
-      className="whitespace-pre-wrap break-words [overflow-anchor:none]"
-      copyLabel={copyLabel}
-      copyValue={contents}
-    >
+    <CodeBlock className="[overflow-anchor:none]" copyLabel={copyLabel} copyValue={contents}>
       <code>
         {typeof value === "string" ? (
           highlightedJson(contents)

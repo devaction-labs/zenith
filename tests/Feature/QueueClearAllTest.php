@@ -6,16 +6,39 @@ use Illuminate\Contracts\Queue\Queue;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Queue\QueueManager;
-use Illuminate\Queue\RedisQueue;
+use Illuminate\Queue\SyncQueue;
+use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\Exceptions;
 use Laravel\Horizon\Contracts\JobRepository;
-use Laravel\Horizon\Contracts\SupervisorRepository;
 use Laravel\Horizon\Horizon;
-use NckRtl\HorizonNewDawn\Queues\ClearsQueueMetadata;
+use NckRtl\HorizonNewDawn\BulkOperations\Jobs\ClearPendingJobsJob;
 
+use function NckRtl\HorizonNewDawn\Tests\Support\dashboardExpects;
 use function NckRtl\HorizonNewDawn\Tests\Support\dashboardReturns;
 use function NckRtl\HorizonNewDawn\Tests\Support\mockDashboardContract;
 use function Pest\Laravel\delete;
 use function Pest\Laravel\withoutMiddleware;
+
+/** @param 'never'|'once'|'twice'|'zeroOrMoreTimes' $times */
+function bindQueueClearAllAsyncBulkQueue(string $times = 'once'): void
+{
+    config()->set('horizon-new-dawn.bulk_operations.connection', 'operations');
+    config()->set('horizon-new-dawn.bulk_operations.queue', 'horizon-maintenance');
+
+    $manager = Mockery::mock(QueueManager::class);
+    dashboardExpects($manager, 'connection', ['operations'], times: $times, value: Mockery::mock(Queue::class));
+    app()->instance(QueueManager::class, $manager);
+}
+
+function bindQueueClearAllSyncBulkQueue(): void
+{
+    config()->set('horizon-new-dawn.bulk_operations.connection', 'sync');
+    config()->set('horizon-new-dawn.bulk_operations.queue', null);
+
+    $manager = Mockery::mock(QueueManager::class);
+    dashboardExpects($manager, 'connection', ['sync'], value: new SyncQueue);
+    app()->instance(QueueManager::class, $manager);
+}
 
 beforeEach(function (): void {
     withoutMiddleware([PreventRequestForgery::class, ValidateCsrfToken::class]);
@@ -26,69 +49,59 @@ afterEach(function (): void {
     Horizon::auth(static fn (): bool => true);
 });
 
-it('clears every supervised queue through the framework', function (): void {
-    $supervisors = mockDashboardContract(SupervisorRepository::class);
-    dashboardReturns($supervisors, 'all', [
-        (object) ['processes' => ['redis:reports,batches' => 2]],
-    ]);
-    app()->instance(SupervisorRepository::class, $supervisors);
+it('queues clearing every queue', function (): void {
+    Bus::fake();
+    bindQueueClearAllAsyncBulkQueue();
 
     $jobs = mockDashboardContract(JobRepository::class);
-    dashboardReturns($jobs, 'countPending', 0);
+    dashboardReturns($jobs, 'countPending', 1);
     app()->instance(JobRepository::class, $jobs);
-
-    $queue = new class extends RedisQueue
-    {
-        /** @var array<int, string> */
-        public array $cleared = [];
-
-        public function __construct() {}
-
-        public function clear($queue = null): int
-        {
-            $this->cleared[] = (string) $queue;
-
-            return $queue === 'reports' ? 4 : 3;
-        }
-    };
-
-    $manager = new class(app(), $queue) extends QueueManager
-    {
-        public function __construct($app, private readonly Queue $queue)
-        {
-            parent::__construct($app);
-        }
-
-        public function connection($name = null): Queue
-        {
-            return $this->queue;
-        }
-    };
-    app()->instance(QueueManager::class, $manager);
-
-    $metadata = new class implements ClearsQueueMetadata
-    {
-        /** @var array<int, array{0: string, 1: string}> */
-        public array $targets = [];
-
-        public function purgePending(string $connection, string $queue): int
-        {
-            $this->targets[] = [$connection, $queue];
-
-            return 0;
-        }
-    };
-    app()->instance(ClearsQueueMetadata::class, $metadata);
 
     delete('/horizon/queues')
         ->assertRedirect()
-        ->assertSessionHas('toast.success', 'Cleared 7 jobs from all queues.');
+        ->assertSessionHas('toast.success', 'Clearing all queues was queued.');
 
-    expect($queue->cleared)->toEqualCanonicalizing(['reports', 'batches'])
-        ->and($metadata->targets)->toEqualCanonicalizing([
-            ['redis', 'reports'],
-            ['redis', 'batches'],
-        ]);
+    Bus::assertDispatched(
+        ClearPendingJobsJob::class,
+        fn (ClearPendingJobsJob $job): bool => $job->connection === 'operations'
+            && $job->queue === 'horizon-maintenance',
+    );
+    Bus::assertDispatchedTimes(ClearPendingJobsJob::class, 1);
+});
+
+it('reports bulk queue configuration failures without clearing queues', function (): void {
+    Bus::fake();
+    Exceptions::fake();
+    bindQueueClearAllSyncBulkQueue();
+
+    $jobs = mockDashboardContract(JobRepository::class);
+    dashboardReturns($jobs, 'countPending', 1);
+    app()->instance(JobRepository::class, $jobs);
+
+    delete('/horizon/queues')
+        ->assertRedirect()
+        ->assertSessionHas(
+            'toast.error',
+            'The bulk operation could not be queued. Check the application logs and try again.',
+        );
+
+    Bus::assertNothingDispatched();
+    Exceptions::assertReportedCount(1);
+});
+
+it('queues clearing every queue when the retained scope exceeds the former ceiling', function (): void {
+    Bus::fake();
+    bindQueueClearAllAsyncBulkQueue();
+
+    $jobs = mockDashboardContract(JobRepository::class);
+    dashboardReturns($jobs, 'countPending', 1001);
+    app()->instance(JobRepository::class, $jobs);
+
+    delete('/horizon/queues')
+        ->assertRedirect()
+        ->assertSessionHas('toast.success', 'Clearing all queues was queued.');
+
+    Bus::assertDispatched(ClearPendingJobsJob::class);
 });
 
 it('honors Horizon authorization when clearing all queues', function (): void {

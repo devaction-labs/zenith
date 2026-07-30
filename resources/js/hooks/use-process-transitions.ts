@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/toast";
 
 import type {
   DashboardSupervisors,
@@ -292,7 +292,7 @@ export function useProcessTransitions(
       }
 
       commitTransitions(remaining);
-      toast.error(transitionTimeoutMessage);
+      toast.add({ title: transitionTimeoutMessage, type: "error" });
     };
     let timeout = window.setTimeout(expireTransitions, Math.max(0, expiresAt - Date.now()));
 

@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
 import { QueueActionsMenu } from "@/components/queues/queue-actions-menu";
 
@@ -22,6 +22,7 @@ describe("QueueActionsMenu", () => {
         queue="reports?urgent"
         paused={false}
         horizonBaseUrl="/horizon"
+        timedQueuePausing
       />,
     );
 
@@ -46,6 +47,38 @@ describe("QueueActionsMenu", () => {
     );
   });
 
+  it("confirms an indefinite pause without duration controls when timed pausing is unsupported", async () => {
+    render(
+      <QueueActionsMenu
+        connection="redis"
+        queue="reports"
+        paused={false}
+        horizonBaseUrl="/horizon"
+        queuePausing
+        timedQueuePausing={false}
+      />,
+    );
+
+    fireEvent.pointerDown(screen.getByRole("button", { name: "Queue actions for reports" }), {
+      button: 0,
+      ctrlKey: false,
+    });
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Pause" }));
+
+    expect(screen.getByRole("dialog", { name: "Pause reports?" })).toBeInTheDocument();
+    expect(screen.getByText("Are you sure you want to pause this queue?")).toBeInTheDocument();
+    expect(screen.queryByRole("switch", { name: "Pause indefinitely" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("spinbutton", { name: "Pause for" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Pause queue" }));
+
+    expect(inertia.post).toHaveBeenCalledWith(
+      "/horizon/queues/redis/reports/pause",
+      { duration_minutes: null },
+      expect.objectContaining({ preserveScroll: true }),
+    );
+  });
+
   it("prefills a timed pause from the modal presets", async () => {
     render(
       <QueueActionsMenu
@@ -53,6 +86,7 @@ describe("QueueActionsMenu", () => {
         queue="reports"
         paused={false}
         horizonBaseUrl="/horizon"
+        timedQueuePausing
       />,
     );
 
@@ -62,7 +96,9 @@ describe("QueueActionsMenu", () => {
     });
     fireEvent.click(await screen.findByRole("menuitem", { name: "Pause" }));
     fireEvent.click(screen.getByRole("switch", { name: "Pause indefinitely" }));
-    fireEvent.click(screen.getByRole("button", { name: "1 hour" }));
+    expect(screen.getByRole("button", { name: "15m" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "4h" })).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "1h" }));
 
     expect(screen.getByRole("spinbutton", { name: "Pause for" })).toHaveValue(60);
 

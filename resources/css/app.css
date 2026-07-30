@@ -1,13 +1,14 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-@import "@fontsource-variable/instrument-sans";
-@import "@fontsource/jetbrains-mono";
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+  /* Desktop shell seam (1140px at 16px root). rem units sort with sm/md/… so shell wins after sm. */
+  --breakpoint-shell: 71.25rem;
   --color-ok: var(--ok);
+  --color-toast-success-icon: var(--toast-success-icon);
   --color-warn: var(--warn);
   --color-error: var(--error);
   --color-panel-top: var(--panel-top);
@@ -54,8 +55,8 @@
   --color-status-working: var(--status-working);
   --color-chart-grid: var(--chart-grid);
   --font-heading: var(--font-sans);
-  --font-sans: "Instrument Sans Variable", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --font-sans: ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, monospace;
   --font-weight-normal: 450;
   --font-weight-semibold: 500;
   --font-weight-bold: 500;
@@ -65,6 +66,7 @@
   --color-sidebar-accent: var(--sidebar-accent);
   --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-muted-foreground: var(--sidebar-muted-foreground);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar: var(--sidebar);
   --color-chart-5: var(--chart-5);
@@ -143,6 +145,7 @@
   --sidebar-foreground: #18181b;
   --sidebar-primary: #7746ec;
   --sidebar-primary-foreground: #ffffff;
+  --sidebar-muted-foreground: #6b6b73;
   --sidebar-accent: #efeff1;
   --sidebar-accent-foreground: #18181b;
   --sidebar-border: #e4e4e7;
@@ -153,7 +156,8 @@
   --th-bg: color-mix(in oklab, var(--muted) 60%, var(--card) 40%);
   --separator: #eeeef0;
   --ok: #15803d;
-  --warn: #a16207;
+  --toast-success-icon: var(--ok);
+  --warn: #854d0e;
   --error: #b91c1c;
   --code-bg: #f4f4f5;
   --code-fg: #383a42;
@@ -237,6 +241,7 @@
   --sidebar-foreground: #f3f4f6;
   --sidebar-primary: #a78bfa;
   --sidebar-primary-foreground: #111827;
+  --sidebar-muted-foreground: #9ca3af;
   --sidebar-accent: #1f2937;
   --sidebar-accent-foreground: #f3f4f6;
   --sidebar-border: #1f2937;
@@ -247,6 +252,7 @@
   --th-bg: #252f3e;
   --separator: #2b3544;
   --ok: var(--color-green-400);
+  --toast-success-icon: var(--color-green-500);
   --warn: var(--color-yellow-400);
   --error: #fca5a5;
   --action-primary: #7746ec;
@@ -258,7 +264,7 @@
   --status-delayed: color-mix(in oklab, var(--color-yellow-900) 70%, var(--card) 30%);
   --status-delayed-foreground: var(--warn);
   --status-processing: color-mix(in oklab, var(--color-blue-900) 70%, var(--card) 30%);
-  --status-processing-foreground: var(--color-blue-400);
+  --status-processing-foreground: var(--color-blue-300);
   --status-retry: color-mix(in oklab, var(--color-pink-800) 70%, var(--card) 30%);
   --status-retry-foreground: var(--color-pink-300);
   --status-paused: var(--status-delayed);

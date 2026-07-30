@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace NckRtl\HorizonNewDawn\Http\Controllers;
 
-use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use NckRtl\HorizonNewDawn\Http\Requests\JobIndexRequest;
 use NckRtl\HorizonNewDawn\Jobs\JobListType;
 use NckRtl\HorizonNewDawn\Jobs\JobsData;
 use NckRtl\HorizonNewDawn\Queues\QueuesData;
@@ -15,30 +15,69 @@ use NckRtl\HorizonNewDawn\Support\Scrolling\HorizonScrollMetadata;
 
 final class JobController
 {
-    public function index(Request $request, JobsData $jobs, QueuesData $queues, string $type): Response
-    {
+    public function index(
+        JobIndexRequest $request,
+        JobsData $jobs,
+        QueuesData $queues,
+        string $type,
+    ): Response {
         $jobType = JobListType::from($type);
-        $cursor = $request->query('starting_at', -1);
-        $startingAt = $jobType === JobListType::Pending && (is_int($cursor) || is_string($cursor))
-            ? $cursor
-            : $request->integer('starting_at', -1);
-        $page = $jobs->page($jobType, $startingAt);
+        $query = $request->search();
+        $filters = $request->getData();
+        $startingAt = $request->startingAt();
+        $resolvePage = fn () => once(
+            fn () => $jobs->page(
+                $jobType,
+                $startingAt,
+                $filters,
+                $query,
+            ),
+        );
 
         return Inertia::render('Jobs/Index', [
             'meta' => new PageMetaData($jobType->title(), $jobType->navigation()),
             'type' => $jobType->value,
-            'pendingCounts' => $jobType === JobListType::Pending
+            'query' => $query ?? '',
+            'filters' => $filters,
+            'filterCatalog' => Inertia::optional(fn () => $jobs->filters($jobType)),
+            'querySignature' => fn () => $jobs->querySignature(
+                $jobType,
+                $filters,
+                $query,
+            ),
+            'pendingCounts' => fn () => $jobType === JobListType::Pending
                 ? $queues->all()->pendingCounts()
                 : null,
+            'listRevision' => function () use ($resolvePage): string {
+                $page = $resolvePage();
+
+                return json_encode([
+                    $page->total,
+                    $page->items[0]->id ?? null,
+                ], JSON_THROW_ON_ERROR);
+            },
             'jobs' => Inertia::scroll(
-                [
-                    'data' => $page->items,
-                    'total' => $page->total,
-                    'available' => $page->available,
-                    'message' => $page->message,
-                ],
+                function () use ($resolvePage): array {
+                    $page = $resolvePage();
+
+                    return [
+                        'data' => $page->items,
+                        'total' => $page->total,
+                        'available' => $page->available,
+                        'message' => $page->message,
+                    ];
+                },
                 'data',
-                new HorizonScrollMetadata('starting_at', null, $page->next, $page->current),
+                function (array $_value) use ($resolvePage): HorizonScrollMetadata {
+                    $page = $resolvePage();
+
+                    return new HorizonScrollMetadata(
+                        'starting_at',
+                        null,
+                        $page->next,
+                        $page->current,
+                    );
+                },
             )->matchOn('data.id'),
         ]);
     }

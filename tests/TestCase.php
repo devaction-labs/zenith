@@ -17,6 +17,17 @@ abstract class TestCase extends Orchestra
     {
         parent::setUp();
 
+        $this->publishPackageAssets();
+    }
+
+    public function rebootstrapApplication(): void
+    {
+        $this->refreshApplication();
+        $this->publishPackageAssets();
+    }
+
+    protected function publishPackageAssets(): void
+    {
         app(Filesystem::class)->copyDirectory(
             __DIR__.'/../dist/build',
             public_path('vendor/horizon-new-dawn/build'),

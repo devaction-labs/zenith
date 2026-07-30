@@ -2,30 +2,60 @@
 
 declare(strict_types=1);
 
+use Illuminate\Contracts\Queue\Queue;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Queue\Failed\FailedJobProviderInterface;
+use Illuminate\Queue\QueueManager;
+use Illuminate\Queue\SyncQueue;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\Exceptions;
 use Inertia\Testing\AssertableInertia;
 use Laravel\Horizon\Contracts\JobRepository;
 use Laravel\Horizon\Contracts\MasterSupervisorRepository;
 use Laravel\Horizon\Contracts\TagRepository;
 use Laravel\Horizon\Horizon;
 use Laravel\Horizon\Jobs\RetryFailedJob as HorizonRetryFailedJob;
+use NckRtl\HorizonNewDawn\Assets\AssetManifest;
+use NckRtl\HorizonNewDawn\BulkOperations\Jobs\ClearFailedJobsJob;
+use NckRtl\HorizonNewDawn\BulkOperations\Jobs\RetryAllFailedJobsJob;
 use NckRtl\HorizonNewDawn\FailedJobs\FailedJobRetryEligibility;
 use NckRtl\HorizonNewDawn\FailedJobs\FailedJobsData;
 use NckRtl\HorizonNewDawn\Jobs\JobsData;
 use NckRtl\HorizonNewDawn\Support\HorizonRuntime;
 
+use function NckRtl\HorizonNewDawn\Tests\Support\dashboardExpects;
+use function NckRtl\HorizonNewDawn\Tests\Support\dashboardNeverReceives;
 use function NckRtl\HorizonNewDawn\Tests\Support\dashboardReturns;
 use function NckRtl\HorizonNewDawn\Tests\Support\dashboardReturnsFor;
 use function NckRtl\HorizonNewDawn\Tests\Support\horizonJob;
 use function NckRtl\HorizonNewDawn\Tests\Support\mockDashboardContract;
 use function Pest\Laravel\delete;
 use function Pest\Laravel\get;
+use function Pest\Laravel\getJson;
 use function Pest\Laravel\post;
 use function Pest\Laravel\withoutMiddleware;
+
+function bindFailedJobsAsyncBulkQueue(): void
+{
+    config()->set('horizon-new-dawn.bulk_operations.connection', 'operations');
+    config()->set('horizon-new-dawn.bulk_operations.queue', 'horizon-maintenance');
+
+    $manager = Mockery::mock(QueueManager::class);
+    dashboardExpects($manager, 'connection', ['operations'], value: Mockery::mock(Queue::class));
+    app()->instance(QueueManager::class, $manager);
+}
+
+function bindFailedJobsSyncBulkQueue(): void
+{
+    config()->set('horizon-new-dawn.bulk_operations.connection', 'sync');
+    config()->set('horizon-new-dawn.bulk_operations.queue', null);
+
+    $manager = Mockery::mock(QueueManager::class);
+    dashboardExpects($manager, 'connection', ['sync'], times: 'twice', value: new SyncQueue);
+    app()->instance(QueueManager::class, $manager);
+}
 
 beforeEach(function (): void {
     withoutMiddleware([PreventRequestForgery::class, ValidateCsrfToken::class]);
@@ -68,7 +98,18 @@ describe('failed job pages', function (): void {
                 ->component('FailedJobs/Index')
                 ->where('meta.title', 'Failed Jobs')
                 ->where('meta.activeNavigation', 'failed')
-                ->where('jobs.retryable', true)
+                ->where('filters.job', null)
+                ->where('filters.queue', null)
+                ->where('filters.connection', null)
+                ->where('filters.state', null)
+                ->missing('sort')
+                ->missing('direction')
+                ->missing('filterCatalog')
+                ->where('querySignature', fn (mixed $value): bool => is_string($value)
+                    && strlen($value) === 64)
+                ->where('actions.retryable', true)
+                ->where('listRevision', '[1,"failed-1"]')
+                ->missing('jobs.actions')
                 ->where('jobs.data.0.id', 'failed-1')
                 ->where('jobs.data.0.retried', false)
                 ->where('jobs.data.0.retryEligible', true)
@@ -95,6 +136,28 @@ describe('failed job pages', function (): void {
                 ->where('job.exception', 'sensitive trace'));
     });
 
+    it('does not pass browser row sorting into the failed-job backend query', function (): void {
+        $repository = mockDashboardContract(JobRepository::class);
+        dashboardReturns($repository, 'getFailed', new Collection);
+        dashboardReturns($repository, 'countFailed', 0);
+        app()->instance(FailedJobsData::class, new FailedJobsData(
+            $repository,
+            mockDashboardContract(TagRepository::class),
+            new JobsData($repository),
+            new FailedJobRetryEligibility,
+        ));
+
+        get('/horizon/failed?sort=failedAt&direction=desc')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
+                ->missing('sort')
+                ->missing('direction')
+                ->where('filters.job', null)
+                ->where('filters.queue', null)
+                ->where('filters.connection', null)
+                ->where('filters.state', null));
+    });
+
     it('returns not found when a non-failed job id is used for failed detail', function (): void {
         $job = horizonJob(0, 'completed-1');
         $job->status = 'completed';
@@ -109,6 +172,110 @@ describe('failed job pages', function (): void {
         ));
 
         get('/horizon/failed/completed-1')->assertNotFound();
+    });
+
+    it('keeps the failed-job filter catalog out of the navigation deferred request', function (): void {
+        $repository = mockDashboardContract(JobRepository::class);
+        dashboardReturns($repository, 'getFailed', new Collection);
+        dashboardReturns($repository, 'countFailed', 0);
+        app()->instance(FailedJobsData::class, new FailedJobsData(
+            $repository,
+            mockDashboardContract(TagRepository::class),
+            new JobsData($repository),
+            new FailedJobRetryEligibility,
+        ));
+
+        $response = getJson('/horizon/failed', [
+            'X-Inertia' => 'true',
+            'X-Inertia-Version' => app(AssetManifest::class)->version(),
+        ])->assertOk();
+
+        expect($response->json('deferredProps.navigation'))
+            ->toContain('navigationCounts')
+            ->not()->toContain('filterCatalog');
+    });
+
+    it('loads the optional failed-job filter catalog without resolving the page', function (): void {
+        $repository = mockDashboardContract(JobRepository::class);
+        dashboardNeverReceives($repository, 'getFailed');
+        dashboardNeverReceives($repository, 'countFailed');
+        app()->instance(FailedJobsData::class, new FailedJobsData(
+            $repository,
+            mockDashboardContract(TagRepository::class),
+            new JobsData($repository),
+            new FailedJobRetryEligibility,
+        ));
+
+        getJson('/horizon/failed', [
+            'X-Inertia' => 'true',
+            'X-Inertia-Version' => app(AssetManifest::class)->version(),
+            'X-Inertia-Partial-Component' => 'FailedJobs/Index',
+            'X-Inertia-Partial-Data' => 'filterCatalog',
+        ])
+            ->assertOk()
+            ->assertJsonPath('props.filterCatalog.available', false)
+            ->assertJsonMissingPath('props.jobs');
+    });
+
+    it('does not recompute bulk actions for an infinite-scroll jobs request', function (): void {
+        $job = horizonJob(0, 'failed-1');
+        $repository = mockDashboardContract(JobRepository::class);
+        dashboardExpects(
+            $repository,
+            'getFailed',
+            ['-1'],
+            value: new Collection([$job]),
+        );
+        dashboardExpects($repository, 'countFailed', value: 1);
+        app()->instance(FailedJobsData::class, new FailedJobsData(
+            $repository,
+            mockDashboardContract(TagRepository::class),
+            new JobsData($repository),
+            new FailedJobRetryEligibility,
+        ));
+
+        getJson('/horizon/failed', [
+            'X-Inertia' => 'true',
+            'X-Inertia-Version' => app(AssetManifest::class)->version(),
+            'X-Inertia-Partial-Component' => 'FailedJobs/Index',
+            'X-Inertia-Partial-Data' => 'jobs',
+            'X-Inertia-Infinite-Scroll-Merge-Intent' => 'prepend',
+        ])
+            ->assertOk()
+            ->assertJsonPath('props.jobs.total', 1)
+            ->assertJsonPath('props.jobs.data.0.id', 'failed-1')
+            ->assertJsonPath('prependProps.0', 'jobs.data')
+            ->assertJsonPath('matchPropsOn.0', 'jobs.data.id')
+            ->assertJsonMissingPath('props.jobs.actions')
+            ->assertJsonMissingPath('props.listRevision')
+            ->assertJsonMissingPath('props.actions');
+    });
+
+    it('returns the failed list revision without returning the infinite-scroll prop', function (): void {
+        $repository = mockDashboardContract(JobRepository::class);
+        dashboardReturns($repository, 'getFailed', new Collection([
+            horizonJob(0, 'latest-failed-job'),
+        ]));
+        dashboardReturns($repository, 'countFailed', 1);
+        app()->instance(FailedJobsData::class, new FailedJobsData(
+            $repository,
+            mockDashboardContract(TagRepository::class),
+            new JobsData($repository),
+            new FailedJobRetryEligibility,
+        ));
+
+        getJson('/horizon/failed', [
+            'X-Inertia' => 'true',
+            'X-Inertia-Version' => app(AssetManifest::class)->version(),
+            'X-Inertia-Partial-Component' => 'FailedJobs/Index',
+            'X-Inertia-Partial-Data' => 'listRevision',
+        ])
+            ->assertOk()
+            ->assertJsonPath('props.listRevision', '[1,"latest-failed-job"]')
+            ->assertJsonMissingPath('props.jobs')
+            ->assertJsonMissingPath('scrollProps.jobs')
+            ->assertJsonMissingPath('prependProps')
+            ->assertJsonMissingPath('matchPropsOn');
     });
 
     it('offers individual retry but not retry all after a prior retry failed', function (): void {
@@ -131,7 +298,8 @@ describe('failed job pages', function (): void {
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
                 ->where('jobs.total', 1)
-                ->where('jobs.retryable', false)
+                ->where('actions.retryable', false)
+                ->missing('jobs.actions')
                 ->where('jobs.data.0.retryEligible', true));
     });
 
@@ -153,10 +321,45 @@ describe('failed job pages', function (): void {
         get('/horizon/failed')
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
-                ->where('jobs.retryable', true)
+                ->where('actions.retryable', true)
+                ->missing('jobs.actions')
                 ->where('jobs.data.0.id', 'retry-child')
                 ->where('jobs.data.0.retryOf', 'cleared-parent')
                 ->where('jobs.data.0.retryEligible', true));
+    });
+
+    it('keeps global bulk actions available when the retained count exceeds the former ceiling', function (): void {
+
+        $job = horizonJob(0, 'matching-failed-job');
+        $repository = mockDashboardContract(JobRepository::class);
+        $tags = mockDashboardContract(TagRepository::class);
+        dashboardReturns($repository, 'getFailed', new Collection([$job]));
+        dashboardReturns($repository, 'countFailed', 1001);
+        dashboardReturnsFor($tags, 'paginate', ['failed:tenant:42', 0, 51], ['matching-failed-job']);
+        dashboardReturnsFor($tags, 'count', ['failed:tenant:42'], 1);
+        dashboardReturnsFor(
+            $repository,
+            'getJobs',
+            [['matching-failed-job'], 0],
+            new Collection([$job]),
+        );
+        app()->instance(FailedJobsData::class, new FailedJobsData(
+            $repository,
+            $tags,
+            new JobsData($repository),
+            new FailedJobRetryEligibility,
+        ));
+
+        get('/horizon/failed?tag=tenant%3A42')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
+                ->where('jobs.total', 1)
+                ->where('actions.hasFailedJobs', true)
+                ->where('actions.retryable', true)
+                ->where('actions.retryUnavailableReason', null)
+                ->where('actions.clearable', true)
+                ->where('actions.clearUnavailableReason', null)
+                ->missing('jobs.actions'));
     });
 
     it('retries one failed job and redirects with feedback', function (): void {
@@ -198,22 +401,51 @@ describe('failed job pages', function (): void {
         Bus::assertNothingDispatched();
     });
 
-    it('retries every eligible failed job and reports the scheduled count', function (): void {
+    it('queues retrying every eligible failed job', function (): void {
         Bus::fake();
+        bindFailedJobsAsyncBulkQueue();
 
         $repository = mockDashboardContract(JobRepository::class);
-        dashboardReturnsFor($repository, 'countFailed', [], 2);
-        dashboardReturnsFor($repository, 'getFailed', ['-1'], new Collection([
-            horizonJob(0, 'failed-1'),
-            horizonJob(1, 'failed-2'),
-        ]));
+        dashboardReturns($repository, 'countFailed', 1);
         app()->instance(JobRepository::class, $repository);
 
         post('/horizon/failed/retry-all')
             ->assertRedirect()
-            ->assertSessionHas('toast.success', 'Scheduled 2 failed jobs for retry.');
+            ->assertSessionHas('toast.success', 'Retrying all failed jobs was queued.');
 
-        Bus::assertDispatchedTimes(HorizonRetryFailedJob::class, 2);
+        Bus::assertDispatched(
+            RetryAllFailedJobsJob::class,
+            fn (RetryAllFailedJobsJob $job): bool => $job->connectionName === null
+                && $job->queueName === null
+                && $job->connection === 'operations'
+                && $job->queue === 'horizon-maintenance',
+        );
+        Bus::assertDispatchedTimes(RetryAllFailedJobsJob::class, 1);
+        Bus::assertNotDispatched(HorizonRetryFailedJob::class);
+    });
+
+    it('queues retry all immediately when the retained count exceeds the former ceiling', function (): void {
+        Bus::fake();
+        bindFailedJobsAsyncBulkQueue();
+
+        $repository = mockDashboardContract(JobRepository::class);
+        dashboardReturns($repository, 'countFailed', 1001);
+        app()->instance(JobRepository::class, $repository);
+
+        post('/horizon/failed/retry-all')
+            ->assertRedirect()
+            ->assertSessionHas('toast.success', 'Retrying all failed jobs was queued.');
+
+        Bus::assertDispatched(
+            RetryAllFailedJobsJob::class,
+            fn (RetryAllFailedJobsJob $job): bool => $job->connectionName === null
+                && $job->queueName === null
+                && $job->operationId === null
+                && $job->connection === 'operations'
+                && $job->queue === 'horizon-maintenance',
+        );
+        Bus::assertDispatchedTimes(RetryAllFailedJobsJob::class, 1);
+        Bus::assertNotDispatched(HorizonRetryFailedJob::class);
     });
 
     it('removes a failed job from Horizon and Laravel storage', function (): void {
@@ -230,25 +462,72 @@ describe('failed job pages', function (): void {
             ->assertSessionHas('toast.success', 'Removed failed job failed-1.');
     });
 
-    it('clears every failed job from Horizon and Laravel storage', function (): void {
-        $repository = mockDashboardContract(JobRepository::class);
-        dashboardReturnsFor($repository, 'countFailed', [], 2);
-        dashboardReturnsFor($repository, 'getFailed', ['-1'], new Collection([
-            horizonJob(0, 'failed-1'),
-            horizonJob(1, 'failed-2'),
-        ]));
-        dashboardReturnsFor($repository, 'deleteFailed', ['failed-1'], 1);
-        dashboardReturnsFor($repository, 'deleteFailed', ['failed-2'], 1);
-        app()->instance(JobRepository::class, $repository);
+    it('queues clearing every failed job', function (): void {
+        Bus::fake();
+        bindFailedJobsAsyncBulkQueue();
 
-        $failedJobs = mockDashboardContract(FailedJobProviderInterface::class);
-        dashboardReturnsFor($failedJobs, 'forget', ['failed-1'], true);
-        dashboardReturnsFor($failedJobs, 'forget', ['failed-2'], true);
-        app()->instance(FailedJobProviderInterface::class, $failedJobs);
+        $repository = mockDashboardContract(JobRepository::class);
+        dashboardReturns($repository, 'countFailed', 1);
+        app()->instance(JobRepository::class, $repository);
 
         delete('/horizon/failed')
             ->assertRedirect()
-            ->assertSessionHas('toast.success', 'Cleared 2 failed jobs.');
+            ->assertSessionHas('toast.success', 'Clearing all failed jobs was queued.');
+
+        Bus::assertDispatched(
+            ClearFailedJobsJob::class,
+            fn (ClearFailedJobsJob $job): bool => $job->connection === 'operations'
+                && $job->queue === 'horizon-maintenance',
+        );
+        Bus::assertDispatchedTimes(ClearFailedJobsJob::class, 1);
+    });
+
+    it('queues clear all immediately when the retained count exceeds the former ceiling', function (): void {
+        Bus::fake();
+        bindFailedJobsAsyncBulkQueue();
+
+        $repository = mockDashboardContract(JobRepository::class);
+        dashboardReturns($repository, 'countFailed', 1001);
+        app()->instance(JobRepository::class, $repository);
+
+        delete('/horizon/failed')
+            ->assertRedirect()
+            ->assertSessionHas('toast.success', 'Clearing all failed jobs was queued.');
+
+        Bus::assertDispatched(
+            ClearFailedJobsJob::class,
+            fn (ClearFailedJobsJob $job): bool => $job->operationId === null
+                && $job->connection === 'operations'
+                && $job->queue === 'horizon-maintenance',
+        );
+        Bus::assertDispatchedTimes(ClearFailedJobsJob::class, 1);
+    });
+
+    it('reports bulk queue configuration failures without touching failed jobs', function (): void {
+        Bus::fake();
+        Exceptions::fake();
+        bindFailedJobsSyncBulkQueue();
+
+        $repository = mockDashboardContract(JobRepository::class);
+        dashboardReturns($repository, 'countFailed', 1);
+        app()->instance(JobRepository::class, $repository);
+
+        post('/horizon/failed/retry-all')
+            ->assertRedirect()
+            ->assertSessionHas(
+                'toast.error',
+                'The bulk operation could not be queued. Check the application logs and try again.',
+            );
+
+        delete('/horizon/failed')
+            ->assertRedirect()
+            ->assertSessionHas(
+                'toast.error',
+                'The bulk operation could not be queued. Check the application logs and try again.',
+            );
+
+        Bus::assertNothingDispatched();
+        Exceptions::assertReportedCount(2);
     });
 
     it('honors Horizon authorization for failed-job mutations', function (): void {

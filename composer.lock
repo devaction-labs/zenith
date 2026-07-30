@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "43fe6e356d08865f576c4707e0552a9d",
+    "content-hash": "6a10a0b6dba135728bc13db83148d19b",
     "packages": [
         {
             "name": "brick/math",
@@ -1107,21 +1107,21 @@
         },
         {
             "name": "inertiajs/inertia-laravel",
-            "version": "v3.1.1",
+            "version": "v3.2.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/inertiajs/inertia-laravel.git",
-                "reference": "022d54f1c125f57eef2b5f90bdecf69ee1df3e72"
+                "reference": "d97fd2bc77d9d4189425d51cb95e900c23171633"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/inertiajs/inertia-laravel/zipball/022d54f1c125f57eef2b5f90bdecf69ee1df3e72",
-                "reference": "022d54f1c125f57eef2b5f90bdecf69ee1df3e72",
+                "url": "https://api.github.com/repos/inertiajs/inertia-laravel/zipball/d97fd2bc77d9d4189425d51cb95e900c23171633",
+                "reference": "d97fd2bc77d9d4189425d51cb95e900c23171633",
                 "shasum": ""
             },
             "require": {
                 "ext-json": "*",
-                "laravel/framework": "^11.0|^12.0|^13.0",
+                "laravel/framework": "^11.35|^12.0|^13.0",
                 "php": "^8.2.0",
                 "symfony/console": "^7.0|^8.0"
             },
@@ -1129,7 +1129,7 @@
                 "laravel/boost": "<2.2.0"
             },
             "require-dev": {
-                "guzzlehttp/guzzle": "^7.2",
+                "guzzlehttp/guzzle": "^7.15.2|^8.0",
                 "larastan/larastan": "^3.0",
                 "laravel/pint": "^1.16",
                 "mockery/mockery": "^1.3.3",
@@ -1173,9 +1173,9 @@
             ],
             "support": {
                 "issues": "https://github.com/inertiajs/inertia-laravel/issues",
-                "source": "https://github.com/inertiajs/inertia-laravel/tree/v3.1.1"
+                "source": "https://github.com/inertiajs/inertia-laravel/tree/v3.2.0"
             },
-            "time": "2026-07-02T12:45:54+00:00"
+            "time": "2026-07-28T20:37:01+00:00"
         },
         {
             "name": "laravel/framework",

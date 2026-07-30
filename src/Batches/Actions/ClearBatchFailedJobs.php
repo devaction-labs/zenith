@@ -7,8 +7,14 @@ namespace NckRtl\HorizonNewDawn\Batches\Actions;
 use Illuminate\Bus\BatchRepository;
 use NckRtl\HorizonNewDawn\FailedJobs\Actions\RemoveFailedJob;
 
+/**
+ * Clears failed jobs already materialised on a single batch record — the
+ * repository-native source of truth for that batch's failedJobIds.
+ */
 final readonly class ClearBatchFailedJobs
 {
+    private const int CHUNK_SIZE = 100;
+
     public function __construct(
         private BatchRepository $batches,
         private RemoveFailedJob $remove,
@@ -22,17 +28,23 @@ final readonly class ClearBatchFailedJobs
             return 0;
         }
 
-        $cleared = 0;
-        $seen = [];
+        $failedJobIds = [];
 
         foreach ($batch->failedJobIds as $jobId) {
-            if (! is_string($jobId) || trim($jobId) === '' || isset($seen[$jobId])) {
+            if (! is_string($jobId) || trim($jobId) === '') {
                 continue;
             }
 
-            $seen[$jobId] = true;
-            $this->remove->handle($jobId);
-            $cleared++;
+            $failedJobIds[$jobId] = true;
+        }
+
+        $cleared = 0;
+
+        foreach (array_chunk(array_keys($failedJobIds), self::CHUNK_SIZE) as $chunk) {
+            foreach ($chunk as $jobId) {
+                $this->remove->handle($jobId);
+                $cleared++;
+            }
         }
 
         return $cleared;

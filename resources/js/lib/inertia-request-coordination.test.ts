@@ -1,9 +1,9 @@
 import type { VisitOptions } from "@inertiajs/core";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
 import {
   backgroundVisitOptions,
-  registerLatestInertiaVisitWins,
+  registerForegroundVisitCancellation,
 } from "@/lib/inertia-request-coordination";
 
 const inertia = vi.hoisted(() => ({
@@ -52,54 +52,92 @@ describe("Inertia request coordination", () => {
     expect(backgroundVisitOptions("/horizon", explicit)).toBe(explicit);
   });
 
-  it("cancels older async requests before a newer non-prefetch visit starts", () => {
+  it("cancels active poll requests when a foreground visit starts", () => {
     inertia.on.mockReturnValue(vi.fn());
+    const cancel = vi.fn();
+    const options = backgroundVisitOptions("/horizon/jobs/pending", {
+      async: true,
+      method: "get",
+      component: null,
+      poll: true,
+    } as VisitOptions & { poll: boolean });
 
-    registerLatestInertiaVisitWins();
+    options.onCancelToken?.({ cancel });
+
+    registerForegroundVisitCancellation();
 
     expect(inertia.on).toHaveBeenCalledWith("before", expect.any(Function));
 
     const listener = inertia.on.mock.calls[0][1];
     listener({ detail: { visit: { prefetch: false } } });
 
-    expect(inertia.cancelAll).toHaveBeenCalledWith({
-      async: true,
-      prefetch: false,
-      sync: false,
-    });
-  });
-
-  it("does not cancel active work for prefetch visits", () => {
-    inertia.on.mockReturnValue(vi.fn());
-    registerLatestInertiaVisitWins();
-
-    const listener = inertia.on.mock.calls[0][1];
-    listener({ detail: { visit: { prefetch: true } } });
-
+    expect(cancel).toHaveBeenCalledOnce();
     expect(inertia.cancelAll).not.toHaveBeenCalled();
   });
 
-  it("rejects background visits while a foreground navigation is in flight", () => {
+  it("does not cancel Inertia deferred requests for same-page foreground visits", () => {
     inertia.on.mockReturnValue(vi.fn());
-    registerLatestInertiaVisitWins();
+    const deferredCancel = vi.fn();
+    const options = backgroundVisitOptions("/horizon/jobs/pending", {
+      async: true,
+      component: null,
+      deferredProps: true,
+      method: "get",
+    } as VisitOptions & { deferredProps: boolean });
 
-    const listener = (name: string) =>
-      inertia.on.mock.calls.find(([eventName]) => eventName === name)?.[1];
+    options.onCancelToken?.({ cancel: deferredCancel });
 
-    listener("start")({ detail: { visit: { async: false } } });
+    registerForegroundVisitCancellation();
 
-    expect(listener("before")({ detail: { visit: { async: true, prefetch: false } } })).toBe(false);
+    const listener = inertia.on.mock.calls[0][1];
+    listener({ detail: { visit: { async: false, prefetch: false } } });
 
-    expect(
-      listener("before")({
-        detail: { visit: { async: true, deferredProps: true, prefetch: false } },
-      }),
-    ).toBeUndefined();
+    expect(deferredCancel).not.toHaveBeenCalled();
+    expect(inertia.cancelAll).not.toHaveBeenCalled();
+  });
 
-    listener("finish")({ detail: { visit: { async: false } } });
+  it("does not cancel an active poll for asynchronous or prefetch visits", () => {
+    inertia.on.mockReturnValue(vi.fn());
+    const cancel = vi.fn();
+    const options = backgroundVisitOptions("/horizon/jobs/pending", {
+      async: true,
+      method: "get",
+      component: null,
+      poll: true,
+    } as VisitOptions & { poll: boolean });
 
-    expect(
-      listener("before")({ detail: { visit: { async: true, prefetch: false } } }),
-    ).toBeUndefined();
+    options.onCancelToken?.({ cancel });
+    registerForegroundVisitCancellation();
+
+    const listener = inertia.on.mock.calls[0][1];
+    listener({ detail: { visit: { async: true, prefetch: false } } });
+    listener({ detail: { visit: { prefetch: true } } });
+
+    expect(cancel).not.toHaveBeenCalled();
+    expect(inertia.cancelAll).not.toHaveBeenCalled();
+  });
+
+  it("removes finished polls from foreground cancellation", () => {
+    inertia.on.mockReturnValue(vi.fn());
+    const cancel = vi.fn();
+    const onFinish = vi.fn();
+    const options = backgroundVisitOptions("/horizon/jobs/pending", {
+      async: true,
+      method: "get",
+      component: null,
+      poll: true,
+      onFinish,
+    } as VisitOptions & { poll: boolean });
+
+    options.onCancelToken?.({ cancel });
+    options.onFinish?.({} as never);
+    registerForegroundVisitCancellation();
+
+    const listener = inertia.on.mock.calls[0][1];
+    listener({ detail: { visit: { async: false, prefetch: false } } });
+
+    expect(onFinish).toHaveBeenCalledOnce();
+    expect(cancel).not.toHaveBeenCalled();
+    expect(inertia.cancelAll).not.toHaveBeenCalled();
   });
 });

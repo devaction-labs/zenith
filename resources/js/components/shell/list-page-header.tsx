@@ -12,10 +12,7 @@ export function ListPageHeader({
 }) {
   return (
     <CardHeader
-      className={cn(
-        "flex h-[54px] items-center justify-between gap-3 px-6 py-0",
-        !separated && "border-b-0",
-      )}
+      className={cn("flex items-center justify-between gap-3", !separated && "border-b-0")}
     >
       <CardTitle>{title}</CardTitle>
       {actions ? (

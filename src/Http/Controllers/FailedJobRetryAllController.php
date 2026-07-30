@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace NckRtl\HorizonNewDawn\Http\Controllers;
 
 use Illuminate\Http\RedirectResponse;
-use NckRtl\HorizonNewDawn\FailedJobs\Actions\RetryAllFailedJobs;
+use NckRtl\HorizonNewDawn\BulkOperations\BulkOperationDispatcher;
+use NckRtl\HorizonNewDawn\BulkOperations\Jobs\RetryAllFailedJobsJob;
 use NckRtl\HorizonNewDawn\Http\Requests\RetryFailedJobsRequest;
 use Throwable;
 
@@ -13,19 +14,19 @@ final class FailedJobRetryAllController
 {
     public function store(
         RetryFailedJobsRequest $request,
-        RetryAllFailedJobs $retry,
+        BulkOperationDispatcher $dispatcher,
     ): RedirectResponse {
         try {
-            $count = $retry->handle();
-            $message = $count === 1
-                ? 'Scheduled 1 failed job for retry.'
-                : "Scheduled {$count} failed jobs for retry.";
+            $dispatcher->dispatch(new RetryAllFailedJobsJob);
 
-            return back()->with('toast.success', $message);
+            return back()->with('toast.success', 'Retrying all failed jobs was queued.');
         } catch (Throwable $exception) {
             report($exception);
 
-            return back()->with('toast.error', 'Failed jobs could not be retried.');
+            return back()->with(
+                'toast.error',
+                'The bulk operation could not be queued. Check the application logs and try again.',
+            );
         }
     }
 }

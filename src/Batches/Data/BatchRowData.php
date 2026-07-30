@@ -24,5 +24,8 @@ final class BatchRowData extends Data
         public readonly int $createdAt,
         public readonly ?int $cancelledAt,
         public readonly ?int $finishedAt,
+        public readonly bool $queueExplicit = false,
+        public readonly bool $connectionExplicit = false,
+        public readonly bool $attributionCaptured = false,
     ) {}
 }

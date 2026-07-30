@@ -4,16 +4,23 @@ declare(strict_types=1);
 
 use Illuminate\Contracts\Redis\Factory as RedisFactory;
 use Illuminate\Redis\Connections\Connection;
+use Illuminate\Redis\Connections\PhpRedisConnection;
+use Illuminate\Redis\Connections\PredisConnection;
 use Illuminate\Support\Collection;
 use Laravel\Horizon\Contracts\JobRepository;
 use Laravel\Horizon\Contracts\TagRepository;
 use NckRtl\HorizonNewDawn\FailedJobs\FailedJobRetryEligibility;
 use NckRtl\HorizonNewDawn\FailedJobs\FailedJobsData;
+use NckRtl\HorizonNewDawn\Jobs\Data\JobIndexFiltersData;
 use NckRtl\HorizonNewDawn\Jobs\JobsData;
+use NckRtl\HorizonNewDawn\Jobs\RetainedJobIndex;
+use NckRtl\HorizonNewDawn\Jobs\RetainedJobQuery;
 
+use function NckRtl\HorizonNewDawn\Tests\Support\dashboardNeverReceives;
 use function NckRtl\HorizonNewDawn\Tests\Support\dashboardReturns;
 use function NckRtl\HorizonNewDawn\Tests\Support\dashboardReturnsFor;
 use function NckRtl\HorizonNewDawn\Tests\Support\dashboardReturnsUsing;
+use function NckRtl\HorizonNewDawn\Tests\Support\dashboardThrowsFor;
 use function NckRtl\HorizonNewDawn\Tests\Support\horizonJob;
 use function NckRtl\HorizonNewDawn\Tests\Support\mockDashboardContract;
 
@@ -64,50 +71,64 @@ describe('FailedJobsData', function (): void {
         expect($data->hasRetryable())->toBeFalse();
     });
 
-    it('finds retryable jobs after an expired hash at a raw failed-job boundary', function (): void {
+    it('pipelines only retry eligibility fields while scanning past an expired hash', function (
+        string $client,
+        Closure $hashFields,
+    ): void {
         $ids = array_map(
             static fn (int $index): string => "failed-{$index}",
             range(0, 50),
         );
         $repository = mockDashboardContract(JobRepository::class);
-        dashboardReturns($repository, 'getFailed', new Collection(array_map(
-            static function (int $index): object {
-                $job = horizonJob($index, "failed-{$index}");
-                $job->retried_by = json_encode([
-                    ['id' => "retry-{$index}", 'status' => 'completed'],
-                ], JSON_THROW_ON_ERROR);
+        dashboardNeverReceives($repository, 'getJobs');
 
-                return $job;
-            },
-            range(0, 48),
-        )));
+        $responses = [];
+
+        foreach ($ids as $index => $id) {
+            if ($id === 'failed-20') {
+                $responses[$id] = $hashFields(null, null);
+
+                continue;
+            }
+
+            $responses[$id] = $hashFields(
+                horizonJob($index, $id)->payload,
+                $id === 'failed-50'
+                    ? null
+                    : json_encode([
+                        ['id' => "retry-{$id}", 'status' => 'completed'],
+                    ], JSON_THROW_ON_ERROR),
+            );
+        }
+
+        $connection = $client === 'predis'
+            ? mockDashboardContract(PredisConnection::class)
+            : mockDashboardContract(PhpRedisConnection::class);
+        $requestedIds = [];
+        $requestedFields = [];
         dashboardReturnsUsing(
-            $repository,
-            'getJobs',
-            static function (array $requestedIds, int $startingAt = 0): Collection {
-                $jobs = [];
+            $connection,
+            'hmget',
+            static function (string $id, array $fields) use (&$requestedIds, &$requestedFields): null {
+                $requestedIds[] = $id;
+                $requestedFields[] = $fields;
 
-                foreach ($requestedIds as $offset => $id) {
-                    if ($id === 'failed-20') {
-                        continue;
-                    }
-
-                    $job = horizonJob($startingAt + $offset, $id);
-
-                    if ($id !== 'failed-50') {
-                        $job->retried_by = json_encode([
-                            ['id' => "retry-{$id}", 'status' => 'completed'],
-                        ], JSON_THROW_ON_ERROR);
-                    }
-
-                    $jobs[] = $job;
-                }
-
-                return new Collection($jobs);
+                return null;
             },
         );
+        dashboardReturnsUsing(
+            $connection,
+            'pipeline',
+            static function (Closure $callback) use ($connection, &$requestedIds, $responses): array {
+                $startingAt = count($requestedIds);
+                $callback($connection);
 
-        $connection = mockDashboardContract(Connection::class);
+                return array_map(
+                    static fn (string $id): array => $responses[$id],
+                    array_slice($requestedIds, $startingAt),
+                );
+            },
+        );
         dashboardReturnsUsing(
             $connection,
             'zrevrange',
@@ -128,8 +149,29 @@ describe('FailedJobsData', function (): void {
             $redis,
         );
 
-        expect($data->hasRetryable())->toBeTrue();
-    });
+        expect($data->hasRetryable())->toBeTrue()
+            ->and($requestedIds)->toBe($ids)
+            ->and($requestedFields)->toBe(array_fill(
+                0,
+                count($ids),
+                ['payload', 'retried_by'],
+            ));
+    })->with([
+        'Predis response shape' => [
+            'predis',
+            static fn (mixed $payload, mixed $retriedBy): array => [
+                $payload,
+                $retriedBy,
+            ],
+        ],
+        'PhpRedis response shape' => [
+            'phpredis',
+            static fn (mixed $payload, mixed $retriedBy): array => [
+                'payload' => $payload ?? false,
+                'retried_by' => $retriedBy ?? false,
+            ],
+        ],
+    ]);
 
     it('normalizes a failed row with its retry metadata', function (): void {
         $job = horizonJob(0, 'failed-1');
@@ -220,6 +262,9 @@ describe('FailedJobsData', function (): void {
     it('paginates failed jobs through the full Horizon tag repository', function (): void {
         $repository = mockDashboardContract(JobRepository::class);
         $tags = mockDashboardContract(TagRepository::class);
+        $retainedRedis = mockDashboardContract(RedisFactory::class);
+        dashboardNeverReceives($repository, 'trimFailedJobs');
+        dashboardNeverReceives($retainedRedis, 'connection');
         dashboardReturnsFor($tags, 'paginate', ['failed:tenant:42', 50, 51], [
             50 => 'failed-51',
         ]);
@@ -233,6 +278,10 @@ describe('FailedJobsData', function (): void {
             $tags,
             new JobsData($repository),
             new FailedJobRetryEligibility,
+            retainedQuery: new RetainedJobQuery(
+                $repository,
+                new RetainedJobIndex($retainedRedis, $repository),
+            ),
         ))
             ->page(50, 'tenant:42');
 
@@ -240,6 +289,44 @@ describe('FailedJobsData', function (): void {
             ->and($page->total)->toBe(51)
             ->and($page->current)->toBe(50)
             ->and($page->next)->toBeNull();
+    });
+
+    it('uses the retained query when an exact metadata filter accompanies a failed tag', function (): void {
+        $repository = mockDashboardContract(JobRepository::class);
+        $tags = mockDashboardContract(TagRepository::class);
+        $retainedRedis = mockDashboardContract(RedisFactory::class);
+        dashboardReturnsFor($repository, 'trimFailedJobs', [], null);
+        dashboardNeverReceives($tags, 'paginate');
+        dashboardNeverReceives($tags, 'count');
+        dashboardThrowsFor(
+            $retainedRedis,
+            'connection',
+            ['horizon'],
+            new RuntimeException('Projection unavailable.'),
+        );
+
+        $page = (new FailedJobsData(
+            $repository,
+            $tags,
+            new JobsData($repository),
+            new FailedJobRetryEligibility,
+            retainedQuery: new RetainedJobQuery(
+                $repository,
+                new RetainedJobIndex($retainedRedis, $repository),
+            ),
+        ))->page(
+            null,
+            'tenant:42',
+            new JobIndexFiltersData(
+                job: null,
+                queue: 'critical',
+                connection: null,
+                state: null,
+            ),
+        );
+
+        expect($page->available)->toBeFalse()
+            ->and($page->message)->toBe('Global failed-job filters are currently unavailable.');
     });
 
     it('reads failed jobs from oldest to newest', function (): void {
@@ -318,6 +405,7 @@ describe('FailedJobsData', function (): void {
 
     it('reads tag-filtered failed jobs from oldest to newest', function (): void {
         $repository = mockDashboardContract(JobRepository::class);
+        dashboardNeverReceives($repository, 'trimFailedJobs');
         dashboardReturnsFor($repository, 'getJobs', [['oldest', 'newest'], 0], new Collection([
             horizonJob(0, 'oldest'),
             horizonJob(1, 'newest'),
@@ -336,6 +424,10 @@ describe('FailedJobsData', function (): void {
             new JobsData($repository),
             new FailedJobRetryEligibility,
             $redis,
+            new RetainedJobQuery(
+                $repository,
+                new RetainedJobIndex($redis, $repository),
+            ),
         ))->page(0, 'tenant:42');
 
         expect(array_column($page->items, 'id'))->toBe(['oldest', 'newest']);

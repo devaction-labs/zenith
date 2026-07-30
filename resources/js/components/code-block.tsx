@@ -1,6 +1,6 @@
 import type { ComponentProps } from "react";
 import { CopyIcon } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/toast";
 
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -24,12 +24,12 @@ export function CodeBlock({
     }
 
     if (await copyToClipboard(copyValue)) {
-      toast.success("Copied to clipboard.");
+      toast.add({ title: "Copied to clipboard.", type: "success" });
 
       return;
     }
 
-    toast.error("Content could not be copied.");
+    toast.add({ title: "Content could not be copied.", type: "error" });
   };
 
   return (
@@ -56,7 +56,7 @@ export function CodeBlock({
       <pre
         {...props}
         className={cn(
-          "m-0 overflow-auto bg-code px-6 py-4 font-mono text-[12.5px] leading-6 font-medium whitespace-pre text-code-foreground",
+          "m-0 overflow-auto bg-code px-4 py-4 font-mono text-[12.5px] leading-6 font-medium whitespace-pre text-code-foreground sm:px-6",
           className,
         )}
       />

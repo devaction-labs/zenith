@@ -1,7 +1,11 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 
-import { formatMetricTooltipLabel, MetricChart } from "@/components/metrics/metric-chart";
+import {
+  formatMetricRuntime,
+  formatMetricTooltipLabel,
+  MetricChart,
+} from "@/components/metrics/metric-chart";
 
 const snapshots = [
   { timestamp: 1_784_387_100, throughput: 12, runtime: 1.5 },
@@ -31,11 +35,15 @@ describe("MetricChart", () => {
     expect(screen.getByText("Latest throughput: 18 jobs per minute.")).toHaveClass("sr-only");
   });
 
-  it("formats runtime chart values in seconds", () => {
+  it("formats runtime chart values with the abbreviated seconds suffix", () => {
     render(<MetricChart kind="runtime" snapshots={snapshots} />);
 
     expect(screen.getByRole("img", { name: "Runtime metric chart" })).toBeVisible();
-    expect(screen.getByText("Latest runtime: 2.121 seconds.")).toHaveClass("sr-only");
+    expect(formatMetricRuntime(0.01)).toBe("10ms");
+    expect(formatMetricRuntime(0.1)).toBe("100ms");
+    expect(formatMetricRuntime(0.999)).toBe("999ms");
+    expect(formatMetricRuntime(1)).toBe("1s");
+    expect(screen.getByText("Latest runtime: 2.12s.")).toHaveClass("sr-only");
   });
 
   it("renders missing runtime observations as gaps without announcing a fabricated zero", () => {

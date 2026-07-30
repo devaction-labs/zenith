@@ -3,34 +3,46 @@ import { mergeDataIntoQueryString } from "@inertiajs/core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useAutoLoad } from "@/hooks/use-auto-load";
+import { resetAutoRefreshStatusForTests } from "@/lib/auto-refresh-status";
 
 const inertia = vi.hoisted(() => ({
   reload: vi.fn(),
   start: vi.fn(),
   stop: vi.fn(),
   usePoll: vi.fn(),
-  scrollProps: {} as Record<string, unknown>,
 }));
 
 vi.mock("@inertiajs/react", () => ({
   router: { reload: inertia.reload },
   usePoll: inertia.usePoll,
-  usePage: () => ({ scrollProps: inertia.scrollProps }),
 }));
+
+const trackBackgroundKeys = [
+  "onCancelToken",
+  "onStart",
+  "onSuccess",
+  "onError",
+  "onNetworkError",
+  "onHttpException",
+  "onCancel",
+  "onFinish",
+] as const;
 
 describe("useAutoLoad", () => {
   beforeEach(() => {
+    resetAutoRefreshStatusForTests();
     inertia.reload.mockReset();
     inertia.start.mockReset();
     inertia.stop.mockReset();
     inertia.usePoll.mockReset();
     inertia.usePoll.mockReturnValue({ start: inertia.start, stop: inertia.stop });
-    inertia.scrollProps = {};
     window.history.replaceState({}, "", "/horizon/failed?starting_at=49&tag=tenant%3A42");
   });
 
   it("polls a fresh partial reload without carrying the scroll cursor", () => {
-    renderHook(() => useAutoLoad({ enabled: true, prop: "jobs", interval: 1_000 }));
+    renderHook(() =>
+      useAutoLoad({ enabled: true, prop: "jobs", interval: 1_000, loadedItemCount: 10 }),
+    );
 
     expect(inertia.usePoll).toHaveBeenCalledWith(1_000, expect.any(Function), {
       autoStart: false,
@@ -40,34 +52,43 @@ describe("useAutoLoad", () => {
     const [url] = mergeDataIntoQueryString("get", window.location.href, options.data);
 
     expect(url).toBe("http://localhost:3000/horizon/failed?tag=tenant%3A42");
-    expect(options).toEqual({
-      data: { starting_at: undefined },
-      only: ["jobs", "horizon", "navigationCounts"],
-      preserveUrl: true,
-      reset: ["jobs"],
-      showProgress: false,
-    });
+    expect(options).toEqual(
+      expect.objectContaining({
+        data: { starting_at: undefined },
+        only: ["jobs", "horizon", "navigationCounts"],
+        preserveUrl: true,
+        reset: ["jobs"],
+        showProgress: false,
+      }),
+    );
+    for (const key of trackBackgroundKeys) {
+      expect(options[key]).toEqual(expect.any(Function));
+    }
     expect(inertia.start).toHaveBeenCalledOnce();
   });
 
-  it("polls only the active list while automatic refresh is disabled", () => {
+  it("polls only freshness props while automatic insertion is disabled", () => {
     renderHook(() =>
       useAutoLoad({
         enabled: false,
         prop: "jobs",
         additionalProps: ["summary"],
+        listRevision: "rev-1",
         interval: 1_000,
+        loadedItemCount: 10,
       }),
     );
 
     expect(inertia.start).toHaveBeenCalledOnce();
-    expect(inertia.usePoll.mock.calls[0][1]()).toEqual({
-      data: { starting_at: undefined },
-      only: ["jobs", "summary"],
-      preserveUrl: true,
-      reset: ["jobs"],
-      showProgress: false,
-    });
+    expect(inertia.usePoll.mock.calls[0][1]()).toEqual(
+      expect.objectContaining({
+        data: { starting_at: undefined },
+        only: ["listRevision", "summary"],
+        preserveUrl: true,
+        showProgress: false,
+      }),
+    );
+    expect(inertia.usePoll.mock.calls[0][1]().reset).toBeUndefined();
   });
 
   it("refreshes the active list immediately when automatic insertion is enabled", () => {
@@ -78,6 +99,7 @@ describe("useAutoLoad", () => {
           prop: "jobs",
           additionalProps: ["summary"],
           interval: 1_000,
+          loadedItemCount: 10,
         }),
       { initialProps: { enabled: false } },
     );
@@ -87,197 +109,105 @@ describe("useAutoLoad", () => {
     rerender({ enabled: true });
 
     expect(inertia.reload).toHaveBeenCalledOnce();
-    expect(inertia.reload).toHaveBeenCalledWith({
-      data: { starting_at: undefined },
-      only: ["jobs", "summary", "horizon", "navigationCounts"],
-      preserveUrl: true,
-      reset: ["jobs"],
-      showProgress: false,
-    });
+    expect(inertia.reload).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: { starting_at: undefined },
+        only: ["jobs", "summary", "horizon", "navigationCounts"],
+        preserveUrl: true,
+        reset: ["jobs"],
+        showProgress: false,
+      }),
+    );
   });
 
-  it("holds new rows until requested when automatic insertion is disabled", () => {
-    const original = [{ id: "job-2" }, { id: "job-1" }];
-    const refreshed = [{ id: "job-3" }, ...original];
+  it("holds new entries until requested when automatic insertion is disabled", () => {
     const { result, rerender } = renderHook(
-      ({ items }) =>
+      ({ listRevision }) =>
         useAutoLoad({
           enabled: false,
           prop: "jobs",
           interval: 1_000,
-          items,
+          listRevision,
+          loadedItemCount: 10,
         }),
-      { initialProps: { items: original } },
+      { initialProps: { listRevision: "rev-1" } },
     );
 
-    rerender({ items: refreshed });
+    expect(result.current.hasNewEntries).toBe(false);
 
-    expect(result.current).toMatchObject({
-      items: original,
-      hasNewEntries: true,
+    rerender({ listRevision: "rev-2" });
+
+    expect(result.current.hasNewEntries).toBe(true);
+
+    act(() => {
+      result.current.loadNewEntries();
     });
 
-    act(() => result.current.loadNewEntries());
-
-    expect(result.current).toMatchObject({
-      items: refreshed,
-      hasNewEntries: false,
-    });
-  });
-
-  it("keeps the loaded tail mounted when polling resets the first page", () => {
-    inertia.scrollProps = {
-      jobs: {
-        pageName: "starting_at",
-        previousPage: null,
-        nextPage: 49,
-        currentPage: -1,
-        reset: true,
-      },
-    };
-    const original = [
-      { id: "job-4", status: "pending" },
-      { id: "job-3", status: "pending" },
-      { id: "job-2", status: "pending" },
-      { id: "job-1", status: "pending" },
-    ];
-    const refreshed = [
-      { id: "job-5", status: "pending" },
-      { id: "job-4", status: "reserved" },
-    ];
-    const { result, rerender } = renderHook(
-      ({ items }) =>
-        useAutoLoad({
-          enabled: true,
-          prop: "jobs",
-          interval: 1_000,
-          items,
-        }),
-      { initialProps: { items: original } },
+    expect(inertia.reload).toHaveBeenCalledOnce();
+    expect(inertia.reload).toHaveBeenCalledWith(
+      expect.objectContaining({
+        only: ["jobs", "listRevision"],
+        reset: ["jobs"],
+      }),
     );
 
-    rerender({ items: refreshed });
+    const options = inertia.reload.mock.calls[0][0];
+    act(() => {
+      options.onSuccess?.({ props: { listRevision: "rev-2" } });
+    });
 
-    expect(result.current.items).toEqual([
-      { id: "job-5", status: "pending" },
-      { id: "job-4", status: "reserved" },
-      { id: "job-3", status: "pending" },
-      { id: "job-2", status: "pending" },
-    ]);
+    expect(result.current.hasNewEntries).toBe(false);
   });
 
-  it("holds a new reset prefix without shrinking the loaded tail", () => {
-    inertia.scrollProps = {
-      jobs: {
-        pageName: "starting_at",
-        previousPage: null,
-        nextPage: 49,
-        currentPage: -1,
-        reset: true,
-      },
-    };
-    const original = [
-      { id: "job-4", status: "pending" },
-      { id: "job-3", status: "pending" },
-      { id: "job-2", status: "pending" },
-      { id: "job-1", status: "pending" },
-    ];
-    const refreshed = [
-      { id: "job-5", status: "pending" },
-      { id: "job-4", status: "reserved" },
-    ];
+  it("prefaces infinite-scroll history with prepend once more than one page is loaded", () => {
+    renderHook(() =>
+      useAutoLoad({
+        enabled: true,
+        prop: "jobs",
+        interval: 1_000,
+        loadedItemCount: 75,
+      }),
+    );
+
+    expect(inertia.usePoll.mock.calls[0][1]()).toEqual(
+      expect.objectContaining({
+        only: ["jobs", "horizon", "navigationCounts"],
+        headers: { "X-Inertia-Infinite-Scroll-Merge-Intent": "prepend" },
+      }),
+    );
+    expect(inertia.usePoll.mock.calls[0][1]().reset).toBeUndefined();
+  });
+
+  it("clears the new-entries flag when the list scope changes", () => {
     const { result, rerender } = renderHook(
-      ({ items }) =>
+      ({ listRevision, scope }) =>
         useAutoLoad({
           enabled: false,
           prop: "jobs",
           interval: 1_000,
-          items,
-        }),
-      { initialProps: { items: original } },
-    );
-
-    rerender({ items: refreshed });
-
-    expect(result.current).toMatchObject({
-      items: [
-        { id: "job-4", status: "reserved" },
-        { id: "job-3", status: "pending" },
-        { id: "job-2", status: "pending" },
-        { id: "job-1", status: "pending" },
-      ],
-      hasNewEntries: true,
-    });
-  });
-
-  it("removes deleted rows while holding only a genuinely new prefix", () => {
-    const original = [{ id: "job-2" }, { id: "job-1" }];
-    const refreshed = [{ id: "job-3" }, { id: "job-1" }];
-    const { result, rerender } = renderHook(
-      ({ items }) =>
-        useAutoLoad({
-          enabled: false,
-          prop: "jobs",
-          interval: 1_000,
-          items,
-        }),
-      { initialProps: { items: original } },
-    );
-
-    rerender({ items: refreshed });
-
-    expect(result.current).toMatchObject({
-      items: [{ id: "job-1" }],
-      hasNewEntries: true,
-    });
-  });
-
-  it("treats an empty or non-overlapping refresh as authoritative", () => {
-    const original = [{ id: "job-2" }, { id: "job-1" }];
-    const { result, rerender } = renderHook(
-      ({ items }) =>
-        useAutoLoad({
-          enabled: false,
-          prop: "jobs",
-          interval: 1_000,
-          items,
-        }),
-      { initialProps: { items: original } },
-    );
-
-    rerender({ items: [{ id: "job-4" }] });
-    expect(result.current).toMatchObject({ items: [{ id: "job-4" }], hasNewEntries: false });
-
-    rerender({ items: [] });
-    expect(result.current).toMatchObject({ items: [], hasNewEntries: false });
-  });
-
-  it("replaces held rows when the list scope changes", () => {
-    const original = [{ id: "failed-1" }];
-    const searched = [{ id: "failed-42" }];
-    const { result, rerender } = renderHook(
-      ({ items, scope }) =>
-        useAutoLoad({
-          enabled: false,
-          prop: "jobs",
-          interval: 1_000,
-          items,
+          listRevision,
           scope,
+          loadedItemCount: 10,
         }),
-      { initialProps: { items: original, scope: "all" } },
+      { initialProps: { listRevision: "rev-1", scope: "all" } },
     );
 
-    rerender({ items: searched, scope: "tenant:42" });
+    rerender({ listRevision: "rev-2", scope: "all" });
+    expect(result.current.hasNewEntries).toBe(true);
 
-    expect(result.current).toMatchObject({
-      items: searched,
-      hasNewEntries: false,
-    });
+    rerender({ listRevision: "rev-3", scope: "tenant:42" });
+    expect(result.current.hasNewEntries).toBe(false);
   });
 
   it("stops native polling when polling is disabled or the hook unmounts", () => {
     const { unmount } = renderHook(() =>
-      useAutoLoad({ enabled: true, prop: "jobs", interval: 1_000, polling: false }),
+      useAutoLoad({
+        enabled: true,
+        prop: "jobs",
+        interval: 1_000,
+        polling: false,
+        loadedItemCount: 10,
+      }),
     );
 
     expect(inertia.start).not.toHaveBeenCalled();
@@ -296,6 +226,7 @@ describe("useAutoLoad", () => {
         prop: "batches",
         interval: 1_000,
         cursor: "before_id",
+        loadedItemCount: 10,
       }),
     );
 

@@ -5,7 +5,9 @@ declare(strict_types=1);
 use Carbon\CarbonImmutable;
 use Illuminate\Bus\BatchRepository;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
+use Illuminate\Contracts\Redis\Factory as RedisFactory;
 use Illuminate\Queue\QueueManager;
+use Illuminate\Redis\Connections\Connection;
 use Laravel\Horizon\Contracts\JobRepository;
 use Laravel\Horizon\Contracts\MetricsRepository;
 use Laravel\Horizon\Contracts\TagRepository;
@@ -14,7 +16,9 @@ use NckRtl\HorizonNewDawn\Batches\BatchJobsData;
 use NckRtl\HorizonNewDawn\FailedJobs\FailedJobRetryEligibility;
 use NckRtl\HorizonNewDawn\FailedJobs\FailedJobsData;
 use NckRtl\HorizonNewDawn\Jobs\JobsData;
+use NckRtl\HorizonNewDawn\Metrics\SnapshotJobsPerMinute;
 use NckRtl\HorizonNewDawn\Queues\Data\QueuePauseTargetData;
+use NckRtl\HorizonNewDawn\Queues\Data\QueueRetainedJobsData;
 use NckRtl\HorizonNewDawn\Queues\Data\QueueRowData;
 use NckRtl\HorizonNewDawn\Queues\Data\QueueWaitThresholdData;
 use NckRtl\HorizonNewDawn\Queues\Data\QueueWaitThresholdTargetData;
@@ -25,6 +29,8 @@ use NckRtl\HorizonNewDawn\Queues\QueuePauseStatus;
 use NckRtl\HorizonNewDawn\Queues\QueueSummary;
 use NckRtl\HorizonNewDawn\Queues\QueueWaitThresholdStatus;
 
+use function NckRtl\HorizonNewDawn\Tests\Support\dashboardExpects;
+use function NckRtl\HorizonNewDawn\Tests\Support\dashboardReturns;
 use function NckRtl\HorizonNewDawn\Tests\Support\dashboardReturnsFor;
 use function NckRtl\HorizonNewDawn\Tests\Support\dashboardThrows;
 use function NckRtl\HorizonNewDawn\Tests\Support\horizonBatch;
@@ -35,6 +41,7 @@ function queueSummaryCoordinator(
     JobRepository $jobRepository,
     BatchRepository $batchRepository,
     MetricsRepository $metrics,
+    ?SnapshotJobsPerMinute $snapshotJobsPerMinute = null,
 ): QueueSummary {
     $jobs = new JobsData($jobRepository);
     $batches = new BatchesData(
@@ -56,7 +63,55 @@ function queueSummaryCoordinator(
         ),
         new QueueBatchesData($batchRepository, $batches, app(CacheFactory::class)),
         $metrics,
+        $snapshotJobsPerMinute ?? queueSummarySnapshotJobsPerMinute(),
     );
+}
+
+function queueSummarySnapshotJobsPerMinute(
+    mixed $lastSnapshotAt = 'not-used',
+    bool $failRedis = false,
+    bool $optional = false,
+): SnapshotJobsPerMinute {
+    $connection = mockDashboardContract(Connection::class);
+    $redis = mockDashboardContract(RedisFactory::class);
+
+    if ($failRedis) {
+        if ($optional) {
+            dashboardExpects(
+                $redis,
+                'connection',
+                times: 'zeroOrMoreTimes',
+                exception: new RuntimeException('redis secret'),
+            );
+        } else {
+            dashboardThrows($redis, 'connection', new RuntimeException('redis secret'));
+        }
+
+        return new SnapshotJobsPerMinute($redis);
+    }
+
+    if ($optional) {
+        dashboardExpects(
+            $connection,
+            'get',
+            ['last_snapshot_at'],
+            times: 'zeroOrMoreTimes',
+            value: $lastSnapshotAt,
+        );
+        dashboardExpects(
+            $redis,
+            'connection',
+            times: 'zeroOrMoreTimes',
+            value: $connection,
+        );
+
+        return new SnapshotJobsPerMinute($redis);
+    }
+
+    dashboardReturnsFor($connection, 'get', ['last_snapshot_at'], $lastSnapshotAt);
+    dashboardReturns($redis, 'connection', $connection);
+
+    return new SnapshotJobsPerMinute($redis);
 }
 
 function queueSummaryRow(): QueueRowData
@@ -128,6 +183,7 @@ function queueSummaryRow(): QueueRowData
 beforeEach(function (): void {
     app(CacheFactory::class)->store()->clear();
     config()->set('horizon-new-dawn.poll_interval', 0);
+    CarbonImmutable::setTestNow('2026-07-18 12:00:00 UTC');
 
     if (queuePausingIsSupported()) {
         app(QueueManager::class)->resume('redis', 'reports');
@@ -135,8 +191,12 @@ beforeEach(function (): void {
     }
 });
 
+afterEach(function (): void {
+    CarbonImmutable::setTestNow();
+});
+
 it('combines live queue retained history batches and snapshot metrics', function (): void {
-    requireQueuePausing();
+    requireTimedQueuePausing();
 
     $deadline = CarbonImmutable::now()->addHour();
     $metadata = new QueuePauseMetadata(app(CacheFactory::class));
@@ -171,8 +231,14 @@ it('combines live queue retained history batches and snapshot metrics', function
     dashboardReturnsFor($metrics, 'throughputForQueue', ['reports'], 4);
     dashboardReturnsFor($metrics, 'runtimeForQueue', ['reports'], 2500.0);
 
-    $summary = queueSummaryCoordinator($jobs, $batchRepository, $metrics)
-        ->forQueue(queueSummaryRow());
+    $summary = queueSummaryCoordinator(
+        $jobs,
+        $batchRepository,
+        $metrics,
+        queueSummarySnapshotJobsPerMinute(
+            (string) CarbonImmutable::now()->subSeconds(30)->getTimestamp(),
+        ),
+    )->forQueue(queueSummaryRow());
 
     expect($summary->toArray())->toMatchArray([
         'available' => true,
@@ -210,6 +276,7 @@ it('combines live queue retained history batches and snapshot metrics', function
         'failedJobsPastDayComplete' => true,
         'failedRetentionMinutes' => 10080,
         'completedJobs' => 1,
+        'completedAvailable' => true,
         'completedComplete' => true,
         'completedJobsPerMinuteComplete' => true,
         'completedJobsPastHourComplete' => true,
@@ -247,10 +314,60 @@ it('combines live queue retained history batches and snapshot metrics', function
                 ],
             ],
         ],
+        'jobsPerMinute' => 8.0,
         'throughput' => 4,
         'averageRuntime' => 2.5,
         'message' => null,
     ]);
+});
+
+it('projects queue jobs per minute from throughputForQueue and the shared snapshot calculator', function (): void {
+    $jobs = mockDashboardContract(JobRepository::class);
+    dashboardReturnsFor($jobs, 'countPending', [], 0);
+    dashboardReturnsFor($jobs, 'countCompleted', [], 0);
+    dashboardReturnsFor($jobs, 'countFailed', [], 0);
+    dashboardReturnsFor($jobs, 'countSilenced', [], 0);
+    $batchRepository = mockDashboardContract(BatchRepository::class);
+    dashboardReturnsFor($batchRepository, 'get', [50, null], []);
+    $metrics = mockDashboardContract(MetricsRepository::class);
+    dashboardReturnsFor($metrics, 'throughputForQueue', ['reports'], 100);
+    dashboardReturnsFor($metrics, 'runtimeForQueue', ['reports'], 0.0);
+
+    $summary = queueSummaryCoordinator(
+        $jobs,
+        $batchRepository,
+        $metrics,
+        queueSummarySnapshotJobsPerMinute(
+            (string) CarbonImmutable::now()->subSeconds(30)->getTimestamp(),
+        ),
+    )->forQueue(queueSummaryRow());
+
+    expect($summary->jobsPerMinute)->toBe(200.0)
+        ->and($summary->throughput)->toBe(100);
+});
+
+it('returns zero jobs per minute when the snapshot timestamp is unusable while keeping throughput', function (): void {
+    $jobs = mockDashboardContract(JobRepository::class);
+    dashboardReturnsFor($jobs, 'countPending', [], 0);
+    dashboardReturnsFor($jobs, 'countCompleted', [], 0);
+    dashboardReturnsFor($jobs, 'countFailed', [], 0);
+    dashboardReturnsFor($jobs, 'countSilenced', [], 0);
+    $batchRepository = mockDashboardContract(BatchRepository::class);
+    dashboardReturnsFor($batchRepository, 'get', [50, null], []);
+    $metrics = mockDashboardContract(MetricsRepository::class);
+    dashboardReturnsFor($metrics, 'throughputForQueue', ['reports'], 40);
+    dashboardReturnsFor($metrics, 'runtimeForQueue', ['reports'], 0.0);
+
+    $summary = queueSummaryCoordinator(
+        $jobs,
+        $batchRepository,
+        $metrics,
+        queueSummarySnapshotJobsPerMinute(null),
+    )->forQueue(queueSummaryRow());
+
+    expect($summary->jobsPerMinute)->toBe(0)
+        ->and($summary->throughput)->toBe(40)
+        ->and($summary->averageRuntime)->toBe(0.0);
 });
 
 it('keeps queue data available when snapshot metrics fail', function (): void {
@@ -264,14 +381,44 @@ it('keeps queue data available when snapshot metrics fail', function (): void {
     $metrics = mockDashboardContract(MetricsRepository::class);
     dashboardThrows($metrics, 'throughputForQueue', new RuntimeException('metrics secret'));
 
-    $summary = queueSummaryCoordinator($jobs, $batchRepository, $metrics)
-        ->forQueue(queueSummaryRow());
+    $summary = queueSummaryCoordinator(
+        $jobs,
+        $batchRepository,
+        $metrics,
+        queueSummarySnapshotJobsPerMinute(optional: true),
+    )->forQueue(queueSummaryRow());
 
     expect($summary->available)->toBeTrue()
         ->and($summary->processes)->toBe(5)
+        ->and($summary->jobsPerMinute)->toBeNull()
         ->and($summary->throughput)->toBeNull()
         ->and($summary->averageRuntime)->toBeNull()
         ->and($summary->message)->toBeNull();
+});
+
+it('returns zero jobs per minute when redis snapshot lookup fails without nulling throughput', function (): void {
+    $jobs = mockDashboardContract(JobRepository::class);
+    dashboardReturnsFor($jobs, 'countPending', [], 0);
+    dashboardReturnsFor($jobs, 'countCompleted', [], 0);
+    dashboardReturnsFor($jobs, 'countFailed', [], 0);
+    dashboardReturnsFor($jobs, 'countSilenced', [], 0);
+    $batchRepository = mockDashboardContract(BatchRepository::class);
+    dashboardReturnsFor($batchRepository, 'get', [50, null], []);
+    $metrics = mockDashboardContract(MetricsRepository::class);
+    dashboardReturnsFor($metrics, 'throughputForQueue', ['reports'], 12);
+    dashboardReturnsFor($metrics, 'runtimeForQueue', ['reports'], 500.0);
+
+    $summary = queueSummaryCoordinator(
+        $jobs,
+        $batchRepository,
+        $metrics,
+        queueSummarySnapshotJobsPerMinute(failRedis: true),
+    )->forQueue(queueSummaryRow());
+
+    expect($summary->available)->toBeTrue()
+        ->and($summary->jobsPerMinute)->toBe(0)
+        ->and($summary->throughput)->toBe(12)
+        ->and($summary->averageRuntime)->toBe(0.5);
 });
 
 it('preserves partial retained-data warnings in the composed queue summary', function (): void {
@@ -299,15 +446,89 @@ it('preserves partial retained-data warnings in the composed queue summary', fun
         );
 });
 
+it('keeps a completed-only calculation failure quiet without inventing a zero', function (): void {
+    $jobs = mockDashboardContract(JobRepository::class);
+    dashboardReturnsFor($jobs, 'countPending', [], 0);
+    dashboardReturnsFor($jobs, 'countCompleted', [], 1);
+    dashboardThrows($jobs, 'getCompleted', new RuntimeException('completed secret'));
+    dashboardReturnsFor($jobs, 'countFailed', [], 0);
+    dashboardReturnsFor($jobs, 'countSilenced', [], 0);
+
+    $batchRepository = mockDashboardContract(BatchRepository::class);
+    dashboardReturnsFor($batchRepository, 'get', [50, null], []);
+
+    $metrics = mockDashboardContract(MetricsRepository::class);
+    dashboardReturnsFor($metrics, 'throughputForQueue', ['reports'], 0);
+
+    $summary = queueSummaryCoordinator($jobs, $batchRepository, $metrics)
+        ->forQueue(queueSummaryRow());
+
+    expect($summary->available)->toBeTrue()
+        ->and($summary->completedJobs)->toBeNull()
+        ->and($summary->completedAvailable)->toBeFalse()
+        ->and($summary->completedComplete)->toBeFalse()
+        ->and($summary->message)->toBeNull();
+});
+
+it('maps a warming retained summary to unknown counts without making the queue unavailable', function (): void {
+    config()->set('horizon-new-dawn.poll_interval', 5_000);
+
+    $prefix = config('horizon.prefix', 'horizon:');
+    $prefix = is_string($prefix) ? $prefix : 'horizon:';
+    $cacheKey = 'horizon-new-dawn:queue-jobs:'.hash(
+        'sha256',
+        $prefix."\0reports",
+    );
+    app(CacheFactory::class)->store()->forever(
+        $cacheKey,
+        QueueRetainedJobsData::warming()->toArray(),
+    );
+
+    $jobs = mockDashboardContract(JobRepository::class);
+    $batchRepository = mockDashboardContract(BatchRepository::class);
+    dashboardReturnsFor($batchRepository, 'get', [50, null], []);
+    $metrics = mockDashboardContract(MetricsRepository::class);
+    dashboardReturnsFor($metrics, 'throughputForQueue', ['reports'], 0);
+
+    $summary = queueSummaryCoordinator($jobs, $batchRepository, $metrics)
+        ->forQueue(queueSummaryRow());
+
+    expect($summary->available)->toBeTrue()
+        ->and($summary->retainedJobsWarming)->toBeTrue()
+        ->and($summary->pendingJobs)->toBeNull()
+        ->and($summary->pendingComplete)->toBeFalse()
+        ->and($summary->failedJobs)->toBeNull()
+        ->and($summary->failedJobsPerMinute)->toBeNull()
+        ->and($summary->failedJobsPastHour)->toBeNull()
+        ->and($summary->failedJobsPastDay)->toBeNull()
+        ->and($summary->completedJobs)->toBeNull()
+        ->and($summary->completedAvailable)->toBeFalse()
+        ->and($summary->silencedJobs)->toBeNull()
+        ->and($summary->message)->toBeNull()
+        ->and($summary->processes)->toBe(5);
+});
+
+it('distinguishes neutral retained-index warming from true retained-data failure', function (): void {
+    $warming = QueueRetainedJobsData::warming();
+    $unavailable = QueueRetainedJobsData::unavailable();
+
+    expect($warming->warming)->toBeTrue()
+        ->and($warming->message)->toBeNull()
+        ->and($unavailable->warming)->toBeFalse()
+        ->and($unavailable->message)->toBe('Some retained job data is currently unavailable.');
+});
+
 it('creates an explicit unavailable summary without inventing zero values', function (): void {
     $summary = QueueSummary::unavailable('reports', 'Horizon queues are currently unavailable.');
 
     expect($summary->available)->toBeFalse()
+        ->and($summary->retainedJobsWarming)->toBeFalse()
         ->and($summary->name)->toBe('reports')
         ->and($summary->pendingJobs)->toBeNull()
         ->and($summary->silencedJobs)->toBeNull()
         ->and($summary->processes)->toBeNull()
         ->and($summary->waitThreshold)->toBeNull()
+        ->and($summary->jobsPerMinute)->toBeNull()
         ->and($summary->throughput)->toBeNull()
         ->and($summary->averageRuntime)->toBeNull()
         ->and($summary->message)->toBe('Horizon queues are currently unavailable.');

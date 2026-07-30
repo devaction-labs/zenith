@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { MouseEventHandler, ReactNode } from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { HorizonLayout } from "@/layouts/horizon-layout";

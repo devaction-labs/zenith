@@ -77,6 +77,10 @@ export function BatchesActions({
     });
   };
 
+  if (!counts.completeScan) {
+    return null;
+  }
+
   const hasActions = counts.available && clearScopes.some((actionScope) => counts[actionScope] > 0);
 
   return (

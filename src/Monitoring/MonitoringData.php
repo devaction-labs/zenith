@@ -119,8 +119,9 @@ final readonly class MonitoringData
     {
         try {
             $repositoryTag = $status->repositoryTag($tag);
-            $ids = $this->tags->paginate($repositoryTag, $startingAt, self::PAGE_SIZE);
-            $jobIds = array_values(array_filter($ids, is_string(...)));
+            $references = $this->tags->paginate($repositoryTag, $startingAt, self::PAGE_SIZE + 1);
+            $pageReferences = array_slice($references, 0, self::PAGE_SIZE);
+            $jobIds = array_values(array_filter($pageReferences, is_string(...)));
             $jobs = $this->jobs->getJobs($jobIds, $startingAt);
             $items = [];
 
@@ -141,7 +142,7 @@ final readonly class MonitoringData
                 items: $items,
                 total: $this->tags->count($repositoryTag),
                 current: $startingAt,
-                next: count($ids) === self::PAGE_SIZE ? $startingAt + self::PAGE_SIZE : null,
+                next: count($references) > self::PAGE_SIZE ? $startingAt + self::PAGE_SIZE : null,
                 message: null,
             );
         } catch (Throwable $exception) {

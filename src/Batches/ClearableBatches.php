@@ -6,10 +6,10 @@ namespace NckRtl\HorizonNewDawn\Batches;
 
 use Illuminate\Bus\Batch;
 use Illuminate\Bus\BatchRepository;
+use JsonException;
 use Laravel\Horizon\Contracts\JobRepository;
 use NckRtl\HorizonNewDawn\Batches\Data\BatchClearCountsData;
 use NckRtl\HorizonNewDawn\Jobs\JobsData;
-use RuntimeException;
 use Throwable;
 
 final readonly class ClearableBatches
@@ -18,16 +18,27 @@ final readonly class ClearableBatches
 
     private const int JOB_PAGE_SIZE = 50;
 
+    private const int FAILED_JOB_CHUNK_SIZE = 500;
+
+    private const int ID_CHUNK_SIZE = 100;
+
     public function __construct(
         private BatchRepository $batches,
         private JobRepository $jobs,
         private JobsData $jobData,
+        private ?DatabaseBatchQuery $databaseQuery = null,
     ) {}
 
     public function counts(): BatchClearCountsData
     {
         try {
-            $ids = $this->classifiedIds();
+            $databaseQuery = $this->databaseQuery;
+
+            if ($databaseQuery !== null && $databaseQuery->supported()) {
+                return $this->databaseCounts($databaseQuery);
+            }
+
+            $classification = $this->classifiedRepositoryIds();
         } catch (Throwable $exception) {
             report($exception);
 
@@ -37,12 +48,14 @@ final readonly class ClearableBatches
                 finished: 0,
                 cancelled: 0,
                 available: false,
+                completeScan: false,
+                message: 'Batch clearing availability could not be verified.',
             );
         }
 
-        $complete = count($ids[BatchClearScope::Complete->value]);
-        $incomplete = count($ids[BatchClearScope::Incomplete->value]);
-        $cancelled = count($ids[BatchClearScope::Cancelled->value]);
+        $complete = count($classification[BatchClearScope::Complete->value]);
+        $incomplete = count($classification[BatchClearScope::Incomplete->value]);
+        $cancelled = count($classification[BatchClearScope::Cancelled->value]);
 
         return new BatchClearCountsData(
             incomplete: $incomplete,
@@ -50,58 +63,333 @@ final readonly class ClearableBatches
             finished: $complete + $incomplete,
             cancelled: $cancelled,
             available: true,
+            completeScan: true,
+            message: null,
         );
+    }
+
+    /**
+     * Stream clearable batch IDs in bounded chunks for destructive workers.
+     *
+     * @return \Generator<int, list<string>>
+     */
+    public function idChunks(
+        BatchClearScope $scope,
+        int $chunkSize = self::ID_CHUNK_SIZE,
+    ): \Generator {
+        if ($chunkSize < 1) {
+            throw new \InvalidArgumentException('Chunk size must be a positive integer.');
+        }
+
+        $databaseQuery = $this->databaseQuery;
+
+        if ($databaseQuery !== null && $databaseQuery->supported()) {
+            yield from $this->databaseIdChunks($databaseQuery, $scope, $chunkSize);
+
+            return;
+        }
+
+        $classification = $this->classifiedRepositoryIds();
+        $ids = $this->idsForScope($classification, $scope);
+        $buffer = [];
+
+        foreach ($ids as $id) {
+            $buffer[] = $id;
+
+            if (count($buffer) === $chunkSize) {
+                yield $buffer;
+                $buffer = [];
+            }
+        }
+
+        if ($buffer !== []) {
+            yield $buffer;
+        }
     }
 
     /** @return array<int, string> */
     public function ids(BatchClearScope $scope): array
     {
-        $ids = $this->classifiedIds();
+        $ids = [];
 
+        foreach ($this->idChunks($scope, self::ID_CHUNK_SIZE) as $chunk) {
+            foreach ($chunk as $id) {
+                $ids[] = $id;
+            }
+        }
+
+        return $ids;
+    }
+
+    private function databaseCounts(DatabaseBatchQuery $databaseQuery): BatchClearCountsData
+    {
+        $complete = 0;
+        $incomplete = 0;
+        $cancelled = 0;
+
+        foreach ($databaseQuery->clearCandidateChunks() as $candidates) {
+            $clearableIds = $this->clearableDatabaseCandidateIds($candidates);
+
+            foreach ($candidates as $candidate) {
+                if (! isset($clearableIds[$candidate->id])) {
+                    continue;
+                }
+
+                match ($candidate->scope) {
+                    BatchClearScope::Complete => $complete++,
+                    BatchClearScope::Incomplete => $incomplete++,
+                    BatchClearScope::Cancelled => $cancelled++,
+                    BatchClearScope::Finished => null,
+                };
+            }
+        }
+
+        return new BatchClearCountsData(
+            incomplete: $incomplete,
+            complete: $complete,
+            finished: $complete + $incomplete,
+            cancelled: $cancelled,
+            available: true,
+            completeScan: true,
+            message: null,
+        );
+    }
+
+    /**
+     * @return \Generator<int, list<string>>
+     */
+    private function databaseIdChunks(
+        DatabaseBatchQuery $databaseQuery,
+        BatchClearScope $scope,
+        int $chunkSize,
+    ): \Generator {
+        $buffer = [];
+
+        foreach ($databaseQuery->clearCandidateChunks() as $candidates) {
+            $clearableIds = $this->clearableDatabaseCandidateIds($candidates);
+
+            foreach ($candidates as $candidate) {
+                if (! isset($clearableIds[$candidate->id])) {
+                    continue;
+                }
+
+                if (! $this->scopeMatches($scope, $candidate->scope)) {
+                    continue;
+                }
+
+                $buffer[] = $candidate->id;
+
+                if (count($buffer) === $chunkSize) {
+                    yield $buffer;
+                    $buffer = [];
+                }
+            }
+        }
+
+        if ($buffer !== []) {
+            yield $buffer;
+        }
+    }
+
+    private function scopeMatches(BatchClearScope $requested, BatchClearScope $candidate): bool
+    {
+        return match ($requested) {
+            BatchClearScope::Finished => in_array(
+                $candidate,
+                [BatchClearScope::Complete, BatchClearScope::Incomplete],
+                true,
+            ),
+            default => $requested === $candidate,
+        };
+    }
+
+    /**
+     * @param  array{
+     *     complete: array<int, string>,
+     *     incomplete: array<int, string>,
+     *     cancelled: array<int, string>
+     * }  $classification
+     * @return array<int, string>
+     */
+    private function idsForScope(array $classification, BatchClearScope $scope): array
+    {
         return match ($scope) {
-            BatchClearScope::Incomplete => $ids[BatchClearScope::Incomplete->value],
-            BatchClearScope::Complete => $ids[BatchClearScope::Complete->value],
-            BatchClearScope::Cancelled => $ids[BatchClearScope::Cancelled->value],
+            BatchClearScope::Incomplete => $classification[BatchClearScope::Incomplete->value],
+            BatchClearScope::Complete => $classification[BatchClearScope::Complete->value],
+            BatchClearScope::Cancelled => $classification[BatchClearScope::Cancelled->value],
             BatchClearScope::Finished => [
-                ...$ids[BatchClearScope::Complete->value],
-                ...$ids[BatchClearScope::Incomplete->value],
+                ...$classification[BatchClearScope::Complete->value],
+                ...$classification[BatchClearScope::Incomplete->value],
             ],
         };
     }
 
     /**
-     * @return array{complete: array<int, string>, incomplete: array<int, string>, cancelled: array<int, string>}
+     * @param  list<DatabaseBatchClearCandidate>  $candidates
+     * @return array<string, true>
      */
-    private function classifiedIds(): array
+    private function clearableDatabaseCandidateIds(array $candidates): array
+    {
+        $clearableIds = [];
+        $candidateIdsByFailedJobId = [];
+
+        foreach ($candidates as $candidate) {
+            if ($candidate->failedJobIds === null) {
+                continue;
+            }
+
+            $clearableIds[$candidate->id] = true;
+
+            foreach ($candidate->failedJobIds as $failedJobId) {
+                $candidateIdsByFailedJobId[$failedJobId][$candidate->id] = true;
+            }
+        }
+
+        foreach (array_chunk(array_keys($candidateIdsByFailedJobId), self::FAILED_JOB_CHUNK_SIZE) as $failedJobIds) {
+            $verifiedParents = $this->verifiedFailedParents($failedJobIds);
+
+            foreach ($failedJobIds as $failedJobId) {
+                if (isset($verifiedParents[$failedJobId])) {
+                    continue;
+                }
+
+                foreach (array_keys($candidateIdsByFailedJobId[$failedJobId]) as $candidateId) {
+                    unset($clearableIds[$candidateId]);
+                }
+            }
+        }
+
+        return $clearableIds;
+    }
+
+    /**
+     * @param  list<string>  $failedJobIds
+     * @return array<string, true>
+     */
+    private function verifiedFailedParents(array $failedJobIds): array
+    {
+        try {
+            $jobs = $this->jobs->getJobs($failedJobIds);
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return [];
+        }
+
+        $requested = array_fill_keys($failedJobIds, true);
+        $verified = [];
+        $seen = [];
+        $duplicates = [];
+
+        foreach ($jobs as $job) {
+            $id = is_object($job) && is_string($job->id ?? null)
+                ? $job->id
+                : null;
+
+            if ($id === null || ! isset($requested[$id])) {
+                continue;
+            }
+
+            if (isset($seen[$id])) {
+                $duplicates[$id] = true;
+
+                continue;
+            }
+
+            $seen[$id] = true;
+
+            if ($this->failedParentHasNoActiveRetry($job)) {
+                $verified[$id] = true;
+            }
+        }
+
+        foreach (array_keys($duplicates) as $duplicate) {
+            unset($verified[$duplicate]);
+        }
+
+        return $verified;
+    }
+
+    private function failedParentHasNoActiveRetry(object $job): bool
+    {
+        if (! property_exists($job, 'retried_by')) {
+            return false;
+        }
+
+        $retries = $job->retried_by;
+
+        if ($retries === null || $retries === false || $retries === '' || $retries === []) {
+            return true;
+        }
+
+        if (is_string($retries)) {
+            try {
+                $retries = json_decode($retries, true, flags: JSON_THROW_ON_ERROR);
+            } catch (JsonException) {
+                return false;
+            }
+        }
+
+        if (! is_array($retries) || ! array_is_list($retries)) {
+            return false;
+        }
+
+        foreach ($retries as $retry) {
+            if (! is_array($retry)
+                || ! is_string($retry['id'] ?? null)
+                || $retry['id'] === ''
+                || ! in_array($retry['status'] ?? null, ['completed', 'failed'], true)
+            ) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * @return array{
+     *     complete: array<int, string>,
+     *     incomplete: array<int, string>,
+     *     cancelled: array<int, string>
+     * }
+     */
+    private function classifiedRepositoryIds(): array
     {
         $complete = [];
         $incomplete = [];
         $cancelled = [];
 
-        foreach ($this->allBatches() as $batch) {
-            if ($batch->cancelled()) {
-                if ($batch->pendingJobs === 0) {
-                    $cancelled[] = $batch->id;
+        foreach ((new RetainedBatchScanner($this->batches))->pages(self::BATCH_PAGE_SIZE) as $page) {
+            foreach ($page as $batch) {
+                if ($batch->cancelled()) {
+                    if ($batch->pendingJobs === 0) {
+                        $cancelled[] = $batch->id;
+                    }
+
+                    continue;
                 }
 
-                continue;
-            }
+                if ($batch->finishedAt !== null) {
+                    $complete[] = $batch->id;
 
-            if ($batch->finishedAt !== null) {
-                $complete[] = $batch->id;
+                    continue;
+                }
 
-                continue;
-            }
-
-            if ($this->hasOnlyFailedJobsPending($batch)) {
-                $incomplete[] = $batch->id;
+                if ($this->hasOnlyFailedJobsPending($batch)) {
+                    $incomplete[] = $batch->id;
+                }
             }
         }
 
         $candidates = array_fill_keys([...$complete, ...$incomplete, ...$cancelled], true);
 
         if ($candidates === []) {
-            return ['complete' => [], 'incomplete' => [], 'cancelled' => []];
+            return [
+                'complete' => [],
+                'incomplete' => [],
+                'cancelled' => [],
+            ];
         }
 
         $active = $this->activeBatchIds($candidates);
@@ -127,29 +415,6 @@ final readonly class ClearableBatches
         return $batch->finishedAt === null
             && $batch->failedJobs > 0
             && $batch->pendingJobs <= $batch->failedJobs;
-    }
-
-    /** @return array<int, Batch> */
-    private function allBatches(): array
-    {
-        $batches = [];
-        $cursor = null;
-
-        while (true) {
-            $page = $this->batches->get(self::BATCH_PAGE_SIZE, $cursor);
-
-            if ($page === []) {
-                break;
-            }
-
-            foreach ($page as $batch) {
-                $batches[] = $batch;
-            }
-
-            $cursor = $this->advanceBatchCursor($page, $cursor);
-        }
-
-        return $batches;
     }
 
     /**
@@ -183,25 +448,5 @@ final readonly class ClearableBatches
         }
 
         return $active;
-    }
-
-    /**
-     * @param  array<int, Batch>  $batches
-     */
-    private function advanceBatchCursor(array $batches, ?string $current): string
-    {
-        $batch = end($batches);
-
-        if (! $batch instanceof Batch) {
-            throw new RuntimeException('The batch repository returned an empty page.');
-        }
-
-        $cursor = $batch->id;
-
-        if ($cursor === '' || ($current !== null && strcmp($cursor, $current) >= 0)) {
-            throw new RuntimeException('The batch repository could not be scanned safely.');
-        }
-
-        return $cursor;
     }
 }

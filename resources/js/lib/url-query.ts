@@ -64,6 +64,5 @@ export function replaceCurrentQuery(parameters: Record<string, QueryParameterVal
     return;
   }
 
-  router.cancelAll({ async: true, prefetch: false, sync: false });
   router.replace({ url, preserveScroll: true, preserveState: true });
 }

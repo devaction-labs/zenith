@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 
 import FailedJobShow from "@/pages/failed-jobs/show";
 import type { FailedJobDetailPageProps } from "@/types/jobs";

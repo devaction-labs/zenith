@@ -81,19 +81,20 @@ final readonly class ReleaseCancelledJobLocks
     }
 
     /** @param array<string, mixed> $payload */
-    private function command(array $payload): mixed
+    private function command(array $payload): ?object
     {
         $data = $payload['data'] ?? null;
         $serialized = is_array($data) ? ($data['command'] ?? null) : null;
+        $allowedClasses = $this->allowedClasses();
 
-        if (! is_string($serialized) || $serialized === '') {
+        if (! is_string($serialized) || $serialized === '' || $allowedClasses === []) {
             return null;
         }
 
         try {
-            $command = @unserialize($serialized);
+            $command = $this->unserializeCommand($serialized, $allowedClasses);
 
-            if ($command !== false || $serialized === 'b:0;') {
+            if ($command !== null) {
                 return $command;
             }
         } catch (Throwable) {
@@ -101,11 +102,49 @@ final readonly class ReleaseCancelledJobLocks
         }
 
         try {
-            $decrypted = $this->encrypter->decrypt($serialized);
+            $decrypted = $this->encrypter->decrypt($serialized, false);
 
-            return is_string($decrypted) ? @unserialize($decrypted) : null;
+            if (! is_string($decrypted)) {
+                return null;
+            }
+
+            $wrapped = @unserialize($decrypted, ['allowed_classes' => false]);
+            $decryptedCommand = is_string($wrapped) ? $wrapped : $decrypted;
+
+            return $this->unserializeCommand($decryptedCommand, $allowedClasses);
         } catch (Throwable) {
             return null;
         }
+    }
+
+    /**
+     * @return array<int, class-string>
+     */
+    private function allowedClasses(): array
+    {
+        $configured = config('horizon-new-dawn.job_payload_allowed_classes', []);
+
+        if (! is_array($configured)) {
+            return [];
+        }
+
+        return array_values(array_unique(array_filter(
+            $configured,
+            static fn (mixed $class): bool => is_string($class) && class_exists($class),
+        )));
+    }
+
+    /**
+     * @param  array<int, class-string>  $allowedClasses
+     */
+    private function unserializeCommand(string $serialized, array $allowedClasses): ?object
+    {
+        $command = @unserialize($serialized, ['allowed_classes' => $allowedClasses]);
+
+        if (! is_object($command) || ! in_array($command::class, $allowedClasses, true)) {
+            return null;
+        }
+
+        return $command;
     }
 }

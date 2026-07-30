@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -17,8 +17,8 @@ describe("Tabs", () => {
     expect(screen.getByRole("tablist", { name: "Metric type" })).toHaveClass(
       "group-data-horizontal/tabs:h-auto",
     );
-    expect(screen.getByRole("tab", { name: "Jobs" })).toHaveClass(
-      "group-data-horizontal/tabs:after:bottom-0",
+    expect(document.querySelector('[data-slot="tabs-indicator"]')).toHaveClass(
+      "group-data-horizontal/tabs:bottom-0",
     );
   });
 });

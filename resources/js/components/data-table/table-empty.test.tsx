@@ -1,6 +1,6 @@
 import { render, screen, within } from "@testing-library/react";
 import { ChartNoAxesCombinedIcon } from "lucide-react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 
 import { TableEmpty } from "@/components/data-table/table-empty";
 import { Table, TableBody } from "@/components/ui/table";

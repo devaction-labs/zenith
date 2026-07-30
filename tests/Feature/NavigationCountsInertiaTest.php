@@ -14,6 +14,7 @@ use Laravel\Horizon\Contracts\MetricsRepository;
 use Laravel\Horizon\Contracts\SupervisorRepository;
 use Laravel\Horizon\WaitTimeCalculator;
 use NckRtl\HorizonNewDawn\Batches\BatchRepositoryOverview;
+use NckRtl\HorizonNewDawn\Batches\DatabaseBatchCapability;
 use NckRtl\HorizonNewDawn\Queues\QueuePauseStatus;
 use NckRtl\HorizonNewDawn\Queues\QueuesData;
 use NckRtl\HorizonNewDawn\Queues\QueueWaitThreshold;
@@ -80,6 +81,7 @@ it('delivers navigation counts in their own deferred group', function (): void {
         new BatchRepositoryOverview($batches, app(CacheFactory::class)),
         $queues,
         $masters,
+        new DatabaseBatchCapability($batches),
     ));
 
     get('/horizon')

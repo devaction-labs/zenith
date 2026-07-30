@@ -8,8 +8,14 @@ use Illuminate\Bus\BatchRepository;
 use NckRtl\HorizonNewDawn\Batches\BatchClearScope;
 use NckRtl\HorizonNewDawn\Batches\ClearableBatches;
 
+/**
+ * Deletes clearable batches in bounded repository transactions streamed from
+ * ClearableBatches so the worker never holds an unbounded ID list.
+ */
 final readonly class ClearBatches
 {
+    private const int DELETE_CHUNK_SIZE = 100;
+
     public function __construct(
         private BatchRepository $batches,
         private ClearableBatches $clearable,
@@ -17,14 +23,18 @@ final readonly class ClearBatches
 
     public function handle(BatchClearScope $scope): int
     {
-        $ids = $this->clearable->ids($scope);
+        $cleared = 0;
 
-        return $this->batches->transaction(function () use ($ids): int {
-            foreach ($ids as $id) {
-                $this->batches->delete($id);
-            }
+        foreach ($this->clearable->idChunks($scope, self::DELETE_CHUNK_SIZE) as $chunk) {
+            $this->batches->transaction(function () use ($chunk): void {
+                foreach ($chunk as $id) {
+                    $this->batches->delete($id);
+                }
+            });
 
-            return count($ids);
-        });
+            $cleared += count($chunk);
+        }
+
+        return $cleared;
     }
 }

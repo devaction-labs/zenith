@@ -36,4 +36,3 @@
 /tsconfig.json export-ignore
 /vite.config.ts export-ignore
 /vitest.config.ts export-ignore
-/dist/build/THIRD_PARTY_LICENSES.md -text whitespace=-trailing-space

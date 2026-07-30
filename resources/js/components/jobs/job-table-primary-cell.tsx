@@ -20,23 +20,29 @@ export function JobTablePrimaryCell({
   fullName?: string;
   queue: string;
   tags: readonly string[];
-  href: string;
+  href?: string | null;
   accessory?: ReactNode;
   details?: ReactNode;
   tagLimit?: number;
   className?: string;
 }) {
   return (
-    <TableCell className={cn("max-w-xl px-6 whitespace-normal", className)}>
+    <TableCell className={cn("max-w-xl whitespace-normal", className)}>
       <div className="flex items-center gap-2">
-        <Link
-          className="min-w-0 truncate font-normal text-foreground"
-          href={href}
-          prefetch
-          title={fullName}
-        >
-          {name}
-        </Link>
+        {href ? (
+          <Link
+            className="min-w-0 truncate font-normal text-foreground"
+            href={href}
+            prefetch
+            title={fullName}
+          >
+            {name}
+          </Link>
+        ) : (
+          <span className="min-w-0 truncate font-normal text-foreground" title={fullName}>
+            {name}
+          </span>
+        )}
         {accessory}
       </div>
       <div className="mt-1 flex min-h-5 flex-wrap items-center gap-1.5 text-[12.5px] text-muted-foreground">

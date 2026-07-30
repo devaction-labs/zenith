@@ -17,5 +17,6 @@ final class HorizonShellData extends Data
         public readonly bool $processing,
         public readonly bool $maintenanceMode,
         public readonly FrameworkCapabilities $capabilities,
+        public readonly bool $jobNavigationBreakdown = false,
     ) {}
 }

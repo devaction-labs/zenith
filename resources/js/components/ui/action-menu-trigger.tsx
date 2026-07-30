@@ -26,10 +26,11 @@ export function ActionMenuTrigger({
       variant="ghost"
       size="icon-sm"
       className={cn(
+        "text-muted-foreground hover:text-primary focus-visible:text-primary aria-expanded:text-primary disabled:opacity-100!",
         className,
         !available &&
           !working &&
-          "cursor-not-allowed opacity-50 hover:bg-transparent hover:text-current active:translate-y-0",
+          "cursor-not-allowed hover:bg-transparent hover:text-current active:translate-y-0",
       )}
       aria-label={label}
       aria-disabled={!available && !working ? true : undefined}

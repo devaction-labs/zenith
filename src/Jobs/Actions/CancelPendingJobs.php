@@ -5,65 +5,98 @@ declare(strict_types=1);
 namespace NckRtl\HorizonNewDawn\Jobs\Actions;
 
 use Laravel\Horizon\Contracts\JobRepository;
-use NckRtl\HorizonNewDawn\Jobs\Data\CancelPendingJobsResultData;
+use NckRtl\HorizonNewDawn\BulkOperations\BulkOperationSnapshot;
+use NckRtl\HorizonNewDawn\Jobs\Data\CancelPendingJobsChunkResultData;
 use NckRtl\HorizonNewDawn\Jobs\PendingJobCancellationResult;
 use NckRtl\HorizonNewDawn\Jobs\PendingJobCancellationScope;
 use Throwable;
 
 final readonly class CancelPendingJobs
 {
-    private const int PAGE_SIZE = 50;
-
     public function __construct(
         private JobRepository $jobs,
         private CancelPendingJob $cancel,
+        private BulkOperationSnapshot $snapshots,
     ) {}
 
-    public function handle(
+    public function processChunk(
         PendingJobCancellationScope $scope,
         ?string $queue = null,
-    ): CancelPendingJobsResultData {
+        ?string $operationId = null,
+    ): CancelPendingJobsChunkResultData {
+        $operationId ??= $this->snapshots->createFromSortedSet('pending_jobs');
+
+        $ids = $this->snapshots->nextChunk($operationId);
+
+        if ($ids === []) {
+            $total = $this->snapshots->finish($operationId);
+
+            return new CancelPendingJobsChunkResultData(
+                operationId: $operationId,
+                complete: true,
+                totalCancelled: $total,
+                chunkCancelled: 0,
+                chunkBatched: 0,
+                chunkFailed: 0,
+            );
+        }
+
         $cancelled = 0;
         $batched = 0;
         $failed = 0;
+        $hydrated = [];
 
-        foreach ($this->pendingJobIds($queue) as $id) {
-            try {
-                match ($this->cancel->handle($id, $scope)) {
-                    PendingJobCancellationResult::Cancelled => $cancelled++,
-                    PendingJobCancellationResult::Batched => $batched++,
-                    PendingJobCancellationResult::NotCancellable => null,
-                };
-            } catch (Throwable $exception) {
-                report($exception);
-                $failed++;
+        foreach ($this->jobs->getJobs($ids) as $job) {
+            if (! is_object($job) || ! is_string($job->id ?? null) || $job->id === '') {
+                continue;
             }
+
+            $hydrated[$job->id] = $job;
         }
 
-        return new CancelPendingJobsResultData($cancelled, $batched, $failed);
-    }
+        try {
+            foreach ($ids as $id) {
+                $job = $hydrated[$id] ?? null;
 
-    /** @return array<int, string> */
-    private function pendingJobIds(?string $queue): array
-    {
-        $total = max(0, (int) $this->jobs->countPending());
-        $ids = [];
+                if ($job === null || ($queue !== null && ($job->queue ?? null) !== $queue)) {
+                    $this->snapshots->acknowledge($operationId, $id);
 
-        for ($inspected = 0; $inspected < $total; $inspected += self::PAGE_SIZE) {
-            foreach ($this->jobs->getPending((string) ($inspected - 1)) as $job) {
-                $id = is_object($job) ? ($job->id ?? null) : null;
-                $jobQueue = is_object($job) ? ($job->queue ?? null) : null;
-
-                if (
-                    is_string($id)
-                    && $id !== ''
-                    && ($queue === null || $jobQueue === $queue)
-                ) {
-                    $ids[$id] = $id;
+                    continue;
                 }
+
+                try {
+                    match ($this->cancel->handle($id, $scope)) {
+                        PendingJobCancellationResult::Cancelled => $cancelled++,
+                        PendingJobCancellationResult::Batched => $batched++,
+                        PendingJobCancellationResult::NotCancellable => null,
+                    };
+                } catch (Throwable $exception) {
+                    report($exception);
+                    $failed++;
+                }
+
+                $this->snapshots->acknowledge($operationId, $id);
             }
+        } catch (Throwable $exception) {
+            $this->snapshots->renew($operationId);
+
+            throw $exception;
         }
 
-        return array_values($ids);
+        $totalCancelled = $this->snapshots->addAffected($operationId, $cancelled);
+        $complete = ! $this->snapshots->hasMore($operationId);
+
+        if ($complete) {
+            $this->snapshots->cleanup($operationId);
+        }
+
+        return new CancelPendingJobsChunkResultData(
+            operationId: $operationId,
+            complete: $complete,
+            totalCancelled: $totalCancelled,
+            chunkCancelled: $cancelled,
+            chunkBatched: $batched,
+            chunkFailed: $failed,
+        );
     }
 }

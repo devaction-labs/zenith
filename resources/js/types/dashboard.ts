@@ -18,15 +18,18 @@ export type DashboardSummary = {
   pendingReserved: number | null;
   pendingReadyNow: number | null;
   pendingDelayed: number | null;
-  failedJobsPerMinute: number;
   failedJobsPastHour: number;
   failedJobsPastDay: number;
-  failedRetentionMinutes: number;
-  completedJobsPerMinute: number;
-  completedJobsPastHour: number;
-  completedJobsPastDay: number;
+  recentlyFailedJobs: number;
+  recentlyFailedPeriodMinutes: number;
+  jobsPerMinute: number;
+  recentJobs: number;
+  recentJobsPeriodMinutes: number;
+  processedSinceSnapshot: number;
+  silencedJobs: number;
   completedRetentionMinutes: number;
-  activeBatches: number;
+  batchesAvailable: boolean;
+  activeBatches: number | null;
   batchPreviews: Array<{
     id: string;
     name: string;
@@ -41,23 +44,29 @@ export type DashboardSummary = {
   message: string | null;
 };
 
+export type WorkloadSplitQueue = {
+  name: string;
+  wait: number;
+  length: number;
+  paused: boolean;
+  pausedUntil: number | null;
+  throughput: number | null;
+  waitThreshold?: QueueWaitThreshold;
+};
+
 export type WorkloadItem = {
   name: string;
   connection: string;
   length: number;
   wait: number;
   processes: number;
+  processesShared: boolean;
   paused: boolean;
   pausedUntil: number | null;
+  throughput: number | null;
   waitThreshold?: QueueWaitThreshold;
-  splitQueues: Array<{
-    name: string;
-    wait: number;
-    length: number;
-    paused: boolean;
-    pausedUntil: number | null;
-    waitThreshold?: QueueWaitThreshold;
-  }> | null;
+  /** Child queues for a comma-delimited balance=false process pool; null for dedicated queues. */
+  splitQueues: WorkloadSplitQueue[] | null;
 };
 
 export type DashboardWorkload = {
@@ -116,6 +125,7 @@ export type DashboardPageProps = {
     processing?: boolean;
     capabilities?: {
       queuePausing: boolean;
+      timedQueuePausing: boolean;
     };
   };
   summary: DashboardSummary;
@@ -131,6 +141,7 @@ export type RunningInstancesPageProps = {
     processing?: boolean;
     capabilities?: {
       queuePausing: boolean;
+      timedQueuePausing: boolean;
     };
   };
   supervisors: DashboardSupervisors;

@@ -9,6 +9,7 @@ use NckRtl\HorizonNewDawn\Queues\Actions\PauseQueue;
 use NckRtl\HorizonNewDawn\Queues\Actions\ResumeQueue;
 use NckRtl\HorizonNewDawn\Queues\Data\PauseQueueData;
 use NckRtl\HorizonNewDawn\Queues\QueuePauseMetadata;
+use NckRtl\HorizonNewDawn\Support\FrameworkCapabilities;
 
 beforeEach(function (): void {
     requireQueuePausing();
@@ -37,6 +38,8 @@ describe('queue pause actions', function (): void {
     });
 
     it('sets a timed pause from now and replaces the readable deadline', function (): void {
+        requireTimedQueuePausing();
+
         $metadata = new QueuePauseMetadata(app(CacheFactory::class));
         $queues = app(QueueManager::class);
         $expectedDeadline = CarbonImmutable::now()->addHour();
@@ -48,6 +51,21 @@ describe('queue pause actions', function (): void {
         expect($deadline?->equalTo($expectedDeadline))->toBeTrue()
             ->and($queues->isPaused('redis', 'reports'))->toBeTrue()
             ->and($metadata->pausedUntil('redis', 'reports'))->toBe($expectedDeadline->timestamp);
+    });
+
+    it('falls back to an indefinite pause when a duration is supplied without timed support', function (): void {
+        $metadata = new QueuePauseMetadata(app(CacheFactory::class));
+        $metadata->storeUntil('redis', 'reports', CarbonImmutable::now()->addHour());
+        $queues = app(QueueManager::class);
+        $capabilities = new FrameworkCapabilities(queuePausing: true, timedQueuePausing: false);
+
+        $deadline = (new PauseQueue($queues, $metadata, $capabilities))->handle(
+            new PauseQueueData('redis', 'reports', 30),
+        );
+
+        expect($deadline)->toBeNull()
+            ->and($queues->isPaused('redis', 'reports'))->toBeTrue()
+            ->and($metadata->pausedUntil('redis', 'reports'))->toBeNull();
     });
 
     it('resumes a queue and removes its readable deadline', function (): void {

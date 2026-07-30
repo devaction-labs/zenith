@@ -2,18 +2,44 @@
 
 declare(strict_types=1);
 
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Testing\PendingCommand;
+use NckRtl\HorizonNewDawn\Batches\DatabaseBatchCapability;
+use NckRtl\HorizonNewDawn\Support\ComposerAssetHook;
 
 use function Pest\Laravel\artisan;
 
-afterEach(function (): void {
+$installComposerJsonBackup = new class
+{
+    public ?string $contents = null;
+};
+
+beforeEach(function () use ($installComposerJsonBackup): void {
     $filesystem = app(Filesystem::class);
+    $composerJson = base_path('composer.json');
+
+    $installComposerJsonBackup->contents = $filesystem->exists($composerJson)
+        ? $filesystem->get($composerJson)
+        : null;
+});
+
+afterEach(function () use ($installComposerJsonBackup): void {
+    $filesystem = app(Filesystem::class);
+    $composerJson = base_path('composer.json');
+
+    if (is_string($installComposerJsonBackup->contents)) {
+        $filesystem->put($composerJson, $installComposerJsonBackup->contents);
+    } elseif ($filesystem->exists($composerJson)) {
+        $filesystem->delete($composerJson);
+    }
+
+    $installComposerJsonBackup->contents = null;
 
     $filesystem->delete(config_path('horizon-new-dawn.php'));
     $filesystem->deleteDirectory(public_path('vendor/horizon-new-dawn'));
-    $filesystem->deleteDirectory(public_path('vendor/horizon-new-dawn-install-test'));
     $filesystem->deleteDirectory(dirname(public_path()).'/horizon-new-dawn-outside-test');
 });
 
@@ -34,19 +60,34 @@ it('publishes the package configuration and compiled assets', function (): void 
     $destination = public_path('vendor/horizon-new-dawn/build');
 
     expect(config_path('horizon-new-dawn.php'))->toBeFile()
-        ->and($destination.'/.vite/manifest.json')->toBeFile();
+        ->and($destination.'/manifest.json')->toBeFile();
 
     foreach ($filesystem->allFiles($source) as $file) {
         expect($destination.'/'.$file->getRelativePathname())->toBeFile();
     }
 });
 
-it('rejects an asset path outside public before mutating configuration or assets', function (): void {
+it('installs when cached configuration predates the package', function (): void {
+    $filesystem = app(Filesystem::class);
+    $destination = public_path('vendor/horizon-new-dawn/build');
+
+    $filesystem->delete(config_path('horizon-new-dawn.php'));
+    $filesystem->deleteDirectory(public_path('vendor/horizon-new-dawn'));
+    config()->set('horizon-new-dawn', []);
+
+    expect(Artisan::call('horizon-new-dawn:install'))->toBe(0)
+        ->and(config_path('horizon-new-dawn.php'))->toBeFile()
+        ->and($destination.'/manifest.json')->toBeFile()
+        ->and($destination.'/favicon.svg')->not->toBeFile();
+});
+
+it('ignores a stale assets_path configuration when publishing assets', function (): void {
     $filesystem = app(Filesystem::class);
     $publishedConfig = config_path('horizon-new-dawn.php');
     $outsideDirectory = dirname(public_path()).'/horizon-new-dawn-outside-test';
     $outsideSentinel = $outsideDirectory.'/keep.txt';
-    $consumerConfig = "<?php\n\nreturn ['consumer' => true];\n";
+    $destination = public_path('vendor/horizon-new-dawn/build');
+    $consumerConfig = "<?php\n\nreturn ['assets_path' => '../horizon-new-dawn-outside-test', 'consumer' => true];\n";
 
     $filesystem->ensureDirectoryExists(dirname($publishedConfig));
     $filesystem->put($publishedConfig, $consumerConfig);
@@ -54,59 +95,118 @@ it('rejects an asset path outside public before mutating configuration or assets
     $filesystem->put($outsideSentinel, 'keep');
     config()->set('horizon-new-dawn.assets_path', '../horizon-new-dawn-outside-test');
 
-    expect(fn (): int => Artisan::call('horizon-new-dawn:install', ['--force' => true]))
-        ->toThrow(RuntimeException::class, 'relative path within the public directory')
+    expect(Artisan::call('horizon-new-dawn:install', ['--force' => true]))->toBe(0)
         ->and($filesystem->get($publishedConfig))->toBe($consumerConfig)
-        ->and($filesystem->get($outsideSentinel))->toBe('keep');
+        ->and($filesystem->get($outsideSentinel))->toBe('keep')
+        ->and($destination.'/manifest.json')->toBeFile()
+        ->and($outsideDirectory.'/manifest.json')->not->toBeFile();
 });
 
 it('preserves published consumer configuration when force refreshing assets', function (): void {
     $filesystem = app(Filesystem::class);
     $publishedConfig = config_path('horizon-new-dawn.php');
-    $assetsPath = 'vendor/horizon-new-dawn-install-test/custom-build';
+    $destination = public_path('vendor/horizon-new-dawn/build');
+    $staleAssetsPath = 'vendor/horizon-new-dawn-install-test/custom-build';
     $consumerConfig = <<<PHP
 <?php
 
 declare(strict_types=1);
 
 return [
-    'assets_path' => '{$assetsPath}',
+    'assets_path' => '{$staleAssetsPath}',
     'poll_interval' => 1234,
 ];
 PHP;
 
     $filesystem->ensureDirectoryExists(dirname($publishedConfig));
     $filesystem->put($publishedConfig, $consumerConfig);
-    config()->set('horizon-new-dawn.assets_path', $assetsPath);
+    config()->set('horizon-new-dawn.assets_path', $staleAssetsPath);
 
     expect(Artisan::call('horizon-new-dawn:install', ['--force' => true]))->toBe(0)
         ->and($filesystem->get($publishedConfig))->toBe($consumerConfig)
-        ->and(public_path($assetsPath.'/.vite/manifest.json'))->toBeFile();
+        ->and($destination.'/manifest.json')->toBeFile()
+        ->and(public_path($staleAssetsPath.'/manifest.json'))->not->toBeFile();
 });
 
-it('keeps old content hashed assets during a forced refresh', function (): void {
+it('replaces the whole published directory and removes prior package-owned files', function (): void {
     $filesystem = app(Filesystem::class);
-    $assetsPath = 'vendor/horizon-new-dawn-install-test/build';
-    $destination = public_path($assetsPath);
-    $oldAsset = $destination.'/assets/app-old-content-hash.js';
+    $destination = public_path('vendor/horizon-new-dawn/build');
+    $manifestPath = $destination.'/manifest.json';
+    $previousAsset = $destination.'/assets/app-previous-content-hash.js';
+    $supersededAsset = $destination.'/assets/app-superseded-content-hash.js';
+    $previousGeneration = [
+        'assets/app-previous-content-hash.js',
+        'assets/app-previous-content-hash.css',
+        'assets/logo-previous-content-hash.svg',
+        'assets/chunk-previous-content-hash.js',
+        'assets/dynamic-previous-content-hash.js',
+    ];
+    $oldManifest = json_encode([
+        'resources/js/app.tsx' => [
+            'file' => 'assets/app-previous-content-hash.js',
+            'css' => ['assets/app-previous-content-hash.css'],
+            'assets' => ['assets/logo-previous-content-hash.svg'],
+            'imports' => ['resources/js/chunk.ts'],
+            'dynamicImports' => ['resources/js/dynamic.ts'],
+        ],
+        'resources/js/chunk.ts' => [
+            'file' => 'assets/chunk-previous-content-hash.js',
+        ],
+        'resources/js/dynamic.ts' => [
+            'file' => 'assets/dynamic-previous-content-hash.js',
+        ],
+    ], JSON_THROW_ON_ERROR);
 
-    $filesystem->ensureDirectoryExists(dirname($oldAsset));
-    $filesystem->put($oldAsset, 'old asset');
-    $filesystem->ensureDirectoryExists($destination.'/.vite');
-    $filesystem->put($destination.'/.vite/manifest.json', '{"old":true}');
-    config()->set('horizon-new-dawn.assets_path', $assetsPath);
+    $filesystem->ensureDirectoryExists(dirname($previousAsset));
+
+    foreach ($previousGeneration as $asset) {
+        $filesystem->put($destination.'/'.$asset, 'previous asset');
+    }
+
+    $filesystem->put($supersededAsset, 'superseded asset');
+    $filesystem->put($destination.'/.platform-metadata', 'consumer metadata');
+    $filesystem->ensureDirectoryExists($destination);
+    $filesystem->put($manifestPath, $oldManifest);
 
     expect(Artisan::call('horizon-new-dawn:install', ['--force' => true]))->toBe(0)
-        ->and($oldAsset)->toBeFile()
-        ->and($filesystem->get($oldAsset))->toBe('old asset')
-        ->and($filesystem->get($destination.'/.vite/manifest.json'))->not->toBe('{"old":true}');
+        ->and($manifestPath)->toBeFile()
+        ->and($filesystem->get($manifestPath))->not->toBe($oldManifest)
+        ->and($previousAsset)->not->toBeFile()
+        ->and($supersededAsset)->not->toBeFile()
+        ->and($destination.'/.platform-metadata')->not->toBeFile();
+
+    foreach ($previousGeneration as $asset) {
+        expect($destination.'/'.$asset)->not->toBeFile();
+    }
 });
 
-it('keeps the live manifest valid when publishing a staged refresh fails', function (): void {
+it('removes untracked package-directory files when force refreshing an incomplete publication', function (): void {
     $filesystem = app(Filesystem::class);
-    $assetsPath = 'vendor/horizon-new-dawn-install-test/build';
-    $destination = public_path($assetsPath);
-    $manifestPath = $destination.'/.vite/manifest.json';
+    $destination = public_path('vendor/horizon-new-dawn/build');
+    $previousAsset = $destination.'/assets/app-previous.js';
+    $untrackedAsset = $destination.'/assets/app-untracked.js';
+
+    $filesystem->ensureDirectoryExists(dirname($previousAsset));
+    $filesystem->put($previousAsset, 'previous asset');
+    $filesystem->put($untrackedAsset, 'untracked asset');
+    $filesystem->ensureDirectoryExists($destination);
+    $filesystem->put($destination.'/manifest.json', json_encode([
+        'resources/js/app.tsx' => [
+            'file' => 'assets/app-previous.js',
+            'imports' => ['missing-entry'],
+        ],
+    ], JSON_THROW_ON_ERROR));
+
+    expect(Artisan::call('horizon-new-dawn:install', ['--force' => true]))->toBe(0)
+        ->and($destination.'/manifest.json')->toBeFile()
+        ->and($previousAsset)->not->toBeFile()
+        ->and($untrackedAsset)->not->toBeFile();
+});
+
+it('restores the previous publication when replacing an existing destination fails', function (): void {
+    $filesystem = app(Filesystem::class);
+    $destination = public_path('vendor/horizon-new-dawn/build');
+    $manifestPath = $destination.'/manifest.json';
     $oldManifest = json_encode([
         'resources/js/app.tsx' => [
             'file' => 'assets/app-old.js',
@@ -114,54 +214,57 @@ it('keeps the live manifest valid when publishing a staged refresh fails', funct
         ],
     ], JSON_THROW_ON_ERROR);
 
-    $filesystem->ensureDirectoryExists($destination.'/.vite');
     $filesystem->ensureDirectoryExists($destination.'/assets');
     $filesystem->put($manifestPath, $oldManifest);
     $filesystem->put($destination.'/assets/app-old.js', 'old asset');
-    config()->set('horizon-new-dawn.assets_path', $assetsPath);
+    $abandonedStagingDirectory = dirname($destination).'/.build-abandoned.tmp';
+    $filesystem->ensureDirectoryExists($abandonedStagingDirectory);
+    touch($abandonedStagingDirectory, time() - 7200);
 
-    app()->instance(Filesystem::class, new class extends Filesystem
+    app()->instance(Filesystem::class, new class($destination) extends Filesystem
     {
-        public function copy($path, $target): bool
+        public function __construct(private readonly string $destination) {}
+
+        public function moveDirectory($from, $to, $overwrite = false): bool
         {
-            if (
-                ! str_contains((string) $path, '/dist/build/')
-                && str_contains((string) $target, '/horizon-new-dawn-install-test/build/assets/')
-            ) {
+            $normalizedTo = str_replace('\\', '/', (string) $to);
+            $normalizedDestination = str_replace('\\', '/', $this->destination);
+
+            if ($normalizedTo === $normalizedDestination && str_contains((string) $from, '.tmp')) {
                 return false;
             }
 
-            return parent::copy($path, $target);
+            return parent::moveDirectory($from, $to, $overwrite);
         }
     });
 
     expect(fn (): int => Artisan::call('horizon-new-dawn:install', ['--force' => true]))
-        ->toThrow(RuntimeException::class, 'Unable to publish Horizon New Dawn asset')
+        ->toThrow(RuntimeException::class, 'Unable to publish')
         ->and($manifestPath)->toBeFile()
         ->and((new Filesystem)->get($manifestPath))->toBe($oldManifest)
-        ->and($destination.'/assets/app-old.js')->toBeFile();
+        ->and($destination.'/assets/app-old.js')->toBeFile()
+        ->and((new Filesystem)->glob(dirname($destination).'/.build-*.tmp'))->toBe([])
+        ->and((new Filesystem)->glob(dirname($destination).'/.build-*.bak'))->toBe([]);
 });
 
 it('repairs an empty published assets directory without force', function (): void {
     $filesystem = app(Filesystem::class);
-    $assetsPath = 'vendor/horizon-new-dawn-install-test/build';
+    $assetsPath = 'vendor/horizon-new-dawn/build';
     $destination = public_path($assetsPath);
 
     $filesystem->ensureDirectoryExists($destination);
-    config()->set('horizon-new-dawn.assets_path', $assetsPath);
 
     expect(Artisan::call('horizon-new-dawn:install'))->toBe(0)
-        ->and($destination.'/.vite/manifest.json')->toBeFile()
-        ->and($destination.'/favicon.svg')->toBeFile();
+        ->and($destination.'/manifest.json')->toBeFile()
+        ->and($destination.'/favicon.svg')->not->toBeFile();
 });
 
 it('repairs a top-level list manifest without force', function (): void {
     $filesystem = app(Filesystem::class);
-    $assetsPath = 'vendor/horizon-new-dawn-install-test/build';
+    $assetsPath = 'vendor/horizon-new-dawn/build';
     $destination = public_path($assetsPath);
 
     publishBrokenPublication($filesystem, $destination, []);
-    config()->set('horizon-new-dawn.assets_path', $assetsPath);
 
     expect(Artisan::call('horizon-new-dawn:install'))->toBe(0)
         ->and(installedManifest($destination))->toHaveKey('resources/js/app.tsx');
@@ -169,7 +272,7 @@ it('repairs a top-level list manifest without force', function (): void {
 
 it('repairs a publication with a missing referenced chunk without force', function (): void {
     $filesystem = app(Filesystem::class);
-    $assetsPath = 'vendor/horizon-new-dawn-install-test/build';
+    $assetsPath = 'vendor/horizon-new-dawn/build';
     $destination = public_path($assetsPath);
 
     publishBrokenPublication($filesystem, $destination, [
@@ -179,7 +282,6 @@ it('repairs a publication with a missing referenced chunk without force', functi
     ], [
         'missing' => ['assets/app-missing.js'],
     ]);
-    config()->set('horizon-new-dawn.assets_path', $assetsPath);
 
     expect(Artisan::call('horizon-new-dawn:install'))->toBe(0)
         ->and($destination.'/assets/app-missing.js')->not->toBeFile()
@@ -188,21 +290,20 @@ it('repairs a publication with a missing referenced chunk without force', functi
 
 it('repairs a malformed published manifest without force', function (): void {
     $filesystem = app(Filesystem::class);
-    $assetsPath = 'vendor/horizon-new-dawn-install-test/build';
+    $assetsPath = 'vendor/horizon-new-dawn/build';
     $destination = public_path($assetsPath);
 
     publishCompletePublication($filesystem, $destination);
-    $filesystem->put($destination.'/.vite/manifest.json', '{invalid');
-    config()->set('horizon-new-dawn.assets_path', $assetsPath);
+    $filesystem->put($destination.'/manifest.json', '{invalid');
 
     expect(Artisan::call('horizon-new-dawn:install'))->toBe(0)
-        ->and($destination.'/.vite/manifest.json')->toBeFile()
+        ->and($destination.'/manifest.json')->toBeFile()
         ->and(installedManifest($destination))->toHaveKey('resources/js/app.tsx');
 });
 
 it('repairs a published manifest that is missing the entrypoint without force', function (): void {
     $filesystem = app(Filesystem::class);
-    $assetsPath = 'vendor/horizon-new-dawn-install-test/build';
+    $assetsPath = 'vendor/horizon-new-dawn/build';
     $destination = public_path($assetsPath);
 
     publishManifestFixture($filesystem, $destination, [
@@ -212,27 +313,28 @@ it('repairs a published manifest that is missing the entrypoint without force', 
             'assets' => [],
         ],
     ], ['assets/app-other.js']);
-    config()->set('horizon-new-dawn.assets_path', $assetsPath);
 
     expect(Artisan::call('horizon-new-dawn:install'))->toBe(0)
         ->and(installedManifest($destination))->toHaveKey('resources/js/app.tsx');
 });
 
-it('repairs a publication that is missing the favicon without force', function (): void {
+it('treats a complete publication without a favicon as current', function (): void {
     $filesystem = app(Filesystem::class);
-    $assetsPath = 'vendor/horizon-new-dawn-install-test/build';
+    $assetsPath = 'vendor/horizon-new-dawn/build';
     $destination = public_path($assetsPath);
-    publishCompletePublication($filesystem, $destination, withFavicon: false);
-    config()->set('horizon-new-dawn.assets_path', $assetsPath);
+
+    $filesystem->deleteDirectory($destination);
+    publishCompletePublication($filesystem, $destination);
 
     expect($destination.'/favicon.svg')->not->toBeFile()
         ->and(Artisan::call('horizon-new-dawn:install'))->toBe(0)
-        ->and($destination.'/favicon.svg')->toBeFile();
+        ->and($destination.'/favicon.svg')->not->toBeFile()
+        ->and(installedManifest($destination))->toHaveKey('resources/js/app.tsx');
 });
 
 it('repairs a publication with an invalid file path without force', function (string $path): void {
     $filesystem = app(Filesystem::class);
-    $assetsPath = 'vendor/horizon-new-dawn-install-test/build';
+    $assetsPath = 'vendor/horizon-new-dawn/build';
     $destination = public_path($assetsPath);
 
     publishBrokenPublication($filesystem, $destination, [
@@ -240,7 +342,6 @@ it('repairs a publication with an invalid file path without force', function (st
             'file' => $path,
         ],
     ]);
-    config()->set('horizon-new-dawn.assets_path', $assetsPath);
 
     expect(Artisan::call('horizon-new-dawn:install'))->toBe(0)
         ->and(installedManifest($destination)['resources/js/app.tsx']['file'] ?? null)->not->toBe($path);
@@ -252,7 +353,7 @@ it('repairs a publication with an invalid file path without force', function (st
 
 it('repairs a publication with an invalid asset collection path without force', function (string $collection, string $path): void {
     $filesystem = app(Filesystem::class);
-    $assetsPath = 'vendor/horizon-new-dawn-install-test/build';
+    $assetsPath = 'vendor/horizon-new-dawn/build';
     $destination = public_path($assetsPath);
 
     publishBrokenPublication($filesystem, $destination, [
@@ -260,7 +361,6 @@ it('repairs a publication with an invalid asset collection path without force', 
             $collection => [$path],
         ],
     ]);
-    config()->set('horizon-new-dawn.assets_path', $assetsPath);
 
     expect(Artisan::call('horizon-new-dawn:install'))->toBe(0)
         ->and(installedManifest($destination)['resources/js/app.tsx'][$collection] ?? [])->not->toContain($path);
@@ -273,7 +373,7 @@ it('repairs a publication with an invalid asset collection path without force', 
 
 it('repairs a publication with a dangling import without force', function (): void {
     $filesystem = app(Filesystem::class);
-    $assetsPath = 'vendor/horizon-new-dawn-install-test/build';
+    $assetsPath = 'vendor/horizon-new-dawn/build';
     $destination = public_path($assetsPath);
 
     publishBrokenPublication($filesystem, $destination, [
@@ -281,7 +381,6 @@ it('repairs a publication with a dangling import without force', function (): vo
             'imports' => ['missing-chunk'],
         ],
     ]);
-    config()->set('horizon-new-dawn.assets_path', $assetsPath);
 
     expect(Artisan::call('horizon-new-dawn:install'))->toBe(0)
         ->and(installedManifest($destination)['resources/js/app.tsx']['imports'] ?? [])->not->toContain('missing-chunk');
@@ -289,7 +388,7 @@ it('repairs a publication with a dangling import without force', function (): vo
 
 it('repairs a publication with a dangling dynamic import without force', function (): void {
     $filesystem = app(Filesystem::class);
-    $assetsPath = 'vendor/horizon-new-dawn-install-test/build';
+    $assetsPath = 'vendor/horizon-new-dawn/build';
     $destination = public_path($assetsPath);
 
     publishBrokenPublication($filesystem, $destination, [
@@ -297,15 +396,14 @@ it('repairs a publication with a dangling dynamic import without force', functio
             'dynamicImports' => ['missing-dynamic-chunk'],
         ],
     ]);
-    config()->set('horizon-new-dawn.assets_path', $assetsPath);
 
     expect(Artisan::call('horizon-new-dawn:install'))->toBe(0)
         ->and(installedManifest($destination)['resources/js/app.tsx']['dynamicImports'] ?? [])->not->toContain('missing-dynamic-chunk');
 });
 
-it('preserves a complete older publication without force', function (): void {
+it('refreshes a complete stale publication without force', function (): void {
     $filesystem = app(Filesystem::class);
-    $assetsPath = 'vendor/horizon-new-dawn-install-test/build';
+    $assetsPath = 'vendor/horizon-new-dawn/build';
     $destination = public_path($assetsPath);
     $manifest = [
         'resources/js/app.tsx' => [
@@ -319,19 +417,205 @@ it('preserves a complete older publication without force', function (): void {
         'assets/app-older.js',
         'assets/app-older.css',
         'assets/logo-older.svg',
-    ], true);
-    config()->set('horizon-new-dawn.assets_path', $assetsPath);
+    ]);
+
+    $sourceManifest = json_decode(
+        $filesystem->get(dirname(__DIR__, 2).'/dist/build/manifest.json'),
+        true,
+        flags: JSON_THROW_ON_ERROR,
+    );
 
     expect(Artisan::call('horizon-new-dawn:install'))->toBe(0)
-        ->and(installedManifest($destination))->toBe($manifest)
-        ->and($filesystem->get($destination.'/assets/app-older.js'))->toBe('fixture:assets/app-older.js');
+        ->and(installedManifest($destination))->toBe($sourceManifest)
+        ->and($destination.'/assets/app-older.js')->not->toBeFile()
+        ->and($destination.'/assets/app-older.css')->not->toBeFile()
+        ->and($destination.'/assets/logo-older.svg')->not->toBeFile();
+});
+
+it('refreshes when only the published manifest differs from the package build', function (): void {
+    $filesystem = app(Filesystem::class);
+    $assetsPath = 'vendor/horizon-new-dawn/build';
+    $destination = public_path($assetsPath);
+    $manifestPath = $destination.'/manifest.json';
+
+    expect(Artisan::call('horizon-new-dawn:install', ['--force' => true]))->toBe(0);
+
+    $staleManifest = installedManifest($destination);
+    $staleManifest['resources/js/app.tsx']['stale'] = true;
+    $filesystem->put($manifestPath, json_encode($staleManifest, JSON_THROW_ON_ERROR));
+
+    $sourceManifest = json_decode(
+        $filesystem->get(dirname(__DIR__, 2).'/dist/build/manifest.json'),
+        true,
+        flags: JSON_THROW_ON_ERROR,
+    );
+
+    expect(Artisan::call('horizon-new-dawn:install'))->toBe(0)
+        ->and(installedManifest($destination))->toBe($sourceManifest);
+});
+
+it('refreshes when the published directory contains files absent from the package build', function (): void {
+    $filesystem = app(Filesystem::class);
+    $destination = public_path('vendor/horizon-new-dawn/build');
+    $metadataPath = $destination.'/.platform-metadata';
+    $extraAsset = $destination.'/assets/app-extra.js';
+
+    expect(Artisan::call('horizon-new-dawn:install', ['--force' => true]))->toBe(0);
+
+    $filesystem->put($metadataPath, 'consumer metadata');
+    $filesystem->put($extraAsset, 'extra asset');
+
+    expect(Artisan::call('horizon-new-dawn:install'))->toBe(0)
+        ->and($metadataPath)->not->toBeFile()
+        ->and($extraAsset)->not->toBeFile()
+        ->and($destination.'/manifest.json')->toBeFile();
+});
+
+it('is a no-op when the published directory exactly matches the package build', function (): void {
+    $filesystem = app(Filesystem::class);
+    $destination = public_path('vendor/horizon-new-dawn/build');
+
+    expect(Artisan::call('horizon-new-dawn:install', ['--force' => true]))->toBe(0);
+
+    $manifestBefore = $filesystem->get($destination.'/manifest.json');
+
+    app()->instance(Filesystem::class, new class extends Filesystem
+    {
+        public function copyDirectory($directory, $destination, $options = null): bool
+        {
+            throw new RuntimeException('Exact publications should not be staged.');
+        }
+    });
+
+    expect(Artisan::call('horizon-new-dawn:install'))->toBe(0)
+        ->and($filesystem->get($destination.'/manifest.json'))->toBe($manifestBefore);
+});
+
+it('removes abandoned staging directories while preserving fresh sibling publishes', function (): void {
+    $filesystem = app(Filesystem::class);
+    $assetsPath = 'vendor/horizon-new-dawn/build';
+    $destination = public_path($assetsPath);
+    $abandonedStagingDirectory = dirname($destination).'/.build-abandoned.tmp';
+    $freshStagingDirectory = dirname($destination).'/.build-active.tmp';
+
+    expect(Artisan::call('horizon-new-dawn:install', ['--force' => true]))->toBe(0);
+
+    $filesystem->ensureDirectoryExists($abandonedStagingDirectory);
+    $filesystem->ensureDirectoryExists($freshStagingDirectory);
+    touch($abandonedStagingDirectory, time() - 7200);
+
+    expect(Artisan::call('horizon-new-dawn:install'))->toBe(0)
+        ->and($abandonedStagingDirectory)->not->toBeDirectory()
+        ->and($freshStagingDirectory)->toBeDirectory();
+});
+
+it('warns when production queue and metrics prerequisites are missing', function (): void {
+    config()->set('queue.default', 'sync');
+    config()->set('queue.batching.database', null);
+    config()->set('queue.batching.table', 'job_batches');
+    Schema::dropIfExists('job_batches');
+    Schema::dropIfExists(DatabaseBatchCapability::METADATA_TABLE);
+    Schema::create('job_batches', function (Blueprint $table): void {
+        $table->string('id')->primary();
+    });
+
+    try {
+        expect(Artisan::call('horizon-new-dawn:install', ['--no-composer-hook' => true]))->toBe(0)
+            ->and(Artisan::output())
+            ->toContain('Bulk operations require an asynchronous queue connection')
+            ->toContain('Schedule `horizon:snapshot` every five minutes')
+            ->toContain('Run `php artisan migrate` to enable batch queue and connection filters');
+    } finally {
+        Schema::dropIfExists('job_batches');
+        Schema::dropIfExists(DatabaseBatchCapability::METADATA_TABLE);
+    }
+});
+
+it('appends the Composer asset refresh hook during a normal install', function (): void {
+    $filesystem = app(Filesystem::class);
+    $composerJson = base_path('composer.json');
+
+    $filesystem->put($composerJson, json_encode([
+        'name' => 'laravel/laravel',
+        'scripts' => [
+            'post-autoload-dump' => [
+                '@php artisan package:discover --ansi',
+            ],
+        ],
+    ], JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT)."\n");
+
+    expect(Artisan::call('horizon-new-dawn:install', ['--force' => true]))->toBe(0)
+        ->and(Artisan::output())->toContain('Added the Horizon New Dawn asset refresh Composer hook');
+
+    $composer = json_decode($filesystem->get($composerJson), true, flags: JSON_THROW_ON_ERROR);
+
+    expect($composer['scripts']['post-autoload-dump'])->toBe([
+        '@php artisan package:discover --ansi',
+        ComposerAssetHook::SCRIPT,
+    ]);
+});
+
+it('does not rewrite composer.json when the asset hook already exists', function (): void {
+    $filesystem = app(Filesystem::class);
+    $composerJson = base_path('composer.json');
+    $original = json_encode([
+        'name' => 'laravel/laravel',
+        'scripts' => [
+            'post-autoload-dump' => [
+                '@php artisan package:discover --ansi',
+                ComposerAssetHook::SCRIPT,
+            ],
+        ],
+    ], JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT)."\n";
+
+    $filesystem->put($composerJson, $original);
+
+    expect(Artisan::call('horizon-new-dawn:install', ['--force' => true]))->toBe(0);
+    expect(Artisan::output())->not()->toContain('Added the Horizon New Dawn asset refresh Composer hook');
+    expect($filesystem->get($composerJson))->toBe($original);
+});
+
+it('skips composer.json mutation when --no-composer-hook is provided', function (): void {
+    $filesystem = app(Filesystem::class);
+    $composerJson = base_path('composer.json');
+    $original = json_encode([
+        'name' => 'laravel/laravel',
+        'scripts' => [
+            'post-autoload-dump' => [
+                '@php artisan package:discover --ansi',
+            ],
+        ],
+    ], JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT)."\n";
+
+    $filesystem->put($composerJson, $original);
+
+    expect(Artisan::call('horizon-new-dawn:install', [
+        '--force' => true,
+        '--no-composer-hook' => true,
+    ]))->toBe(0);
+    expect($filesystem->get($composerJson))->toBe($original);
+    expect(Artisan::output())->not()->toContain('Added the Horizon New Dawn asset refresh Composer hook');
+});
+
+it('warns and continues when composer.json cannot be updated', function (): void {
+    $filesystem = app(Filesystem::class);
+    $composerJson = base_path('composer.json');
+    $filesystem->put($composerJson, '{invalid');
+
+    expect(Artisan::call('horizon-new-dawn:install', ['--force' => true]))->toBe(0)
+        ->and(Artisan::output())
+        ->toContain('Could not update composer.json with the asset refresh hook')
+        ->toContain('Horizon New Dawn is ready')
+        ->and(config_path('horizon-new-dawn.php'))->toBeFile()
+        ->and(public_path('vendor/horizon-new-dawn/build/manifest.json'))->toBeFile()
+        ->and($filesystem->get($composerJson))->toBe('{invalid');
 });
 
 /**
  * @param  array<int|string, mixed>  $overrideManifest
  * @param  array{missing?: list<string>, override?: array<string, string>}  $mutations
  */
-function publishBrokenPublication(Filesystem $filesystem, string $destination, array $overrideManifest, array $mutations = [], bool $withFavicon = true): void
+function publishBrokenPublication(Filesystem $filesystem, string $destination, array $overrideManifest, array $mutations = []): void
 {
     $baseManifest = completePublicationManifest();
     $manifest = array_is_list($overrideManifest)
@@ -348,21 +632,20 @@ function publishBrokenPublication(Filesystem $filesystem, string $destination, a
         $files[$path] = $contents;
     }
 
-    publishManifestFixture($filesystem, $destination, $manifest, array_keys($files), $withFavicon);
+    publishManifestFixture($filesystem, $destination, $manifest, array_keys($files));
 
     foreach ($files as $path => $contents) {
         $filesystem->put($destination.'/'.$path, $contents);
     }
 }
 
-function publishCompletePublication(Filesystem $filesystem, string $destination, bool $withFavicon = true): void
+function publishCompletePublication(Filesystem $filesystem, string $destination): void
 {
     publishManifestFixture(
         $filesystem,
         $destination,
         completePublicationManifest(),
         array_keys(completePublicationFiles()),
-        $withFavicon,
     );
 
     foreach (completePublicationFiles() as $path => $contents) {
@@ -379,10 +662,9 @@ function publishManifestFixture(
     string $destination,
     array $manifest,
     array $files = [],
-    bool $withFavicon = true,
 ): void {
-    $filesystem->ensureDirectoryExists($destination.'/.vite');
-    $filesystem->put($destination.'/.vite/manifest.json', json_encode($manifest, JSON_THROW_ON_ERROR));
+    $filesystem->ensureDirectoryExists($destination);
+    $filesystem->put($destination.'/manifest.json', json_encode($manifest, JSON_THROW_ON_ERROR));
 
     foreach ($files as $file) {
         $filesystem->ensureDirectoryExists(dirname($destination.'/'.$file));
@@ -390,10 +672,6 @@ function publishManifestFixture(
         if (! $filesystem->exists($destination.'/'.$file)) {
             $filesystem->put($destination.'/'.$file, 'fixture:'.$file);
         }
-    }
-
-    if ($withFavicon) {
-        $filesystem->put($destination.'/favicon.svg', '<svg />');
     }
 }
 
@@ -437,7 +715,7 @@ function completePublicationFiles(): array
 function installedManifest(string $buildDirectory): array
 {
     $manifest = json_decode(
-        app(Filesystem::class)->get($buildDirectory.'/.vite/manifest.json'),
+        app(Filesystem::class)->get($buildDirectory.'/manifest.json'),
         true,
         flags: JSON_THROW_ON_ERROR,
     );

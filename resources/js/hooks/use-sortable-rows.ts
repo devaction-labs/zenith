@@ -15,6 +15,7 @@ export type SortState = {
 export type SortUrlOptions = {
   persist?: boolean;
   prefix?: string;
+  defaultSort?: SortState;
 };
 
 const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: "base" });
@@ -76,23 +77,25 @@ function queryParameterNames(prefix?: string) {
 }
 
 function initialSort<T>(columns: readonly SortColumn<T>[], options: SortUrlOptions) {
-  if (!options.persist) {
-    return null;
+  if (options.persist) {
+    const parameters = queryParameterNames(options.prefix);
+    const key = currentQueryParameter(parameters.sort);
+    const direction = currentQueryParameter(parameters.direction);
+
+    if (
+      key !== null &&
+      (direction === "asc" || direction === "desc") &&
+      columns.some((column) => column.key === key)
+    ) {
+      return { key, direction } satisfies SortState;
+    }
   }
 
-  const parameters = queryParameterNames(options.prefix);
-  const key = currentQueryParameter(parameters.sort);
-  const direction = currentQueryParameter(parameters.direction);
-
-  if (
-    key === null ||
-    (direction !== "asc" && direction !== "desc") ||
-    !columns.some((column) => column.key === key)
-  ) {
-    return null;
+  if (options.defaultSort && columns.some((column) => column.key === options.defaultSort?.key)) {
+    return options.defaultSort;
   }
 
-  return { key, direction } satisfies SortState;
+  return null;
 }
 
 export function useSortableRows<T>(
@@ -100,9 +103,9 @@ export function useSortableRows<T>(
   columns: readonly SortColumn<T>[],
   options: SortUrlOptions = {},
 ) {
-  const { persist = false, prefix } = options;
+  const { defaultSort, persist = false, prefix } = options;
   const [sort, setSort] = useState<SortState | null>(() =>
-    initialSort(columns, { persist, prefix }),
+    initialSort(columns, { defaultSort, persist, prefix }),
   );
   const sortedRows = useMemo(() => sortRows(rows, columns, sort), [columns, rows, sort]);
   const toggle = useCallback(

@@ -14,6 +14,7 @@ use NckRtl\HorizonNewDawn\Jobs\JobsData;
 use NckRtl\HorizonNewDawn\Queues\Data\QueueRetainedJobsData;
 use NckRtl\HorizonNewDawn\Queues\QueueActivityTab;
 use NckRtl\HorizonNewDawn\Queues\QueueJobsData;
+use NckRtl\HorizonNewDawn\Support\PollInterval;
 use NckRtl\HorizonNewDawn\Tests\Support\HorizonJob;
 
 use function NckRtl\HorizonNewDawn\Tests\Support\dashboardExpects;
@@ -270,6 +271,7 @@ it('summarizes retained totals and rolling periods and caches for the polling in
         'pending' => 1,
         'pendingComplete' => true,
         'completed' => 2,
+        'completedAvailable' => true,
         'completedComplete' => true,
         'completedPerMinute' => 0.02,
         'completedPerMinuteComplete' => true,
@@ -290,11 +292,18 @@ it('summarizes retained totals and rolling periods and caches for the polling in
         'silenced' => 1,
         'silencedComplete' => true,
         'message' => null,
+        'warming' => false,
     ])->and($cached->toArray())->toBe($summary->toArray());
 });
 
-it('rounds a 1500ms retained job summary poll interval down to a one second cache ttl', function (): void {
-    config()->set('horizon-new-dawn.poll_interval', 1500);
+it('uses the configured or default poll interval for its summary cache ttl', function (
+    ?int $pollInterval,
+    int $expectedCacheSeconds,
+): void {
+    config()->set(
+        'horizon-new-dawn',
+        $pollInterval === null ? [] : ['poll_interval' => $pollInterval],
+    );
 
     $repository = mockDashboardContract(JobRepository::class);
     dashboardReturnsFor($repository, 'countPending', [], 1);
@@ -313,7 +322,7 @@ it('rounds a 1500ms retained job summary poll interval down to a one second cach
         'remember',
         [
             Mockery::type('string'),
-            1,
+            $expectedCacheSeconds,
             Mockery::type(Closure::class),
         ],
         'once',
@@ -334,7 +343,24 @@ it('rounds a 1500ms retained job summary poll interval down to a one second cach
     );
 
     expect($data->summary('reports')->pending)->toBe(1);
-});
+})->with([
+    'configured 1500ms interval' => [1500, 1],
+    'cached config without the interval' => [null, 5],
+]);
+
+it('keeps retained index freshness positive when UI polling is disabled or subsecond', function (
+    int $pollInterval,
+    int $expectedCacheSeconds,
+): void {
+    config()->set('horizon-new-dawn.poll_interval', $pollInterval);
+
+    expect(PollInterval::retainedCacheSeconds())->toBe($expectedCacheSeconds);
+})->with([
+    'disabled UI polling' => [0, 1],
+    'subsecond UI polling' => [999, 1],
+    'partial second UI polling' => [1_500, 2],
+    'five second UI polling' => [5_000, 5],
+]);
 
 it('replaces unserializable legacy job summary objects with scalar cache payloads', function (): void {
     requireConfigurableCacheUnserialization();
@@ -353,6 +379,7 @@ it('replaces unserializable legacy job summary objects with scalar cache payload
         pending: 99,
         pendingComplete: true,
         completed: 99,
+        completedAvailable: true,
         completedComplete: true,
         completedPerMinute: 99.0,
         completedPerMinuteComplete: true,
@@ -532,10 +559,35 @@ it('marks every bounded rolling statistic as a lower bound', function (): void {
     $summary = retainedQueueJobsData($repository)->summary('reports');
 
     expect($summary->completed)->toBe(250)
+        ->and($summary->completedAvailable)->toBeTrue()
         ->and($summary->completedComplete)->toBeFalse()
         ->and($summary->completedPerMinuteComplete)->toBeFalse()
         ->and($summary->completedPastHourComplete)->toBeFalse()
         ->and($summary->completedPastDayComplete)->toBeFalse();
+});
+
+it('does not invent a completed lower bound or warning when its summary is unavailable', function (): void {
+    $repository = mockDashboardContract(JobRepository::class);
+    dashboardReturnsFor($repository, 'countPending', [], 0);
+    dashboardReturnsFor($repository, 'countCompleted', [], 1);
+    dashboardThrowsFor(
+        $repository,
+        'getCompleted',
+        ['-1'],
+        new RuntimeException('completed secret'),
+    );
+    dashboardReturnsFor($repository, 'countFailed', [], 0);
+    dashboardReturnsFor($repository, 'countSilenced', [], 0);
+
+    $summary = retainedQueueJobsData($repository)->summary('reports');
+
+    expect($summary->completed)->toBeNull()
+        ->and($summary->completedAvailable)->toBeFalse()
+        ->and($summary->completedComplete)->toBeFalse()
+        ->and($summary->completedPerMinute)->toBeNull()
+        ->and($summary->completedPastHour)->toBeNull()
+        ->and($summary->completedPastDay)->toBeNull()
+        ->and($summary->message)->toBeNull();
 });
 
 it('isolates an exception to the requested retained collection', function (): void {

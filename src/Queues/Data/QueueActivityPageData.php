@@ -20,6 +20,7 @@ final class QueueActivityPageData extends Data
         public readonly int|string|null $current,
         public readonly int|string|null $next,
         public readonly ?string $message,
+        public readonly bool $warming = false,
     ) {}
 
     public static function unavailable(string $pageName, string $message): self
@@ -33,6 +34,21 @@ final class QueueActivityPageData extends Data
             current: null,
             next: null,
             message: $message,
+        );
+    }
+
+    public static function warming(string $pageName): self
+    {
+        return new self(
+            available: true,
+            rows: [],
+            total: 0,
+            complete: false,
+            pageName: $pageName,
+            current: null,
+            next: null,
+            message: null,
+            warming: true,
         );
     }
 }

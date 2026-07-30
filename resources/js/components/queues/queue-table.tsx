@@ -1,4 +1,4 @@
-import { Link, router } from "@inertiajs/react";
+import { Link } from "@inertiajs/react";
 import { TriangleAlertIcon } from "lucide-react";
 
 import { SortableTableHead } from "@/components/data-table/sortable-table-head";
@@ -23,6 +23,7 @@ import { show as queueShow } from "@/generated/routes/horizon-new-dawn/queues";
 import { useSortableRows, type SortColumn } from "@/hooks/use-sortable-rows";
 import { resolveHorizonRoute } from "@/lib/horizon-route";
 import { isInteractiveTarget } from "@/lib/interactive-target";
+import { prefetchQueueDetail, visitQueueDetail } from "@/lib/queue-detail-navigation";
 import type { QueueList, QueueRow } from "@/types/queues";
 
 const numberFormatter = new Intl.NumberFormat();
@@ -46,12 +47,14 @@ export function QueueTable({
   queues,
   horizonBaseUrl,
   queuePausing = true,
+  timedQueuePausing = true,
   emptyTitle,
   emptyDescription,
 }: {
   queues: QueueList;
   horizonBaseUrl: string;
   queuePausing?: boolean;
+  timedQueuePausing?: boolean;
   emptyTitle?: string;
   emptyDescription?: string;
 }) {
@@ -78,44 +81,44 @@ export function QueueTable({
             columnKey="name"
             direction={directionFor("name", sorted.sort)}
             onSort={sorted.toggle}
-            className="w-[32%] px-6"
+            className="w-[32%]"
           />
           <SortableTableHead
             label="Wait threshold"
             columnKey="waitThreshold"
             direction={directionFor("waitThreshold", sorted.sort)}
             onSort={sorted.toggle}
-            className="w-[190px] px-6"
+            className="w-[190px]"
           />
           <SortableTableHead
             label="Ready Jobs"
             columnKey="ready"
             direction={directionFor("ready", sorted.sort)}
             onSort={sorted.toggle}
-            className="px-6 text-right"
+            className="text-right"
           />
           <SortableTableHead
             label="Delayed Jobs"
             columnKey="delayed"
             direction={directionFor("delayed", sorted.sort)}
             onSort={sorted.toggle}
-            className="px-6 text-right"
+            className="text-right"
           />
           <SortableTableHead
             label="Processes"
             columnKey="processes"
             direction={directionFor("processes", sorted.sort)}
             onSort={sorted.toggle}
-            className="w-[130px] px-6 text-right"
+            className="w-[130px] text-right"
           />
           <SortableTableHead
             label="Wait"
             columnKey="wait"
             direction={directionFor("wait", sorted.sort)}
             onSort={sorted.toggle}
-            className="w-[150px] px-6 text-right"
+            className="w-[150px] text-right"
           />
-          <TableHead className="w-[80px] pr-3 pl-6 text-right">Actions</TableHead>
+          <TableHead className="w-[80px] pr-2.5 pl-3 text-right sm:pr-6">Actions</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -137,16 +140,16 @@ export function QueueTable({
             <TableRow
               className="cursor-pointer"
               key={queue.name}
+              onMouseEnter={() => prefetchQueueDetail(detailUrl)}
               onClick={(event) => {
                 if (isInteractiveTarget(event.target)) {
                   return;
                 }
 
-                router.visit(detailUrl);
+                visitQueueDetail(detailUrl);
               }}
-              onMouseEnter={() => router.prefetch(detailUrl)}
             >
-              <TableCell className="px-6">
+              <TableCell>
                 <Link
                   className="inline-flex items-center gap-2 font-normal text-foreground"
                   href={detailUrl}
@@ -168,27 +171,28 @@ export function QueueTable({
                   </p>
                 ) : null}
               </TableCell>
-              <TableCell className="px-6">
+              <TableCell>
                 <QueueWaitThresholdCell waitThreshold={queue.waitThreshold} />
               </TableCell>
-              <TableCell className="px-6 text-right tabular-nums text-muted-foreground">
+              <TableCell className="text-right tabular-nums text-muted-foreground">
                 {numberFormatter.format(queue.ready)}
               </TableCell>
-              <TableCell className="px-6 text-right tabular-nums text-muted-foreground">
+              <TableCell className="text-right tabular-nums text-muted-foreground">
                 {numberFormatter.format(queue.delayed)}
               </TableCell>
-              <TableCell className="px-6 text-right tabular-nums text-muted-foreground">
+              <TableCell className="text-right tabular-nums text-muted-foreground">
                 {numberFormatter.format(queue.processes)}
               </TableCell>
-              <TableCell className="px-6 text-right tabular-nums text-muted-foreground">
+              <TableCell className="text-right tabular-nums text-muted-foreground">
                 <Duration seconds={queue.wait} />
               </TableCell>
-              <TableCell className="pr-3 pl-6 text-right">
+              <TableCell className="pr-2.5 pl-3 text-right sm:pr-6">
                 <QueueActionsMenu
                   queue={queue.name}
                   targets={queue.pauseTargets}
                   horizonBaseUrl={horizonBaseUrl}
                   queuePausing={queuePausing}
+                  timedQueuePausing={timedQueuePausing}
                 />
               </TableCell>
             </TableRow>

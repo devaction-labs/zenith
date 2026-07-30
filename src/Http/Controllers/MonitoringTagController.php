@@ -22,8 +22,10 @@ final class MonitoringTagController
         ?string $status = null,
     ): Response {
         $monitoringStatus = MonitoringStatus::from($status ?? MonitoringStatus::Jobs->value);
-        $summary = $monitoring->summary($tag);
-        $page = $monitoring->page($tag, $monitoringStatus, $request->integer('starting_at', 0));
+        $startingAt = $request->integer('starting_at', 0);
+        $resolvePage = fn () => once(
+            fn () => $monitoring->page($tag, $monitoringStatus, $startingAt),
+        );
         $title = $monitoringStatus === MonitoringStatus::Failed
             ? "Failed Jobs for \"{$tag}\""
             : "Recent Jobs for \"{$tag}\"";
@@ -32,16 +34,37 @@ final class MonitoringTagController
             'meta' => new PageMetaData($title, NavigationItem::Monitoring),
             'tag' => $tag,
             'status' => $monitoringStatus->value,
-            'summary' => $summary,
+            'summary' => fn () => $monitoring->summary($tag),
+            'listRevision' => function () use ($resolvePage): string {
+                $page = $resolvePage();
+
+                return json_encode([
+                    $page->total,
+                    $page->items[0]->id ?? null,
+                ], JSON_THROW_ON_ERROR);
+            },
             'jobs' => Inertia::scroll(
-                [
-                    'data' => $page->items,
-                    'total' => $page->total,
-                    'available' => $page->available,
-                    'message' => $page->message,
-                ],
+                function () use ($resolvePage): array {
+                    $page = $resolvePage();
+
+                    return [
+                        'data' => $page->items,
+                        'total' => $page->total,
+                        'available' => $page->available,
+                        'message' => $page->message,
+                    ];
+                },
                 'data',
-                new HorizonScrollMetadata('starting_at', null, $page->next, $page->current),
+                function (array $_value) use ($resolvePage): HorizonScrollMetadata {
+                    $page = $resolvePage();
+
+                    return new HorizonScrollMetadata(
+                        'starting_at',
+                        null,
+                        $page->next,
+                        $page->current,
+                    );
+                },
             )->matchOn('data.id'),
         ]);
     }

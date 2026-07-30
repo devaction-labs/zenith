@@ -242,13 +242,17 @@ describe("SupervisorsTable", () => {
 
     expect(scalingUp).toHaveAttribute("data-scaling-filled", "1");
 
-    act(() => vi.advanceTimersByTime(720));
+    act(() => {
+      void vi.advanceTimersByTime(720);
+    });
     expect(scalingUp).toHaveAttribute("data-scaling-filled", "2");
 
     view.rerender(renderTable(6, "up", 7));
 
     for (const filledBlocks of [3, 4, 5, 1]) {
-      act(() => vi.advanceTimersByTime(720));
+      act(() => {
+        void vi.advanceTimersByTime(720);
+      });
 
       expect(scalingUp).toHaveAttribute("data-scaling-filled", String(filledBlocks));
     }
@@ -260,12 +264,16 @@ describe("SupervisorsTable", () => {
     ).toHaveAttribute("data-scaling-filled", "1");
 
     for (const filledBlocks of [2, 3, 4, 5]) {
-      act(() => vi.advanceTimersByTime(720));
+      act(() => {
+        void vi.advanceTimersByTime(720);
+      });
 
       expect(scalingUp).toHaveAttribute("data-scaling-filled", String(filledBlocks));
     }
 
-    act(() => vi.advanceTimersByTime(720));
+    act(() => {
+      void vi.advanceTimersByTime(720);
+    });
 
     expect(
       screen.getByRole("button", { name: /^Autoscaling idle at 7 processes/ }),
@@ -279,11 +287,15 @@ describe("SupervisorsTable", () => {
 
     expect(scalingDown).toHaveAttribute("data-scaling-filled", "5");
 
-    act(() => vi.advanceTimersByTime(720));
+    act(() => {
+      void vi.advanceTimersByTime(720);
+    });
     expect(scalingDown).toHaveAttribute("data-scaling-filled", "4");
 
     for (const filledBlocks of [3, 2, 1, 5]) {
-      act(() => vi.advanceTimersByTime(720));
+      act(() => {
+        void vi.advanceTimersByTime(720);
+      });
 
       expect(scalingDown).toHaveAttribute("data-scaling-filled", String(filledBlocks));
     }
@@ -295,12 +307,16 @@ describe("SupervisorsTable", () => {
     ).toHaveAttribute("data-scaling-filled", "5");
 
     for (const filledBlocks of [4, 3, 2, 1]) {
-      act(() => vi.advanceTimersByTime(720));
+      act(() => {
+        void vi.advanceTimersByTime(720);
+      });
 
       expect(scalingDown).toHaveAttribute("data-scaling-filled", String(filledBlocks));
     }
 
-    act(() => vi.advanceTimersByTime(720));
+    act(() => {
+      void vi.advanceTimersByTime(720);
+    });
 
     const steady = screen.getByRole("button", { name: /^Autoscaling idle at 6 processes/ });
     const blocks = steady.querySelectorAll("[data-scaling-block]");
@@ -357,7 +373,9 @@ describe("SupervisorsTable", () => {
       name: /^Scaling up from 6 processes to 7 processes/,
     });
 
-    act(() => vi.advanceTimersByTime(720));
+    act(() => {
+      void vi.advanceTimersByTime(720);
+    });
     expect(indicator).toHaveAttribute("data-scaling-filled", "2");
 
     view.rerender(renderTable("down", 5));
@@ -367,18 +385,24 @@ describe("SupervisorsTable", () => {
     ).toHaveAttribute("data-scaling-filled", "2");
 
     for (const filledBlocks of [3, 4, 5]) {
-      act(() => vi.advanceTimersByTime(720));
+      act(() => {
+        void vi.advanceTimersByTime(720);
+      });
 
       expect(indicator).toHaveAttribute("data-scaling-filled", String(filledBlocks));
     }
 
-    act(() => vi.advanceTimersByTime(720));
+    act(() => {
+      void vi.advanceTimersByTime(720);
+    });
 
     expect(
       screen.getByRole("button", { name: /^Scaling down from 6 processes to 5 processes/ }),
     ).toHaveAttribute("data-scaling-filled", "5");
 
-    act(() => vi.advanceTimersByTime(720));
+    act(() => {
+      void vi.advanceTimersByTime(720);
+    });
     expect(indicator).toHaveAttribute("data-scaling-filled", "4");
 
     view.rerender(renderTable("up", 7));
@@ -388,12 +412,16 @@ describe("SupervisorsTable", () => {
     ).toHaveAttribute("data-scaling-filled", "4");
 
     for (const filledBlocks of [3, 2, 1]) {
-      act(() => vi.advanceTimersByTime(720));
+      act(() => {
+        void vi.advanceTimersByTime(720);
+      });
 
       expect(indicator).toHaveAttribute("data-scaling-filled", String(filledBlocks));
     }
 
-    act(() => vi.advanceTimersByTime(720));
+    act(() => {
+      void vi.advanceTimersByTime(720);
+    });
 
     expect(
       screen.getByRole("button", { name: /^Scaling up from 6 processes to 7 processes/ }),
@@ -444,7 +472,9 @@ describe("SupervisorsTable", () => {
       "1",
     );
 
-    act(() => vi.advanceTimersByTime(3600));
+    act(() => {
+      void vi.advanceTimersByTime(3600);
+    });
 
     expect(screen.getByRole("button", { name: /^Scaling up/ })).toHaveAttribute(
       "data-scaling-filled",

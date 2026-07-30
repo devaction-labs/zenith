@@ -1,14 +1,16 @@
 import { Head, Link } from "@inertiajs/react";
 import { useState } from "react";
 
+import { DetailList, DetailListItem } from "@/components/detail-list";
 import { Duration } from "@/components/duration";
 import { JobStatus, type JobStatusValue } from "@/components/jobs/job-status";
 import { PendingJobActionsMenu } from "@/components/jobs/pending-job-actions";
 import { JobTags } from "@/components/jobs/job-tags";
 import { JsonPayload } from "@/components/payload/json-payload";
+import { ResponsiveTabsHeader, type ResponsiveTabItem } from "@/components/responsive-tabs-header";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { show as batchShow } from "@/generated/routes/horizon-new-dawn/batches";
 import { show as failedJobShow } from "@/generated/routes/horizon-new-dawn/failed-jobs";
 import { show as queueShow } from "@/generated/routes/horizon-new-dawn/queues";
@@ -58,9 +60,14 @@ function JobShow({ horizon, type, job }: JobDetailPageProps) {
     job.pushedAt !== null && job.reservedAt !== null
       ? Math.max(0, job.reservedAt - job.pushedAt)
       : null;
-  const details: Array<{ label: string; value: React.ReactNode; identifier?: boolean }> = [
+  const details: Array<{
+    label: string;
+    value: React.ReactNode;
+    identifier?: boolean;
+    testId?: string;
+  }> = [
     { label: "Status", value: <JobStatus status={status} /> },
-    { label: "ID", value: job.id, identifier: true },
+    { label: "ID", value: job.id, identifier: true, testId: "job-id" },
     { label: "Connection", value: job.connection },
     {
       label: "Queue",
@@ -79,6 +86,8 @@ function JobShow({ horizon, type, job }: JobDetailPageProps) {
       ? [
           {
             label: "Retry of ID",
+            identifier: true,
+            testId: "job-retry-id",
             value: (
               <Link
                 className="text-[13px] text-sm! text-foreground underline decoration-foreground/40 underline-offset-4 transition-colors hover:text-primary hover:decoration-primary"
@@ -96,6 +105,8 @@ function JobShow({ horizon, type, job }: JobDetailPageProps) {
       ? [
           {
             label: "Batch",
+            identifier: true,
+            testId: "job-batch-id",
             value: (
               <Link
                 className="text-[13px] text-sm! text-foreground underline decoration-foreground/40 underline-offset-4 transition-colors hover:text-primary hover:decoration-primary"
@@ -154,9 +165,9 @@ function JobShow({ horizon, type, job }: JobDetailPageProps) {
   return (
     <>
       <Head title="Job Detail" />
-      <div className="flex flex-col gap-3.5">
+      <div className="flex flex-col gap-[7px] min-[1140px]:gap-3.5">
         <Card>
-          <CardHeader className="flex h-[54px] flex-row justify-between gap-4 px-6 py-0">
+          <CardHeader className="flex flex-row justify-between gap-4">
             <CardTitle className="flex min-w-0 items-center gap-2">
               <span className="truncate" title={job.name}>
                 {job.name}
@@ -164,22 +175,36 @@ function JobShow({ horizon, type, job }: JobDetailPageProps) {
               {job.retryOf ? <Badge variant="retry">Retry</Badge> : null}
             </CardTitle>
             {type === "pending" && job.status === "pending" && job.batchId === null ? (
-              <div className="flex shrink-0 items-center">
+              <CardAction className="flex shrink-0 items-center self-center">
                 <PendingJobActionsMenu
                   jobId={job.id}
                   horizonBaseUrl={horizon.baseUrl}
                   canCancel={job.batchId === null}
                   canRelease={status === "delayed"}
                 />
-              </div>
+              </CardAction>
             ) : null}
           </CardHeader>
           <CardContent className="p-0">
-            <dl className="pt-1.5 pb-2.5">
-              {details.map((detail, index) => (
-                <DetailRow key={detail.label} detail={detail} bordered={index > 0} />
-              ))}
-            </dl>
+            <DetailList>
+              {details.map((detail, index) => {
+                const title = typeof detail.value === "string" ? detail.value : undefined;
+
+                return (
+                  <DetailListItem
+                    key={detail.label}
+                    label={detail.label}
+                    bordered={index > 0}
+                    scrollable={detail.identifier}
+                    valueClassName={detail.identifier ? "text-[13px] text-sm!" : "break-all"}
+                    valueTestId={detail.testId}
+                    valueTitle={title}
+                  >
+                    {detail.value}
+                  </DetailListItem>
+                );
+              })}
+            </DetailList>
           </CardContent>
         </Card>
 
@@ -225,6 +250,10 @@ function JobDataTabs({
   tags: readonly string[];
 }) {
   const [activeTab, setActiveTab] = useState<JobDataTab>(initialJobDataTab);
+  const tabItems: readonly ResponsiveTabItem<JobDataTab>[] = [
+    { value: "data", label: "Data" },
+    { value: "tags", label: "Tags", count: tags.length },
+  ];
 
   useActiveTabQuery(activeTab);
 
@@ -237,33 +266,22 @@ function JobDataTabs({
           className="gap-0"
         >
           <div className="border-b border-separator">
-            <TabsList
-              variant="line"
-              aria-label="Job data"
-              className="max-w-full justify-start gap-2 overflow-x-auto rounded-none px-3 py-0"
-            >
-              <TabsTrigger
-                value="data"
-                className="h-auto flex-none rounded-none px-3 py-4 text-[13.5px]"
-              >
-                Data
-              </TabsTrigger>
-              <TabsTrigger
-                value="tags"
-                className="h-auto flex-none rounded-none px-3 py-4 text-[13.5px]"
-              >
-                Tags
-                <Badge className="h-4 min-w-4 px-1.5 text-[10.5px]" variant="secondary">
-                  {tags.length}
-                </Badge>
-              </TabsTrigger>
-            </TabsList>
+            <ResponsiveTabsHeader
+              value={activeTab}
+              items={tabItems}
+              ariaLabel="Job data"
+              onValueChange={(value) => {
+                if (value !== null && value !== activeTab) {
+                  setActiveTab(value);
+                }
+              }}
+            />
           </div>
 
           <TabsContent value="data" className="mt-0">
             <JsonPayload value={payload} />
           </TabsContent>
-          <TabsContent value="tags" className="mt-0 px-6 py-4">
+          <TabsContent value="tags" className="mt-0 px-4 py-4 sm:px-6">
             <JobTags tags={tags} />
           </TabsContent>
         </Tabs>
@@ -274,34 +292,6 @@ function JobDataTabs({
 
 function initialJobDataTab(): JobDataTab {
   return currentQueryParameter("tab") === "tags" ? "tags" : "data";
-}
-
-function DetailRow({
-  detail,
-  bordered,
-}: {
-  detail: { label: string; value: React.ReactNode; identifier?: boolean };
-  bordered: boolean;
-}) {
-  const title = typeof detail.value === "string" ? detail.value : undefined;
-
-  return (
-    <div
-      className={
-        bordered
-          ? "flex gap-4 border-t border-dashed border-separator px-6 py-2.5"
-          : "flex gap-4 px-6 py-2.5"
-      }
-    >
-      <dt className="w-40 shrink-0 text-muted-foreground">{detail.label}</dt>
-      <dd
-        className={`min-w-0 break-all ${detail.identifier ? "text-[13px] text-sm!" : ""}`}
-        title={title}
-      >
-        {detail.value}
-      </dd>
-    </div>
-  );
 }
 
 const jobRefreshProps = ["job"];

@@ -5,25 +5,30 @@ declare(strict_types=1);
 namespace NckRtl\HorizonNewDawn\Http\Controllers;
 
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Str;
-use NckRtl\HorizonNewDawn\Monitoring\Actions\ClearRecentJobs;
+use NckRtl\HorizonNewDawn\BulkOperations\BulkOperationDispatcher;
+use NckRtl\HorizonNewDawn\BulkOperations\Jobs\ClearRecentJobsJob;
 use Throwable;
 
 final class MonitoringRecentJobController
 {
-    public function destroy(ClearRecentJobs $clear, string $tag): RedirectResponse
-    {
+    public function destroy(
+        BulkOperationDispatcher $dispatcher,
+        string $tag,
+    ): RedirectResponse {
         try {
-            $count = $clear->handle($tag);
+            $dispatcher->dispatch(new ClearRecentJobsJob($tag));
 
             return back()->with(
                 'toast.success',
-                "Cleared {$count} recent ".Str::plural('job', $count)." from {$tag}.",
+                "Clearing recent jobs from {$tag} was queued.",
             );
         } catch (Throwable $exception) {
             report($exception);
 
-            return back()->with('toast.error', "Could not clear recent jobs from {$tag}.");
+            return back()->with(
+                'toast.error',
+                'The bulk operation could not be queued. Check the application logs and try again.',
+            );
         }
     }
 }

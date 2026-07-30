@@ -28,7 +28,7 @@ describe('QueuePauseStatus', function (): void {
         $state = (new QueuePauseStatus(
             queues: $queues,
             metadata: new QueuePauseMetadata(app(CacheFactory::class)),
-            capabilities: new FrameworkCapabilities(queuePausing: false),
+            capabilities: new FrameworkCapabilities(queuePausing: false, timedQueuePausing: false),
         ))->for('redis', 'reports');
 
         expect($state->toArray())->toBe([
@@ -54,7 +54,7 @@ describe('QueuePauseStatus', function (): void {
     });
 
     it('reports a timed pause with its readable deadline', function (): void {
-        requireQueuePausing();
+        requireTimedQueuePausing();
 
         $deadline = CarbonImmutable::parse('2026-07-20 19:00:00 UTC');
         $metadata = new QueuePauseMetadata(app(CacheFactory::class));

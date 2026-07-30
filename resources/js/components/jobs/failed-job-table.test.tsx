@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 
 import { FailedJobTable } from "@/components/jobs/failed-job-table";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -93,34 +93,52 @@ const jobs: JobRow[] = [
 ];
 
 describe("FailedJobTable", () => {
-  it("sorts rows and renders retry metadata through dedicated routes", () => {
+  it("does not advertise loaded-row sorting and renders retry metadata through dedicated routes", () => {
     render(
       <TooltipProvider>
         <FailedJobTable jobs={jobs} horizonBaseUrl="/horizon" />
       </TooltipProvider>,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Sort by Runtime ascending" }));
     const rows = within(screen.getAllByRole("rowgroup")[1]).getAllByRole("row");
 
-    expect(rows[0]).toHaveTextContent("FastJob");
-    expect(rows[0]).toHaveTextContent("Retry of failed-original");
-    expect(rows[1]).toHaveTextContent("Retried");
-    expect(within(rows[1]).getByRole("button", { name: /Retried/ })).toHaveAttribute(
+    expect(screen.queryByRole("button", { name: /Sort by/ })).not.toBeInTheDocument();
+    expect(rows[1]).toHaveTextContent("FastJob");
+    expect(rows[1]).toHaveTextContent("Retry of failed-original");
+    expect(rows[2]).toHaveTextContent("Retried");
+    expect(within(rows[2]).getByRole("button", { name: /Retried/ })).toHaveAttribute(
       "title",
       "Total retries: 2, Last retry status: Failed",
     );
-    expect(within(rows[2]).getByRole("button", { name: /Retried/ })).toHaveAttribute(
+    expect(within(rows[0]).getByRole("button", { name: /Retried/ })).toHaveAttribute(
       "title",
       "Total retries: 2, Last retry status: Completed",
     );
-    expect(within(rows[0]).getByRole("button", { name: "Retry failed job" })).toBeEnabled();
-    expect(within(rows[1]).queryByRole("button", { name: "Retry failed job" })).toBeNull();
+    expect(within(rows[1]).getByRole("button", { name: "Retry failed job" })).toBeEnabled();
+    expect(within(rows[0]).queryByRole("button", { name: "Retry failed job" })).toBeNull();
     expect(within(rows[2]).queryByRole("button", { name: "Retry failed job" })).toBeNull();
     expect(screen.getByRole("link", { name: "FastJob" })).toHaveAttribute(
       "href",
       "/horizon/failed/failed-fast",
     );
+  });
+
+  it("delegates an explicitly controlled failed timestamp sort", () => {
+    const onSort = vi.fn();
+
+    render(
+      <TooltipProvider>
+        <FailedJobTable
+          jobs={jobs}
+          horizonBaseUrl="/horizon"
+          sorting={{ key: "failedAt", direction: "desc", columns: ["failedAt"], onSort }}
+        />
+      </TooltipProvider>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Sort by Failed ascending" }));
+
+    expect(onSort).toHaveBeenCalledWith("failedAt");
   });
 
   it("uses the Failed Jobs navigation icon for its empty state", () => {

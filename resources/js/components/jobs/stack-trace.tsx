@@ -4,7 +4,9 @@ export function StackTrace({ value }: { value: string }) {
   const frames = value.split("\n").filter((frame) => frame !== "");
 
   if (frames.length === 0) {
-    return <p className="px-6 py-4 text-sm text-muted-foreground">No exception was recorded.</p>;
+    return (
+      <p className="px-4 py-4 text-sm text-muted-foreground sm:px-6">No exception was recorded.</p>
+    );
   }
 
   return (

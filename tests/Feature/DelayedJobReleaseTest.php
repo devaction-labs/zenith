@@ -12,6 +12,7 @@ use Laravel\Horizon\Contracts\JobRepository;
 use Laravel\Horizon\Horizon;
 use Laravel\Horizon\RedisQueue;
 
+use function NckRtl\HorizonNewDawn\Tests\Support\dashboardReturns;
 use function NckRtl\HorizonNewDawn\Tests\Support\dashboardReturnsFor;
 use function NckRtl\HorizonNewDawn\Tests\Support\horizonJob;
 use function NckRtl\HorizonNewDawn\Tests\Support\mockDashboardContract;
@@ -59,6 +60,11 @@ function bindDelayedJobRelease(int $redisResult): void
 
     $jobs = mockDashboardContract(JobRepository::class);
     dashboardReturnsFor($jobs, 'getJobs', [[$job->id]], new Collection([$job]));
+
+    if ($redisResult === 1) {
+        dashboardReturns($jobs, 'migrated', null);
+    }
+
     app()->instance(JobRepository::class, $jobs);
 
     app()->instance(QueueManager::class, new DelayedJobReleaseQueueManager(

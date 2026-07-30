@@ -1,5 +1,5 @@
 import { buttonVariants } from "@/components/ui/button";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 
 describe("buttonVariants", () => {
   it.each([

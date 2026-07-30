@@ -15,7 +15,6 @@ use NckRtl\HorizonNewDawn\Tests\Support\HorizonJob;
 
 use function NckRtl\HorizonNewDawn\Tests\Support\dashboardReturns;
 use function NckRtl\HorizonNewDawn\Tests\Support\dashboardReturnsFor;
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardReturnsUsing;
 use function NckRtl\HorizonNewDawn\Tests\Support\dashboardThrows;
 use function NckRtl\HorizonNewDawn\Tests\Support\horizonBatch;
 use function NckRtl\HorizonNewDawn\Tests\Support\horizonJob;
@@ -144,6 +143,42 @@ describe('BatchesData', function (): void {
             ->and($page->next)->toBe('batch-1');
     });
 
+    it('returns all 54 Dynamo-style batches across a full page and short final page', function (): void {
+        $repository = mockDashboardContract(BatchRepository::class);
+        $firstRepositoryPage = array_map(
+            static fn (int $index) => horizonBatch(sprintf('batch-%03d', $index)),
+            range(54, 5),
+        );
+        $secondRepositoryPage = array_map(
+            static fn (int $index) => horizonBatch(sprintf('batch-%03d', $index)),
+            range(4, 1),
+        );
+        dashboardReturnsFor($repository, 'get', [50, null], $firstRepositoryPage);
+        dashboardReturnsFor($repository, 'get', [50, 'batch-005'], $secondRepositoryPage);
+        dashboardReturnsFor($repository, 'get', [46, 'batch-001'], []);
+        $jobs = mockDashboardContract(JobRepository::class);
+        $data = batchData($repository, $jobs);
+
+        $firstPage = $data->page(null, null);
+        $secondPage = $data->page($firstPage->next, null);
+        $ids = array_map(
+            static fn ($batch): string => $batch->id,
+            [...$firstPage->batches, ...$secondPage->batches],
+        );
+
+        expect($firstPage->batches)->toHaveCount(50)
+            ->and($firstPage->next)->toBe('batch-005')
+            ->and($secondPage->batches)->toHaveCount(4)
+            ->and($secondPage->current)->toBe('batch-005')
+            ->and($secondPage->next)->toBeNull()
+            ->and($ids)->toHaveCount(54)
+            ->and(array_unique($ids))->toBe($ids)
+            ->and($ids)->toBe(array_map(
+                static fn (int $index): string => sprintf('batch-%03d', $index),
+                range(54, 1),
+            ));
+    });
+
     it('returns an explicit unavailable page when the batch database fails', function (): void {
         $repository = mockDashboardContract(BatchRepository::class);
         dashboardThrows($repository, 'get', new RuntimeException('database password leaked'));
@@ -191,6 +226,8 @@ describe('BatchesData', function (): void {
             ->and($detail?->id)->toBe('batch-1')
             ->and($detail?->connection)->toBe('redis')
             ->and($detail?->queue)->toBe('imports')
+            ->and($detail?->connectionExplicit)->toBeTrue()
+            ->and($detail?->queueExplicit)->toBeTrue()
             ->and($detail?->jobs->pending->total)->toBe(1)
             ->and($detail?->jobs->pending->rows[0]->id)->toBe('pending-1')
             ->and($detail?->jobs->completed->total)->toBe(3)
@@ -208,48 +245,28 @@ describe('BatchesData', function (): void {
         expect(batchData($repository, $jobs)->find('missing'))->toBeNull();
     });
 
-    it('searches for literal percent and underscore characters through the batch repository', function (): void {
+    it('does not approximate exact filters for a non-database batch repository', function (): void {
         $repository = mockDashboardContract(BatchRepository::class);
-        $matching = horizonBatch('batch-z', name: 'Import 100%_done');
-        $other = horizonBatch('batch-y', name: 'Import completed orders');
-        dashboardReturnsUsing(
-            $repository,
-            'get',
-            static fn (int $limit, ?string $before): array => match ($before) {
-                null => [$matching, $other],
-                'batch-y' => [],
-                default => throw new LogicException("Unexpected batch cursor [{$before}]."),
-            },
-        );
+        dashboardReturnsFor($repository, 'get', [50, null], [
+            horizonBatch('batch-z', name: 'Unrelated'),
+            horizonBatch('batch-y', name: 'Needle import'),
+        ]);
+        dashboardReturnsFor($repository, 'get', [48, 'batch-y'], []);
         $jobs = mockDashboardContract(JobRepository::class);
 
-        $page = batchData($repository, $jobs)->page(null, '100%_done');
+        $page = batchData($repository, $jobs)->page(
+            null,
+            'needle',
+            'imports',
+            'redis',
+            BatchCreatedRange::LastHour,
+        );
 
         expect($page->available)->toBeTrue()
             ->and(array_map(static fn ($batch): string => $batch->id, $page->batches))
-            ->toBe(['batch-z']);
-    });
-
-    it('continues repository searches after a short nonempty source page', function (): void {
-        $repository = mockDashboardContract(BatchRepository::class);
-        dashboardReturnsUsing(
-            $repository,
-            'get',
-            static fn (int $limit, ?string $before): array => match ($before) {
-                null => [horizonBatch('batch-z', name: 'Unrelated')],
-                'batch-z' => [horizonBatch('batch-y', name: 'Needle import')],
-                'batch-y' => [],
-                default => throw new LogicException("Unexpected batch cursor [{$before}]."),
-            },
-        );
-        $jobs = mockDashboardContract(JobRepository::class);
-
-        $page = batchData($repository, $jobs)->page(null, 'needle');
-
-        expect($page->available)->toBeTrue()
-            ->and(array_map(static fn ($batch): string => $batch->id, $page->batches))
-            ->toBe(['batch-y'])
-            ->and($page->next)->toBeNull();
+            ->toBe(['batch-z', 'batch-y'])
+            ->and($page->complete)->toBeTrue()
+            ->and($page->message)->toBeNull();
     });
 
     it('returns an unavailable page when the repository cursor does not advance', function (): void {
@@ -261,56 +278,11 @@ describe('BatchesData', function (): void {
         );
         $jobs = mockDashboardContract(JobRepository::class);
 
-        $page = batchData($repository, $jobs)->page(null, 'needle');
+        $page = batchData($repository, $jobs)->page(null, null);
 
         expect($page->available)->toBeFalse()
             ->and($page->batches)->toBe([])
             ->and($page->next)->toBeNull();
-    });
-
-    it('filters queue connection and created range before returning a page', function (): void {
-        Date::setTestNow('2026-07-21 15:00:00');
-        config()->set('queue.default', 'redis');
-        config()->set('queue.connections.redis.queue', 'imports');
-
-        $matching = horizonBatch('matching');
-        $matching->options = [];
-        $matching->createdAt = Date::now()->subDays(2)->toImmutable();
-
-        $wrongQueue = horizonBatch('wrong-queue');
-        $wrongQueue->options['queue'] = 'reports';
-        $wrongQueue->createdAt = Date::now()->subDays(2)->toImmutable();
-
-        $wrongConnection = horizonBatch('wrong-connection');
-        $wrongConnection->options['connection'] = 'database';
-        $wrongConnection->createdAt = Date::now()->subDays(2)->toImmutable();
-
-        $tooOld = horizonBatch('too-old');
-        $tooOld->createdAt = Date::now()->subDays(8)->toImmutable();
-
-        $repository = mockDashboardContract(BatchRepository::class);
-        dashboardReturnsFor($repository, 'get', [50, null], [
-            $matching,
-            $wrongQueue,
-            $wrongConnection,
-            $tooOld,
-        ]);
-        dashboardReturnsFor($repository, 'get', [50, 'too-old'], []);
-        $jobs = mockDashboardContract(JobRepository::class);
-
-        $page = batchData($repository, $jobs)->page(
-            null,
-            null,
-            'imports',
-            'redis',
-            BatchCreatedRange::Last7Days,
-        );
-
-        expect($page->batches)->toHaveCount(1)
-            ->and($page->batches[0]->id)->toBe('matching')
-            ->and($page->next)->toBeNull();
-
-        Date::setTestNow();
     });
 
     it('maps every supported created range to the requested cutoff', function (): void {

@@ -10,7 +10,6 @@ use Illuminate\Contracts\Queue\Queue;
 use Illuminate\Contracts\Redis\Factory as RedisFactory;
 use Illuminate\Queue\QueueManager;
 use Illuminate\Redis\Connections\Connection;
-use Illuminate\Support\Collection;
 use Laravel\Horizon\Contracts\JobRepository;
 use Laravel\Horizon\Contracts\MasterSupervisorRepository;
 use Laravel\Horizon\Contracts\MetricsRepository;
@@ -18,10 +17,12 @@ use Laravel\Horizon\Contracts\SupervisorRepository;
 use Laravel\Horizon\MasterSupervisor;
 use Laravel\Horizon\WaitTimeCalculator;
 use NckRtl\HorizonNewDawn\Batches\BatchRepositoryOverview;
+use NckRtl\HorizonNewDawn\Batches\DatabaseBatchCapability;
 use NckRtl\HorizonNewDawn\Dashboard\DashboardBatchSummary;
 use NckRtl\HorizonNewDawn\Dashboard\DashboardData;
 use NckRtl\HorizonNewDawn\Dashboard\DashboardPendingState;
 use NckRtl\HorizonNewDawn\Dashboard\HorizonStatus;
+use NckRtl\HorizonNewDawn\Metrics\SnapshotJobsPerMinute;
 use NckRtl\HorizonNewDawn\Queues\QueuePauseMetadata;
 use NckRtl\HorizonNewDawn\Queues\QueuePauseStatus;
 use NckRtl\HorizonNewDawn\Queues\QueueWaitThreshold;
@@ -30,6 +31,7 @@ use function NckRtl\HorizonNewDawn\Tests\Support\dashboardReturns;
 use function NckRtl\HorizonNewDawn\Tests\Support\dashboardReturnsFor;
 use function NckRtl\HorizonNewDawn\Tests\Support\dashboardReturnsUsing;
 use function NckRtl\HorizonNewDawn\Tests\Support\dashboardThrows;
+use function NckRtl\HorizonNewDawn\Tests\Support\dashboardThrowsFor;
 use function NckRtl\HorizonNewDawn\Tests\Support\horizonBatch;
 use function NckRtl\HorizonNewDawn\Tests\Support\mockDashboardContract;
 
@@ -49,8 +51,12 @@ function summaryDashboardData(array $masters): DashboardData
     dashboardReturns($jobs, 'countFailed', 23);
     dashboardReturns($jobs, 'countCompleted', 36);
     dashboardReturns($jobs, 'countPending', 5);
+    dashboardReturns($jobs, 'countRecentlyFailed', 14);
+    dashboardReturns($jobs, 'countRecent', 48);
+    dashboardReturns($jobs, 'countSilenced', 3);
 
     $metrics = mockDashboardContract(MetricsRepository::class);
+    dashboardReturns($metrics, 'throughput', 250);
     dashboardReturns($metrics, 'measuredQueues', ['default', 'exports']);
 
     $supervisors = mockDashboardContract(SupervisorRepository::class);
@@ -82,11 +88,8 @@ function summaryDashboardData(array $masters): DashboardData
 
     $connection = mockDashboardContract(Connection::class);
     $failedRetentionMinutes = max(0, (int) config('horizon.trim.failed', 10080));
-    $completedRetentionMinutes = max(0, (int) config('horizon.trim.completed', 60));
     $failedHourCutoff = CarbonImmutable::now()->subMinutes(min(60, $failedRetentionMinutes));
     $failedDayCutoff = CarbonImmutable::now()->subMinutes(min(1440, $failedRetentionMinutes));
-    $completedHourCutoff = CarbonImmutable::now()->subMinutes(min(60, $completedRetentionMinutes));
-    $completedDayCutoff = CarbonImmutable::now()->subMinutes(min(1440, $completedRetentionMinutes));
     dashboardReturnsFor(
         $connection,
         'zcount',
@@ -101,18 +104,6 @@ function summaryDashboardData(array $masters): DashboardData
     );
     dashboardReturnsFor(
         $connection,
-        'zcount',
-        ['completed_jobs', '-inf', (string) ($completedHourCutoff->getTimestamp() * -1)],
-        6,
-    );
-    dashboardReturnsFor(
-        $connection,
-        'zcount',
-        ['completed_jobs', '-inf', (string) ($completedDayCutoff->getTimestamp() * -1)],
-        31,
-    );
-    dashboardReturnsFor(
-        $connection,
         'zrange',
         ['snapshot:queue:default', -1, -1],
         [json_encode(['runtime' => 1_100, 'throughput' => 80], JSON_THROW_ON_ERROR)],
@@ -122,6 +113,13 @@ function summaryDashboardData(array $masters): DashboardData
         'zrange',
         ['snapshot:queue:exports', -1, -1],
         [json_encode(['runtime' => 1_200, 'throughput' => 70], JSON_THROW_ON_ERROR)],
+    );
+    // 250 throughput over 20 fractional minutes → 12.5 jobs/min (not Horizon's floor of 1 minute).
+    dashboardReturnsFor(
+        $connection,
+        'get',
+        ['last_snapshot_at'],
+        (string) CarbonImmutable::now()->subMinutes(20)->getTimestamp(),
     );
     $redis = mockDashboardContract(RedisFactory::class);
     dashboardReturns($redis, 'connection', $connection);
@@ -135,19 +133,25 @@ function summaryDashboardData(array $masters): DashboardData
         $waitTimes,
         unusedQueuePauseStatus(),
         new DashboardPendingState($queues),
-        new DashboardBatchSummary(new BatchRepositoryOverview(
-            $batches,
-            app(CacheFactory::class),
-        )),
+        new DashboardBatchSummary(
+            new BatchRepositoryOverview(
+                $batches,
+                app(CacheFactory::class),
+            ),
+            new DatabaseBatchCapability($batches),
+        ),
         $redis,
         app(QueueWaitThreshold::class),
+        new SnapshotJobsPerMinute($redis),
     );
 }
 
 describe('DashboardData', function (): void {
     it('builds the running dashboard summary from Horizon contracts', function (): void {
-        config()->set('horizon.trim.completed', 120);
+        config()->set('horizon.trim.recent', 120);
         config()->set('horizon.trim.failed', 2880);
+        config()->set('horizon.trim.recent_failed', 10080);
+        config()->set('horizon.trim.completed', 180);
 
         $summary = summaryDashboardData([
             (object) ['status' => 'running'],
@@ -163,30 +167,33 @@ describe('DashboardData', function (): void {
             'pendingReserved' => 3,
             'pendingReadyNow' => 8,
             'pendingDelayed' => 11,
-            'failedJobsPerMinute' => 0.03,
             'failedJobsPastHour' => 2,
             'failedJobsPastDay' => 9,
-            'failedRetentionMinutes' => 2880,
-            'completedJobsPerMinute' => 0.1,
-            'completedJobsPastHour' => 6,
-            'completedJobsPastDay' => 31,
-            'completedRetentionMinutes' => 120,
+            'recentlyFailedJobs' => 14,
+            'recentlyFailedPeriodMinutes' => 10080,
+            'jobsPerMinute' => 12.5,
+            'recentJobs' => 48,
+            'recentJobsPeriodMinutes' => 120,
+            'processedSinceSnapshot' => 250,
+            'silencedJobs' => 3,
+            'completedRetentionMinutes' => 180,
+            'batchesAvailable' => true,
             'activeBatches' => 4,
             'batchPreviews' => [
                 [
-                    'id' => 'batch-3',
-                    'name' => 'Archive audit logs',
-                    'progress' => 48,
-                ],
-                [
-                    'id' => 'batch-2',
-                    'name' => 'Import order CSV',
-                    'progress' => 13,
+                    'id' => 'batch-0',
+                    'name' => 'Import customer records',
+                    'progress' => 99,
                 ],
                 [
                     'id' => 'batch-1',
                     'name' => 'Reindex product catalog',
                     'progress' => 72,
+                ],
+                [
+                    'id' => 'batch-3',
+                    'name' => 'Archive audit logs',
+                    'progress' => 48,
                 ],
             ],
             'processes' => 6,
@@ -199,17 +206,178 @@ describe('DashboardData', function (): void {
         ]);
     });
 
-    it('averages rolling counts over the available retention coverage', function (): void {
-        config()->set('horizon.trim.completed', 30);
-        config()->set('horizon.trim.failed', 45);
+    it('exposes completed retention minutes from horizon.trim.completed', function (): void {
+        config()->set('horizon.trim.completed', 240);
 
         $summary = summaryDashboardData([(object) ['status' => 'running']])->summary();
 
-        expect($summary->completedJobsPerMinute)->toBe(0.2)
-            ->and($summary->failedJobsPerMinute)->toBe(0.04)
-            ->and($summary->completedRetentionMinutes)->toBe(30)
-            ->and($summary->failedRetentionMinutes)->toBe(45);
+        expect($summary->completedRetentionMinutes)->toBe(240);
     });
+
+    it('clamps negative completed retention minutes to zero', function (): void {
+        config()->set('horizon.trim.completed', -15);
+
+        $summary = summaryDashboardData([(object) ['status' => 'running']])->summary();
+
+        expect($summary->completedRetentionMinutes)->toBe(0);
+    });
+
+    it('defaults completed retention minutes to 60 when the trim key is missing', function (): void {
+        $trim = config('horizon.trim', []);
+        unset($trim['completed']);
+        config()->set('horizon.trim', $trim);
+
+        $summary = summaryDashboardData([(object) ['status' => 'running']])->summary();
+
+        expect($summary->completedRetentionMinutes)->toBe(60);
+    });
+
+    it('falls back recent-failed retention period to the failed trim when recent_failed is unset', function (): void {
+        config()->set('horizon.trim.failed', 4320);
+        config()->set('horizon.trim.recent_failed', null);
+        config()->set('horizon.trim.recent', 90);
+
+        $summary = summaryDashboardData([(object) ['status' => 'running']])->summary();
+
+        expect($summary->recentlyFailedPeriodMinutes)->toBe(4320)
+            ->and($summary->recentJobsPeriodMinutes)->toBe(90)
+            ->and($summary->recentlyFailedJobs)->toBe(14)
+            ->and($summary->jobsPerMinute)->toBe(12.5)
+            ->and($summary->processedSinceSnapshot)->toBe(250)
+            ->and($summary->recentJobs)->toBe(48)
+            ->and($summary->silencedJobs)->toBe(3);
+    });
+
+    it('projects jobs per minute from fractional elapsed time since the last snapshot', function (): void {
+        CarbonImmutable::setTestNow('2026-07-18 12:00:00 UTC');
+
+        $jobs = mockDashboardContract(JobRepository::class);
+        dashboardReturns($jobs, 'countFailed', 0);
+        dashboardReturns($jobs, 'countCompleted', 0);
+        dashboardReturns($jobs, 'countPending', 0);
+        dashboardReturns($jobs, 'countRecentlyFailed', 0);
+        dashboardReturns($jobs, 'countRecent', 0);
+        dashboardReturns($jobs, 'countSilenced', 0);
+
+        $metrics = mockDashboardContract(MetricsRepository::class);
+        dashboardReturns($metrics, 'throughput', 100);
+        dashboardReturns($metrics, 'measuredQueues', []);
+
+        $supervisors = mockDashboardContract(SupervisorRepository::class);
+        dashboardReturns($supervisors, 'all', []);
+
+        $masterSupervisors = mockDashboardContract(MasterSupervisorRepository::class);
+        dashboardReturns($masterSupervisors, 'all', [(object) ['status' => 'running']]);
+
+        $waitTimes = mockDashboardContract(WaitTimeCalculator::class);
+        dashboardReturns($waitTimes, 'calculate', []);
+
+        $connection = mockDashboardContract(Connection::class);
+        dashboardReturns($connection, 'zcount', 0);
+        // 30 seconds elapsed — Horizon would clamp to 1 minute and report 100.
+        dashboardReturnsFor(
+            $connection,
+            'get',
+            ['last_snapshot_at'],
+            (string) CarbonImmutable::now()->subSeconds(30)->getTimestamp(),
+        );
+        $redis = mockDashboardContract(RedisFactory::class);
+        dashboardReturns($redis, 'connection', $connection);
+
+        $batches = mockDashboardContract(BatchRepository::class);
+        dashboardReturnsFor($batches, 'get', [100, null], []);
+
+        $data = new DashboardData(
+            $jobs,
+            $metrics,
+            $supervisors,
+            $masterSupervisors,
+            mockDashboardContract(QueueFactory::class),
+            $waitTimes,
+            unusedQueuePauseStatus(),
+            unusedDashboardPendingState(),
+            new DashboardBatchSummary(
+                new BatchRepositoryOverview($batches, app(CacheFactory::class)),
+                new DatabaseBatchCapability($batches),
+            ),
+            $redis,
+            app(QueueWaitThreshold::class),
+            new SnapshotJobsPerMinute($redis),
+        );
+
+        $summary = $data->summary();
+
+        expect($summary->jobsPerMinute)->toBe(200.0)
+            ->and($summary->processedSinceSnapshot)->toBe(100);
+    });
+
+    it('falls back to zero jobs per minute when the snapshot timestamp is missing or unusable', function (string $case): void {
+        CarbonImmutable::setTestNow('2026-07-18 12:00:00 UTC');
+
+        $lastSnapshotAt = match ($case) {
+            'missing' => null,
+            'future' => (string) CarbonImmutable::now()->addMinute()->getTimestamp(),
+            'zero elapsed' => (string) CarbonImmutable::now()->getTimestamp(),
+            default => throw new InvalidArgumentException("Unknown case [{$case}]."),
+        };
+
+        $jobs = mockDashboardContract(JobRepository::class);
+        dashboardReturns($jobs, 'countFailed', 0);
+        dashboardReturns($jobs, 'countCompleted', 0);
+        dashboardReturns($jobs, 'countPending', 0);
+        dashboardReturns($jobs, 'countRecentlyFailed', 0);
+        dashboardReturns($jobs, 'countRecent', 0);
+        dashboardReturns($jobs, 'countSilenced', 0);
+
+        $metrics = mockDashboardContract(MetricsRepository::class);
+        dashboardReturns($metrics, 'throughput', 40);
+        dashboardReturns($metrics, 'measuredQueues', []);
+
+        $supervisors = mockDashboardContract(SupervisorRepository::class);
+        dashboardReturns($supervisors, 'all', []);
+
+        $masterSupervisors = mockDashboardContract(MasterSupervisorRepository::class);
+        dashboardReturns($masterSupervisors, 'all', [(object) ['status' => 'running']]);
+
+        $waitTimes = mockDashboardContract(WaitTimeCalculator::class);
+        dashboardReturns($waitTimes, 'calculate', []);
+
+        $connection = mockDashboardContract(Connection::class);
+        dashboardReturns($connection, 'zcount', 0);
+        dashboardReturnsFor($connection, 'get', ['last_snapshot_at'], $lastSnapshotAt);
+        $redis = mockDashboardContract(RedisFactory::class);
+        dashboardReturns($redis, 'connection', $connection);
+
+        $batches = mockDashboardContract(BatchRepository::class);
+        dashboardReturnsFor($batches, 'get', [100, null], []);
+
+        $data = new DashboardData(
+            $jobs,
+            $metrics,
+            $supervisors,
+            $masterSupervisors,
+            mockDashboardContract(QueueFactory::class),
+            $waitTimes,
+            unusedQueuePauseStatus(),
+            unusedDashboardPendingState(),
+            new DashboardBatchSummary(
+                new BatchRepositoryOverview($batches, app(CacheFactory::class)),
+                new DatabaseBatchCapability($batches),
+            ),
+            $redis,
+            app(QueueWaitThreshold::class),
+            new SnapshotJobsPerMinute($redis),
+        );
+
+        $summary = $data->summary();
+
+        expect($summary->jobsPerMinute)->toBe(0)
+            ->and($summary->processedSinceSnapshot)->toBe(40);
+    })->with([
+        'missing',
+        'future',
+        'zero elapsed',
+    ]);
 
     it('reports paused when every Horizon master is paused', function (): void {
         $summary = summaryDashboardData([(object) ['status' => 'paused']])->summary();
@@ -237,7 +405,12 @@ describe('DashboardData', function (): void {
             unusedDashboardBatchSummary(),
             mockDashboardContract(RedisFactory::class),
             app(QueueWaitThreshold::class),
+            new SnapshotJobsPerMinute(mockDashboardContract(RedisFactory::class)),
         );
+
+        config()->set('horizon.trim.recent_failed', 20160);
+        config()->set('horizon.trim.recent', 45);
+        config()->set('horizon.trim.completed', 90);
 
         expect($data->summary()->toArray())->toBe([
             'available' => false,
@@ -248,14 +421,17 @@ describe('DashboardData', function (): void {
             'pendingReserved' => null,
             'pendingReadyNow' => null,
             'pendingDelayed' => null,
-            'failedJobsPerMinute' => 0,
             'failedJobsPastHour' => 0,
             'failedJobsPastDay' => 0,
-            'failedRetentionMinutes' => 10080,
-            'completedJobsPerMinute' => 0,
-            'completedJobsPastHour' => 0,
-            'completedJobsPastDay' => 0,
-            'completedRetentionMinutes' => 60,
+            'recentlyFailedJobs' => 0,
+            'recentlyFailedPeriodMinutes' => 20160,
+            'jobsPerMinute' => 0,
+            'recentJobs' => 0,
+            'recentJobsPeriodMinutes' => 45,
+            'processedSinceSnapshot' => 0,
+            'silencedJobs' => 0,
+            'completedRetentionMinutes' => 90,
+            'batchesAvailable' => false,
             'activeBatches' => 0,
             'batchPreviews' => [],
             'processes' => 0,
@@ -313,6 +489,10 @@ describe('DashboardData', function (): void {
         dashboardReturnsFor($metrics, 'runtimeForQueue', ['mail'], 1000);
         dashboardReturnsFor($metrics, 'runtimeForQueue', ['reports'], 1000);
         dashboardReturnsFor($metrics, 'runtimeForQueue', ['exports'], 1000);
+        dashboardReturnsFor($metrics, 'throughputForQueue', ['default'], 40);
+        dashboardReturnsFor($metrics, 'throughputForQueue', ['mail'], 12);
+        dashboardReturnsFor($metrics, 'throughputForQueue', ['reports'], 7);
+        dashboardReturnsFor($metrics, 'throughputForQueue', ['exports'], 9);
 
         $data = new DashboardData(
             mockDashboardContract(JobRepository::class),
@@ -326,9 +506,19 @@ describe('DashboardData', function (): void {
             unusedDashboardBatchSummary(),
             mockDashboardContract(RedisFactory::class),
             app(QueueWaitThreshold::class),
+            new SnapshotJobsPerMinute(mockDashboardContract(RedisFactory::class)),
         );
 
         $workload = $data->workload()->toArray();
+        /** @var list<array{name: string}> $workloadItems */
+        $workloadItems = $workload['items'];
+
+        expect(array_column($workloadItems, 'name'))->toBe([
+            'default',
+            'mail',
+            'reports,exports',
+        ]);
+
         $grouped = $workload['items'][2];
 
         expect($grouped['waitThreshold']['status'])->toBe('within_bounds')
@@ -355,8 +545,10 @@ describe('DashboardData', function (): void {
                     'length' => 8,
                     'wait' => 4.5,
                     'processes' => 3,
+                    'processesShared' => false,
                     'paused' => true,
                     'pausedUntil' => null,
+                    'throughput' => 40,
                     'splitQueues' => null,
                 ],
                 [
@@ -365,8 +557,10 @@ describe('DashboardData', function (): void {
                     'length' => 2,
                     'wait' => 1,
                     'processes' => 1,
+                    'processesShared' => false,
                     'paused' => false,
                     'pausedUntil' => null,
+                    'throughput' => 12,
                     'splitQueues' => null,
                 ],
                 [
@@ -375,16 +569,162 @@ describe('DashboardData', function (): void {
                     'length' => 5,
                     'wait' => 3,
                     'processes' => 2,
+                    'processesShared' => true,
                     'paused' => false,
                     'pausedUntil' => null,
+                    'throughput' => 16,
                     'splitQueues' => [
-                        ['name' => 'reports', 'length' => 3, 'wait' => 2, 'paused' => false, 'pausedUntil' => null],
-                        ['name' => 'exports', 'length' => 2, 'wait' => 3, 'paused' => true, 'pausedUntil' => 1784577600],
+                        [
+                            'name' => 'reports',
+                            'length' => 3,
+                            'wait' => 2,
+                            'paused' => false,
+                            'pausedUntil' => null,
+                            'throughput' => 7,
+                        ],
+                        [
+                            'name' => 'exports',
+                            'length' => 2,
+                            // Cumulative: reports (2) + exports own TTC (1) under pool priority order.
+                            'wait' => 3,
+                            'paused' => true,
+                            'pausedUntil' => 1784577600,
+                            'throughput' => 9,
+                        ],
                     ],
                 ],
             ],
             'message' => null,
         ]);
+    });
+
+    it('leaves parent shared-pool throughput null when any child metric is unavailable', function (): void {
+        $waitTimes = mockDashboardContract(WaitTimeCalculator::class);
+        dashboardReturns($waitTimes, 'calculate', [
+            'redis:reports,exports' => 5,
+        ]);
+        dashboardReturnsFor($waitTimes, 'calculateTimeToClear', ['redis', 'reports', 4], 3);
+        dashboardReturnsFor($waitTimes, 'calculateTimeToClear', ['redis', 'exports', 4], 2);
+
+        $supervisors = mockDashboardContract(SupervisorRepository::class);
+        dashboardReturns($supervisors, 'all', [
+            (object) [
+                'processes' => [
+                    'redis:reports,exports' => 4,
+                ],
+            ],
+        ]);
+
+        $queue = mockDashboardContract(Queue::class);
+        dashboardReturnsFor($queue, 'readyNow', ['reports'], 1);
+        dashboardReturnsFor($queue, 'readyNow', ['exports'], 2);
+        $queueFactory = mockDashboardContract(QueueFactory::class);
+        dashboardReturnsFor($queueFactory, 'connection', ['redis'], $queue);
+
+        $metrics = mockDashboardContract(MetricsRepository::class);
+        dashboardReturnsFor($metrics, 'runtimeForQueue', ['reports'], 1000);
+        dashboardReturnsFor($metrics, 'runtimeForQueue', ['exports'], 1000);
+        dashboardThrowsFor($metrics, 'throughputForQueue', ['reports'], new RuntimeException('metrics secret'));
+        dashboardReturnsFor($metrics, 'throughputForQueue', ['exports'], 11);
+
+        $data = new DashboardData(
+            mockDashboardContract(JobRepository::class),
+            $metrics,
+            $supervisors,
+            mockDashboardContract(MasterSupervisorRepository::class),
+            $queueFactory,
+            $waitTimes,
+            unusedQueuePauseStatus(),
+            unusedDashboardPendingState(),
+            unusedDashboardBatchSummary(),
+            mockDashboardContract(RedisFactory::class),
+            app(QueueWaitThreshold::class),
+            new SnapshotJobsPerMinute(mockDashboardContract(RedisFactory::class)),
+        );
+
+        $item = $data->workload()->toArray()['items'][0];
+
+        expect($item)->toMatchArray([
+            'name' => 'reports,exports',
+            'length' => 3,
+            'processes' => 4,
+            'processesShared' => true,
+            'throughput' => null,
+        ])
+            ->and($item['splitQueues'][0])->toMatchArray([
+                'name' => 'reports',
+                'wait' => 3,
+                'throughput' => null,
+            ])
+            ->and($item['splitQueues'][1])->toMatchArray([
+                'name' => 'exports',
+                'wait' => 5,
+                'throughput' => 11,
+            ]);
+    });
+
+    it('keeps workload available when one queue throughput metric fails', function (): void {
+        $waitTimes = mockDashboardContract(WaitTimeCalculator::class);
+        dashboardReturns($waitTimes, 'calculate', [
+            'redis:default' => 2,
+            'redis:mail' => 1,
+        ]);
+
+        $supervisors = mockDashboardContract(SupervisorRepository::class);
+        dashboardReturns($supervisors, 'all', [
+            (object) [
+                'processes' => [
+                    'redis:default' => 3,
+                    'redis:mail' => 1,
+                ],
+            ],
+        ]);
+
+        $queue = mockDashboardContract(Queue::class);
+        dashboardReturnsFor($queue, 'readyNow', ['default'], 4);
+        dashboardReturnsFor($queue, 'readyNow', ['mail'], 1);
+        $queueFactory = mockDashboardContract(QueueFactory::class);
+        dashboardReturnsFor($queueFactory, 'connection', ['redis'], $queue);
+
+        $metrics = mockDashboardContract(MetricsRepository::class);
+        dashboardReturnsFor($metrics, 'runtimeForQueue', ['default'], 1000);
+        dashboardReturnsFor($metrics, 'runtimeForQueue', ['mail'], 1000);
+        dashboardThrowsFor($metrics, 'throughputForQueue', ['default'], new RuntimeException('metrics secret'));
+        dashboardReturnsFor($metrics, 'throughputForQueue', ['mail'], 18);
+
+        $data = new DashboardData(
+            mockDashboardContract(JobRepository::class),
+            $metrics,
+            $supervisors,
+            mockDashboardContract(MasterSupervisorRepository::class),
+            $queueFactory,
+            $waitTimes,
+            unusedQueuePauseStatus(),
+            unusedDashboardPendingState(),
+            unusedDashboardBatchSummary(),
+            mockDashboardContract(RedisFactory::class),
+            app(QueueWaitThreshold::class),
+            new SnapshotJobsPerMinute(mockDashboardContract(RedisFactory::class)),
+        );
+
+        $workload = $data->workload();
+        /** @var list<array{name: string, processes: int, processesShared: bool, throughput: int|null}> $workloadItems */
+        $workloadItems = $workload->toArray()['items'];
+        $items = collect($workloadItems)->keyBy('name');
+
+        expect($workload->available)->toBeTrue()
+            ->and($items['default'])->toMatchArray([
+                'name' => 'default',
+                'processes' => 3,
+                'processesShared' => false,
+                'throughput' => null,
+            ])
+            ->and($items['mail'])->toMatchArray([
+                'name' => 'mail',
+                'processes' => 1,
+                'processesShared' => false,
+                'throughput' => 18,
+            ]);
     });
 
     it('exposes the wait threshold state for each workload queue', function (): void {
@@ -418,6 +758,7 @@ describe('DashboardData', function (): void {
             unusedDashboardBatchSummary(),
             mockDashboardContract(RedisFactory::class),
             app(QueueWaitThreshold::class),
+            new SnapshotJobsPerMinute(mockDashboardContract(RedisFactory::class)),
         );
 
         $item = $data->workload()->toArray()['items'][0];
@@ -460,6 +801,7 @@ describe('DashboardData', function (): void {
             unusedDashboardBatchSummary(),
             mockDashboardContract(RedisFactory::class),
             app(QueueWaitThreshold::class),
+            new SnapshotJobsPerMinute(mockDashboardContract(RedisFactory::class)),
         );
 
         $threshold = $data->workload()->toArray()['items'][0]['waitThreshold'];
@@ -515,6 +857,7 @@ describe('DashboardData', function (): void {
             unusedDashboardBatchSummary(),
             mockDashboardContract(RedisFactory::class),
             app(QueueWaitThreshold::class),
+            new SnapshotJobsPerMinute(mockDashboardContract(RedisFactory::class)),
         );
 
         $items = $data->workload()->toArray()['items'];
@@ -531,8 +874,10 @@ describe('DashboardData', function (): void {
                 'length' => 9,
                 'wait' => 50,
                 'processes' => 2,
+                'processesShared' => false,
                 'paused' => true,
                 'pausedUntil' => null,
+                'throughput' => null,
                 'splitQueues' => null,
             ])
             ->and($byConnection['redis-b'])->toMatchArray([
@@ -541,49 +886,12 @@ describe('DashboardData', function (): void {
                 'length' => 1,
                 'wait' => 100,
                 'processes' => 1,
+                'processesShared' => false,
                 'paused' => false,
                 'pausedUntil' => null,
+                'throughput' => null,
                 'splitQueues' => null,
             ]);
-    });
-
-    it('exposes safe recent failure previews without payloads or exceptions', function (): void {
-        $jobs = mockDashboardContract(JobRepository::class);
-        dashboardReturns($jobs, 'getFailed', new Collection([
-            (object) [
-                'id' => 'job-1',
-                'name' => 'App\\Jobs\\ImportFeed',
-                'queue' => 'default',
-                'failed_at' => '1784281320.25',
-                'payload' => '{"secret":"value"}',
-                'exception' => 'Sensitive trace',
-            ],
-        ]));
-
-        $data = new DashboardData(
-            $jobs,
-            mockDashboardContract(MetricsRepository::class),
-            mockDashboardContract(SupervisorRepository::class),
-            mockDashboardContract(MasterSupervisorRepository::class),
-            mockDashboardContract(QueueFactory::class),
-            mockDashboardContract(WaitTimeCalculator::class),
-            unusedQueuePauseStatus(),
-            unusedDashboardPendingState(),
-            unusedDashboardBatchSummary(),
-            mockDashboardContract(RedisFactory::class),
-            app(QueueWaitThreshold::class),
-        );
-
-        expect($data->recentFailures()->toArray())->toBe([
-            'available' => true,
-            'items' => [[
-                'id' => 'job-1',
-                'name' => 'App\\Jobs\\ImportFeed',
-                'queue' => 'default',
-                'failedAt' => 1784281320.25,
-            ]],
-            'message' => null,
-        ]);
     });
 
     it('predicts the next auto-scaling process change with the Horizon strategy', function (): void {
@@ -686,6 +994,7 @@ describe('DashboardData', function (): void {
             unusedDashboardBatchSummary(),
             mockDashboardContract(RedisFactory::class),
             app(QueueWaitThreshold::class),
+            new SnapshotJobsPerMinute(mockDashboardContract(RedisFactory::class)),
         );
 
         $items = [];
@@ -775,6 +1084,7 @@ describe('DashboardData', function (): void {
             unusedDashboardBatchSummary(),
             mockDashboardContract(RedisFactory::class),
             app(QueueWaitThreshold::class),
+            new SnapshotJobsPerMinute(mockDashboardContract(RedisFactory::class)),
         );
 
         expect($data->supervisors()->toArray())->toBe([
@@ -833,10 +1143,15 @@ function unusedDashboardPendingState(): DashboardPendingState
 
 function unusedDashboardBatchSummary(): DashboardBatchSummary
 {
-    return new DashboardBatchSummary(new BatchRepositoryOverview(
-        mockDashboardContract(BatchRepository::class),
-        app(CacheFactory::class),
-    ));
+    $batches = mockDashboardContract(BatchRepository::class);
+
+    return new DashboardBatchSummary(
+        new BatchRepositoryOverview(
+            $batches,
+            app(CacheFactory::class),
+        ),
+        new DatabaseBatchCapability($batches),
+    );
 }
 
 function unusedQueuePauseStatus(): QueuePauseStatus

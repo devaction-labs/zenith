@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 
 import { WorkloadTable } from "@/components/dashboard/workload-table";
 
@@ -24,6 +24,8 @@ describe("WorkloadTable", () => {
               length: 12,
               wait: 3,
               processes: 4,
+              processesShared: false,
+              throughput: 8,
               paused: false,
               pausedUntil: null,
               splitQueues: null,
@@ -35,8 +37,9 @@ describe("WorkloadTable", () => {
 
     expect(screen.getByRole("cell", { name: "default" })).toBeVisible();
     expect(screen.getByRole("cell", { name: "12" })).toBeVisible();
-    expect(screen.getByRole("cell", { name: "A few seconds" })).toBeVisible();
+    expect(screen.getByRole("cell", { name: "3s" })).toBeVisible();
     expect(screen.getByRole("cell", { name: "4" })).toBeVisible();
+    expect(screen.getByRole("cell", { name: "8" })).toBeVisible();
   });
 
   it("distinguishes an empty queue from unavailable data", () => {
@@ -80,6 +83,8 @@ describe("WorkloadTable", () => {
               length: 2,
               wait: 3600,
               processes: 1,
+              processesShared: false,
+              throughput: null,
               paused: false,
               pausedUntil: null,
               splitQueues: null,
@@ -90,11 +95,27 @@ describe("WorkloadTable", () => {
               length: 10,
               wait: 8,
               processes: 3,
+              processesShared: true,
+              throughput: 12,
               paused: false,
               pausedUntil: null,
               splitQueues: [
-                { name: "alpha", length: 6, wait: 8, paused: false, pausedUntil: null },
-                { name: "beta", length: 4, wait: 3, paused: true, pausedUntil: null },
+                {
+                  name: "alpha",
+                  length: 6,
+                  wait: 8,
+                  paused: false,
+                  pausedUntil: null,
+                  throughput: 7,
+                },
+                {
+                  name: "beta",
+                  length: 4,
+                  wait: 3,
+                  paused: true,
+                  pausedUntil: null,
+                  throughput: 5,
+                },
               ],
             },
           ],
@@ -104,13 +125,23 @@ describe("WorkloadTable", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Sort by Ready Jobs ascending" }));
     const rowGroups = screen.getAllByRole("rowgroup");
-    const rows = within(rowGroups[1]).getAllByRole("row");
+    let rows = within(rowGroups[1]).getAllByRole("row");
 
+    expect(rows).toHaveLength(2);
     expect(rows[0]).toHaveTextContent("zeta");
-    expect(rows[0]).toHaveTextContent("An hour");
+    expect(rows[0]).toHaveTextContent("1h");
     expect(rows[1]).toHaveTextContent("alpha, beta");
-    expect(rows[2]).toHaveTextContent("alpha");
-    expect(rows[3]).toHaveTextContent("beta");
+    expect(screen.queryByText("Paused")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /Expand shared pool alpha, beta/i }));
+    rows = within(rowGroups[1]).getAllByRole("row");
+
+    expect(rows).toHaveLength(4);
+    expect(rows[0]).toHaveTextContent("zeta");
+    expect(rows[1]).toHaveTextContent("alpha, beta");
+    // Split children inherit the parent Ready Jobs ascending sort.
+    expect(rows[2]).toHaveTextContent("beta");
+    expect(rows[3]).toHaveTextContent("alpha");
     expect(screen.getAllByRole("button", { name: /queue actions/i })).toHaveLength(3);
     expect(screen.getByText("Paused")).toBeVisible();
   });

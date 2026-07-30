@@ -6,59 +6,78 @@ namespace NckRtl\HorizonNewDawn\Monitoring\Actions;
 
 use Laravel\Horizon\Contracts\JobRepository;
 use Laravel\Horizon\Contracts\TagRepository;
+use NckRtl\HorizonNewDawn\BulkOperations\BulkOperationChunkResult;
+use NckRtl\HorizonNewDawn\BulkOperations\BulkOperationSnapshot;
 use NckRtl\HorizonNewDawn\FailedJobs\Actions\RetryFailedJob;
 use NckRtl\HorizonNewDawn\Monitoring\MonitoringTagGuard;
+use Throwable;
 
 final readonly class RetryFailedJobs
 {
-    private const int PAGE_SIZE = 50;
-
     public function __construct(
         private TagRepository $tags,
         private JobRepository $jobs,
         private RetryFailedJob $retry,
         private MonitoringTagGuard $guard,
+        private BulkOperationSnapshot $snapshots,
     ) {}
 
-    public function handle(string $tag): int
+    public function processChunk(string $tag, ?string $operationId = null): BulkOperationChunkResult
     {
         $this->guard->ensureMonitored($this->tags, $tag);
 
-        $repositoryTag = "failed:{$tag}";
-        $startingAt = 0;
-        $scheduled = 0;
-        $seen = [];
+        $operationId ??= $this->snapshots->createFromSortedSet("failed:{$tag}");
 
-        while (true) {
-            $ids = array_values($this->tags->paginate($repositoryTag, $startingAt, self::PAGE_SIZE));
+        $ids = $this->snapshots->nextChunk($operationId);
 
-            if ($ids === []) {
-                break;
-            }
-
-            foreach ($this->jobs->getJobs($ids) as $job) {
-                if (! is_object($job) || ! is_string($job->id ?? null) || $job->id === '') {
-                    continue;
-                }
-
-                if (isset($seen[$job->id])) {
-                    continue;
-                }
-
-                $seen[$job->id] = true;
-
-                if ($this->retry->handleBulk($job->id, $job)) {
-                    $scheduled++;
-                }
-            }
-
-            if (count($ids) < self::PAGE_SIZE) {
-                break;
-            }
-
-            $startingAt += self::PAGE_SIZE;
+        if ($ids === []) {
+            return BulkOperationChunkResult::completed(
+                $operationId,
+                $this->snapshots->finish($operationId),
+            );
         }
 
-        return $scheduled;
+        $hydrated = [];
+
+        foreach ($this->jobs->getJobs($ids) as $job) {
+            if (! is_object($job) || ! is_string($job->id ?? null) || $job->id === '') {
+                continue;
+            }
+
+            $hydrated[$job->id] = $job;
+        }
+
+        try {
+            foreach ($ids as $id) {
+                $job = $hydrated[$id] ?? null;
+
+                if ($job === null) {
+                    $this->snapshots->acknowledge($operationId, $id);
+
+                    continue;
+                }
+
+                if ($this->retry->handleBulk($id, $job)) {
+                    $this->snapshots->addAffected($operationId, 1);
+                }
+
+                $this->snapshots->acknowledge($operationId, $id);
+            }
+        } catch (Throwable $exception) {
+            $this->snapshots->renew($operationId);
+
+            throw $exception;
+        }
+
+        $totalAffected = $this->snapshots->totalAffected($operationId);
+
+        if ($this->snapshots->hasMore($operationId)) {
+            return BulkOperationChunkResult::continuing($operationId, $totalAffected);
+        }
+
+        return BulkOperationChunkResult::completed(
+            $operationId,
+            $this->snapshots->finish($operationId),
+        );
     }
 }

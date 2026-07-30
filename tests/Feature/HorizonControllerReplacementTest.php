@@ -11,6 +11,7 @@ use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Queue\QueueManager;
 use Illuminate\Redis\Connections\Connection;
+use Illuminate\Support\Env;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Route;
 use Inertia\Testing\AssertableInertia;
@@ -21,25 +22,35 @@ use Laravel\Horizon\Contracts\SupervisorRepository;
 use Laravel\Horizon\Contracts\TagRepository;
 use Laravel\Horizon\Contracts\WorkloadRepository;
 use Laravel\Horizon\Horizon;
+use Laravel\Horizon\Http\Controllers\BatchesController as HorizonBatchesController;
 use Laravel\Horizon\Http\Controllers\HomeController as HorizonHomeController;
 use Laravel\Horizon\Http\Controllers\MonitoringController as HorizonMonitoringController;
+use Laravel\Horizon\Http\Controllers\RetryController as HorizonRetryController;
 use Laravel\Horizon\Http\Middleware\Authenticate;
 use Laravel\Horizon\Jobs\MonitorTag as HorizonMonitorTag;
+use Laravel\Horizon\Jobs\RetryFailedJob as HorizonRetryFailedJob;
 use Laravel\Horizon\Jobs\StopMonitoringTag as HorizonStopMonitoringTag;
 use Laravel\Horizon\WaitTimeCalculator;
+use NckRtl\HorizonNewDawn\Assets\AssetManifest;
 use NckRtl\HorizonNewDawn\Batches\BatchRepositoryOverview;
+use NckRtl\HorizonNewDawn\Batches\DatabaseBatchCapability;
+use NckRtl\HorizonNewDawn\BulkOperations\Jobs\RetryBatchJob;
 use NckRtl\HorizonNewDawn\Dashboard\DashboardBatchSummary;
 use NckRtl\HorizonNewDawn\Dashboard\DashboardData;
 use NckRtl\HorizonNewDawn\Dashboard\DashboardPendingState;
+use NckRtl\HorizonNewDawn\Http\Controllers\BatchesApiController;
 use NckRtl\HorizonNewDawn\Http\Controllers\HomeController;
 use NckRtl\HorizonNewDawn\Http\Controllers\MonitoringApiController;
 use NckRtl\HorizonNewDawn\Http\Middleware\HandleInertiaRequests;
+use NckRtl\HorizonNewDawn\Metrics\SnapshotJobsPerMinute;
 use NckRtl\HorizonNewDawn\Queues\QueuePauseMetadata;
 use NckRtl\HorizonNewDawn\Queues\QueuePauseStatus;
 use NckRtl\HorizonNewDawn\Queues\QueueWaitThreshold;
 use NckRtl\HorizonNewDawn\Support\FrameworkCapabilities;
 use NckRtl\HorizonNewDawn\Support\HorizonRuntime;
+use NckRtl\HorizonNewDawn\Tests\TestCase;
 
+use function NckRtl\HorizonNewDawn\Tests\Support\dashboardExpects;
 use function NckRtl\HorizonNewDawn\Tests\Support\dashboardReturns;
 use function NckRtl\HorizonNewDawn\Tests\Support\dashboardReturnsFor;
 use function NckRtl\HorizonNewDawn\Tests\Support\mockDashboardContract;
@@ -59,7 +70,7 @@ describe('Horizon controller replacement', function (): void {
             ->and($route?->gatherMiddleware())->toContain(Authenticate::class);
     });
 
-    it('guards mutations on the preserved Horizon monitoring API', function (): void {
+    it('preserves monitoring input safeguards on the Horizon API', function (): void {
         withoutMiddleware([PreventRequestForgery::class, ValidateCsrfToken::class]);
         Horizon::auth(static fn (): bool => true);
         Bus::fake();
@@ -97,13 +108,55 @@ describe('Horizon controller replacement', function (): void {
         Bus::assertDispatchedTimes(HorizonStopMonitoringTag::class, 1);
     });
 
+    it('safely queues the preserved Horizon retry APIs', function (): void {
+        withoutMiddleware([PreventRequestForgery::class, ValidateCsrfToken::class]);
+        Horizon::auth(static fn (): bool => true);
+        Bus::fake();
+        config()->set('horizon-new-dawn.bulk_operations.connection', 'operations');
+        config()->set('horizon-new-dawn.bulk_operations.queue', 'horizon-maintenance');
+
+        $manager = Mockery::mock(QueueManager::class);
+        dashboardExpects($manager, 'connection', ['operations'], value: Mockery::mock(Queue::class));
+        app()->instance(QueueManager::class, $manager);
+
+        $retryController = app(HorizonRetryController::class);
+
+        expect(app(HorizonBatchesController::class))
+            ->toBeInstanceOf(BatchesApiController::class);
+        expect($retryController::class)->toBe(HorizonRetryController::class);
+
+        postJson('/horizon/api/batches/retry/batch-1')->assertOk();
+        postJson('/horizon/api/jobs/retry/job-1')->assertOk();
+
+        Bus::assertDispatched(
+            RetryBatchJob::class,
+            fn (RetryBatchJob $job): bool => $job->batchId === 'batch-1'
+                && $job->connection === 'operations'
+                && $job->queue === 'horizon-maintenance',
+        );
+        Bus::assertDispatched(
+            HorizonRetryFailedJob::class,
+            fn (HorizonRetryFailedJob $job): bool => $job->id === 'job-1',
+        );
+        Bus::assertDispatchedTimes(RetryBatchJob::class, 1);
+        Bus::assertDispatchedTimes(HorizonRetryFailedJob::class, 1);
+    });
+
     it('returns the New Dawn dashboard from the concrete package route', function (): void {
+        config()->set('horizon-new-dawn', []);
+
         $jobs = mockDashboardContract(JobRepository::class);
         dashboardReturns($jobs, 'countFailed', 3);
         dashboardReturns($jobs, 'countCompleted', 36);
         dashboardReturns($jobs, 'countPending', 5);
+        dashboardReturns($jobs, 'countRecentlyFailed', 2);
+        dashboardReturns($jobs, 'countRecent', 40);
+        dashboardReturns($jobs, 'countSilenced', 1);
 
         $metrics = mockDashboardContract(MetricsRepository::class);
+        dashboardReturns($metrics, 'jobsProcessedPerMinute', 12);
+        dashboardReturns($metrics, 'throughput', 40);
+        dashboardReturns($metrics, 'throughputForQueue', 0);
         dashboardReturns($metrics, 'measuredQueues', ['default']);
 
         $supervisors = mockDashboardContract(SupervisorRepository::class);
@@ -164,12 +217,16 @@ describe('Horizon controller replacement', function (): void {
             $waitTimes,
             new QueuePauseStatus($queueManager, new QueuePauseMetadata(app('cache'))),
             $pendingState,
-            new DashboardBatchSummary(new BatchRepositoryOverview(
-                $batches,
-                app(CacheFactory::class),
-            )),
+            new DashboardBatchSummary(
+                new BatchRepositoryOverview(
+                    $batches,
+                    app(CacheFactory::class),
+                ),
+                new DatabaseBatchCapability($batches),
+            ),
             $redis,
             app(QueueWaitThreshold::class),
+            new SnapshotJobsPerMinute($redis),
         ));
         app()->instance(
             HorizonRuntime::class,
@@ -187,6 +244,7 @@ describe('Horizon controller replacement', function (): void {
                 ->where('horizon.status', 'running')
                 ->where('horizon.processing', true)
                 ->where('horizon.maintenanceMode', false)
+                ->where('horizon.jobNavigationBreakdown', false)
                 ->where('summary.available', true)
                 ->where('summary.status', 'running')
                 ->where('summary.pendingJobs', 5)
@@ -195,7 +253,10 @@ describe('Horizon controller replacement', function (): void {
                 ->where('workload.available', true)
                 ->where('workload.items.0.name', 'default')
                 ->where('supervisors.available', true)
-                ->where('supervisors.groups.0.name', 'horizon-web-01'));
+                ->where('supervisors.groups.0.name', 'horizon-web-01')
+                ->missing('recentFailures')
+                ->missing('recent_failures')
+                ->missing('failures'));
 
         get('/horizon/instances')
             ->assertOk()
@@ -212,11 +273,64 @@ describe('Horizon controller replacement', function (): void {
     });
 
     it('shares unavailable framework capabilities with the interface', function (): void {
-        app()->instance(FrameworkCapabilities::class, new FrameworkCapabilities(queuePausing: false));
+        app()->instance(
+            FrameworkCapabilities::class,
+            new FrameworkCapabilities(queuePausing: false, timedQueuePausing: false),
+        );
 
         get('/horizon')
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
-                ->where('horizon.capabilities.queuePausing', false));
+                ->where('horizon.capabilities.queuePausing', false)
+                ->where('horizon.capabilities.timedQueuePausing', false));
+    });
+
+    it('shares timed queue pausing separately from basic queue pausing', function (): void {
+        app()->instance(
+            FrameworkCapabilities::class,
+            new FrameworkCapabilities(queuePausing: true, timedQueuePausing: false),
+        );
+
+        get('/horizon')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
+                ->where('horizon.capabilities.queuePausing', true)
+                ->where('horizon.capabilities.timedQueuePausing', false));
+    });
+
+    it('shares the enabled job navigation breakdown with the interface', function (): void {
+        config()->set('horizon-new-dawn.job_navigation_breakdown', true);
+
+        get('/horizon')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
+                ->where('horizon.jobNavigationBreakdown', true));
+    });
+
+    it('shares the configured custom Horizon path as horizon.baseUrl', function (): void {
+        /** @var TestCase $this */
+        $repository = Env::getRepository();
+        $previous = $repository->get('HORIZON_PATH');
+
+        try {
+            $repository->set('HORIZON_PATH', 'operations/horizon');
+            $this->rebootstrapApplication();
+
+            get('/operations/horizon', [
+                'X-Inertia' => 'true',
+                'X-Inertia-Version' => app(AssetManifest::class)->version(),
+            ])
+                ->assertOk()
+                ->assertJsonPath('component', 'Dashboard')
+                ->assertJsonPath('props.horizon.baseUrl', url('/operations/horizon'));
+        } finally {
+            if ($previous === null) {
+                $repository->clear('HORIZON_PATH');
+            } else {
+                $repository->set('HORIZON_PATH', $previous);
+            }
+
+            $this->rebootstrapApplication();
+        }
     });
 });

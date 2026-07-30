@@ -29,7 +29,9 @@ describe("BatchFailedJobsActions", () => {
       expect.objectContaining({ preserveScroll: true }),
     );
 
-    act(() => options.onStart());
+    act(() => {
+      options.onStart();
+    });
     expect(screen.getByRole("button", { name: "Failed batch jobs actions" })).toBeDisabled();
   });
 });

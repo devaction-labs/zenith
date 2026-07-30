@@ -21,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { BatchCreatedRange, BatchFilterValues, BatchStatus } from "@/types/batches";
+import type { BatchCreatedRange, BatchFilterValues } from "@/types/batches";
 
 const ALL_OPTIONS = "__all__";
 
@@ -32,44 +32,20 @@ const createdOptions: Array<{ label: string; value: BatchCreatedRange }> = [
   { label: "Last 30 days", value: "month" },
 ];
 
-const statusOptions: Array<{ label: string; value: BatchStatus }> = [
-  { label: "In progress", value: "pending" },
-  { label: "Has failures", value: "failures" },
-  { label: "Complete", value: "finished" },
-  { label: "Cancelled", value: "cancelled" },
-];
-
-type BatchFiltersProps =
-  | {
-      queues: readonly string[];
-      connections: readonly string[];
-      values: BatchFilterValues;
-      onChange: (values: BatchFilterValues) => void;
-    }
-  | {
-      value: BatchStatus | null;
-      onValueChange: (value: BatchStatus | null) => void;
-      description?: string;
-    };
-
-export function BatchFilters(props: BatchFiltersProps) {
-  if ("value" in props) {
-    return <BatchStatusFilters {...props} />;
-  }
-
-  return <BatchIndexFilters {...props} />;
-}
-
-function BatchIndexFilters({
+export function BatchFilters({
   queues,
   connections,
   values,
   onChange,
+  attributionAvailable,
+  attributionMessage,
 }: {
   queues: readonly string[];
   connections: readonly string[];
   values: BatchFilterValues;
   onChange: (values: BatchFilterValues) => void;
+  attributionAvailable: boolean;
+  attributionMessage?: string | null;
 }) {
   const activeFilterCount = Object.values(values).filter((value) => value !== null).length;
 
@@ -81,7 +57,7 @@ function BatchIndexFilters({
             type="button"
             variant="action"
             size="icon-sm"
-            className="relative"
+            className="relative text-muted-foreground"
             aria-label={
               activeFilterCount > 0
                 ? `Filter batches, ${activeFilterCount} active`
@@ -103,27 +79,36 @@ function BatchIndexFilters({
         <DialogHeader>
           <DialogTitle>Filter batches</DialogTitle>
           <DialogDescription>
-            Narrow retained batches by queue, connection, or creation time.
+            {attributionAvailable
+              ? "Narrow retained batches by queue, connection, or creation time. Historical batches without a recorded destination are inferred once from the queue configuration active when New Dawn first discovers them."
+              : `Narrow retained batches by creation time. ${
+                  attributionMessage ??
+                  "Run the Horizon New Dawn migration to enable queue and connection filters."
+                }`}
           </DialogDescription>
         </DialogHeader>
         <FieldGroup>
-          <BatchFilterSelect
-            label="Queue"
-            allLabel="All queues"
-            options={queues.map((queue) => ({ label: queue, value: queue }))}
-            value={values.queue}
-            onValueChange={(queue) => onChange({ ...values, queue })}
-          />
-          <BatchFilterSelect
-            label="Connection"
-            allLabel="All connections"
-            options={connections.map((connection) => ({
-              label: connection,
-              value: connection,
-            }))}
-            value={values.connection}
-            onValueChange={(connection) => onChange({ ...values, connection })}
-          />
+          {attributionAvailable ? (
+            <>
+              <BatchFilterSelect
+                label="Queue"
+                allLabel="All queues"
+                options={queues.map((queue) => ({ label: queue, value: queue }))}
+                value={values.queue}
+                onValueChange={(queue) => onChange({ ...values, queue })}
+              />
+              <BatchFilterSelect
+                label="Connection"
+                allLabel="All connections"
+                options={connections.map((connection) => ({
+                  label: connection,
+                  value: connection,
+                }))}
+                value={values.connection}
+                onValueChange={(connection) => onChange({ ...values, connection })}
+              />
+            </>
+          ) : null}
           <BatchFilterSelect
             label="Created"
             allLabel="Any time"
@@ -140,67 +125,6 @@ function BatchIndexFilters({
             variant="action"
             disabled={activeFilterCount === 0}
             onClick={() => onChange({ queue: null, connection: null, created: null })}
-          >
-            Clear filters
-          </Button>
-          <DialogClose render={<Button type="button" />}>Done</DialogClose>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function BatchStatusFilters({
-  value,
-  onValueChange,
-  description = "Narrow the loaded batches by status.",
-}: {
-  value: BatchStatus | null;
-  onValueChange: (value: BatchStatus | null) => void;
-  description?: string;
-}) {
-  return (
-    <Dialog>
-      <DialogTrigger
-        render={
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            className="relative"
-            aria-label={value === null ? "Filter batches" : "Filter batches, 1 active"}
-            title="Filter batches"
-          />
-        }
-      >
-        <FilterIcon />
-        {value !== null ? (
-          <span
-            aria-hidden="true"
-            className="absolute top-0.5 right-0.5 size-2 rounded-full bg-primary"
-          />
-        ) : null}
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Filter batches</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
-        </DialogHeader>
-        <FieldGroup>
-          <BatchFilterSelect
-            label="Status"
-            allLabel="All statuses"
-            options={statusOptions}
-            value={value}
-            onValueChange={(nextValue) => onValueChange(nextValue as BatchStatus | null)}
-          />
-        </FieldGroup>
-        <DialogFooter className="sm:justify-between">
-          <Button
-            type="button"
-            variant="ghost"
-            disabled={value === null}
-            onClick={() => onValueChange(null)}
           >
             Clear filters
           </Button>
@@ -238,7 +162,7 @@ function BatchFilterSelect({
         <SelectTrigger id={triggerId} className="w-full">
           <SelectValue />
         </SelectTrigger>
-        <SelectContent alignItemWithTrigger={false}>
+        <SelectContent alignItemWithTrigger={false} listLabel={`${label} options`}>
           <SelectGroup>
             {items.map((item) => (
               <SelectItem key={item.value} value={item.value}>

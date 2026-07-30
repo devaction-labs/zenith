@@ -1,167 +1,157 @@
-import { router, usePage, usePoll } from "@inertiajs/react";
+import { router, usePoll } from "@inertiajs/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-type AutoLoadItem = {
-  id: string;
-};
+import { trackBackgroundRefresh } from "@/lib/auto-refresh-status";
 
-const emptyItems: readonly never[] = [];
 const emptyProps: readonly string[] = [];
+const firstPageSize = 50;
+const infiniteScrollMergeIntentHeader = "X-Inertia-Infinite-Scroll-Merge-Intent";
 
-function reconcileResetItems<T extends AutoLoadItem>(
-  current: readonly T[],
-  incoming: readonly T[],
-  hasNextPage: boolean,
-): readonly T[] {
-  if (
-    !hasNextPage ||
-    current.length === 0 ||
-    incoming.length === 0 ||
-    incoming.length > current.length
-  ) {
-    return incoming;
-  }
+type EntryReloadMode = "replace" | "prepend";
 
-  const incomingIds = new Set(incoming.map((item) => item.id));
-
-  if (!current.some((item) => incomingIds.has(item.id))) {
-    return incoming;
-  }
-
-  return [...incoming, ...current.filter((item) => !incomingIds.has(item.id))].slice(
-    0,
-    current.length,
-  );
-}
-
-export function useAutoLoad<T extends AutoLoadItem = AutoLoadItem>({
+export function useAutoLoad({
   enabled,
   prop,
   interval,
   cursor = "starting_at",
-  items = emptyItems,
+  listRevision,
   additionalProps = emptyProps,
+  includeSharedProps = true,
   scope = "default",
   polling = true,
+  loadedItemCount,
 }: {
   enabled: boolean;
   prop: string;
   interval: number;
   cursor?: string;
-  items?: readonly T[];
+  listRevision?: string;
   additionalProps?: readonly string[];
+  includeSharedProps?: boolean;
   scope?: string;
   polling?: boolean;
+  loadedItemCount: number;
 }) {
-  const scrollProp = usePage().scrollProps?.[prop];
-  const isReset = scrollProp?.reset === true;
-  const hasNextPage = scrollProp?.nextPage !== null && scrollProp?.nextPage !== undefined;
-  const latestItems = useRef(items);
-  const visibleItemsRef = useRef(items);
+  const listRevisionRef = useRef(listRevision);
+  const baselineRevisionRef = useRef(listRevision);
   const scopeRef = useRef(scope);
-  const [visibleItems, setVisibleItems] = useState(items);
+  const browsingHistoryRef = useRef(loadedItemCount > firstPageSize);
+  const pollCancelRef = useRef<(() => void) | null>(null);
   const [hasNewEntries, setHasNewEntries] = useState(false);
 
   useEffect(() => {
+    listRevisionRef.current = listRevision;
+
     if (scopeRef.current !== scope) {
       scopeRef.current = scope;
-      latestItems.current = items;
-      visibleItemsRef.current = items;
-      setVisibleItems(items);
+      browsingHistoryRef.current = loadedItemCount > firstPageSize;
+      baselineRevisionRef.current = listRevision;
       setHasNewEntries(false);
 
       return;
     }
 
-    const currentItems = visibleItemsRef.current;
-    const refreshedItems = isReset ? reconcileResetItems(currentItems, items, hasNextPage) : items;
-
-    latestItems.current = refreshedItems;
+    if (loadedItemCount > firstPageSize && !browsingHistoryRef.current) {
+      browsingHistoryRef.current = true;
+    }
 
     if (enabled) {
-      visibleItemsRef.current = refreshedItems;
-      setVisibleItems(refreshedItems);
+      baselineRevisionRef.current = listRevision;
       setHasNewEntries(false);
 
       return;
     }
 
-    const visibleIds = new Set(currentItems.map((item) => item.id));
-
-    if (visibleIds.size === 0) {
-      visibleItemsRef.current = refreshedItems;
-      setVisibleItems(refreshedItems);
-      setHasNewEntries(false);
-
-      return;
-    }
-
-    if (refreshedItems.length === 0) {
-      visibleItemsRef.current = refreshedItems;
-      setVisibleItems(refreshedItems);
-      setHasNewEntries(false);
-
-      return;
-    }
-
-    const firstVisibleIndex = refreshedItems.findIndex((item) => visibleIds.has(item.id));
-
-    if (firstVisibleIndex > 0) {
-      const refreshedById = new Map(refreshedItems.map((item) => [item.id, item]));
-      const heldItems = isReset
-        ? currentItems
-            .filter((item) => hasNextPage || refreshedById.has(item.id))
-            .map((item) => refreshedById.get(item.id) ?? item)
-        : refreshedItems.slice(firstVisibleIndex);
-
-      visibleItemsRef.current = heldItems;
-      setVisibleItems(heldItems);
+    if (listRevision !== undefined && listRevision !== baselineRevisionRef.current) {
       setHasNewEntries(true);
-
-      return;
     }
+  }, [enabled, listRevision, loadedItemCount, scope]);
 
-    if (firstVisibleIndex === 0) {
-      visibleItemsRef.current = refreshedItems;
-      setVisibleItems(refreshedItems);
-      setHasNewEntries(false);
+  const requestOptions = (entryReloadMode?: EntryReloadMode) => {
+    let cancelRequest: (() => void) | null = null;
+    const includeEntries = entryReloadMode !== undefined;
 
-      return;
-    }
-
-    visibleItemsRef.current = refreshedItems;
-    setVisibleItems(refreshedItems);
-    setHasNewEntries(false);
-  }, [enabled, hasNextPage, isReset, items, scope]);
-
-  const loadNewEntries = useCallback(() => {
-    visibleItemsRef.current = latestItems.current;
-    setVisibleItems(latestItems.current);
-    setHasNewEntries(false);
-  }, []);
-
-  const requestOptions = () => ({
-    data: { [cursor]: undefined },
-    only: Array.from(
-      new Set(
-        enabled
-          ? [prop, ...additionalProps, "horizon", "navigationCounts"]
-          : [prop, ...additionalProps],
+    return trackBackgroundRefresh({
+      data: { [cursor]: undefined },
+      only: Array.from(
+        new Set([
+          ...(includeEntries ? [prop] : []),
+          ...(listRevision === undefined ? [] : ["listRevision"]),
+          ...additionalProps,
+          ...(enabled && includeSharedProps ? ["horizon", "navigationCounts"] : []),
+        ]),
       ),
-    ),
-    preserveUrl: true,
-    reset: [prop],
-    showProgress: false,
-  });
+      ...(entryReloadMode === "replace" ? { reset: [prop] } : {}),
+      ...(entryReloadMode === "prepend"
+        ? { headers: { [infiniteScrollMergeIntentHeader]: "prepend" } }
+        : {}),
+      preserveUrl: true,
+      showProgress: false,
+      onCancelToken: (token: { cancel: () => void }) => {
+        cancelRequest = token.cancel;
+        pollCancelRef.current = cancelRequest;
+      },
+      onFinish: () => {
+        if (pollCancelRef.current === cancelRequest) {
+          pollCancelRef.current = null;
+        }
+      },
+    });
+  };
+
   const requestOptionsRef = useRef(requestOptions);
   const wasEnabledRef = useRef(enabled);
 
   requestOptionsRef.current = requestOptions;
 
-  const poll = usePoll(interval, () => requestOptionsRef.current(), {
-    autoStart: false,
-    mode: "cancel",
-  });
+  const cancelActivePoll = useCallback(() => {
+    const cancel = pollCancelRef.current;
+
+    pollCancelRef.current = null;
+    cancel?.();
+  }, []);
+
+  const onBeforeNextPage = useCallback(() => {
+    cancelActivePoll();
+
+    if (!browsingHistoryRef.current) {
+      browsingHistoryRef.current = true;
+    }
+  }, [cancelActivePoll]);
+
+  const loadNewEntries = useCallback(() => {
+    cancelActivePoll();
+
+    const options = requestOptionsRef.current("replace");
+
+    router.reload({
+      ...options,
+      onSuccess: (page) => {
+        options.onSuccess?.(page);
+
+        const refreshedRevision = page.props.listRevision;
+        const baselineRevision =
+          typeof refreshedRevision === "string" ? refreshedRevision : listRevisionRef.current;
+
+        listRevisionRef.current = baselineRevision;
+        baselineRevisionRef.current = baselineRevision;
+        browsingHistoryRef.current = false;
+        setHasNewEntries(false);
+      },
+    });
+  }, [cancelActivePoll]);
+
+  const poll = usePoll(
+    interval,
+    () =>
+      requestOptionsRef.current(
+        enabled ? (browsingHistoryRef.current ? "prepend" : "replace") : undefined,
+      ),
+    {
+      autoStart: false,
+      mode: "cancel",
+    },
+  );
   const pollRef = useRef(poll);
 
   pollRef.current = poll;
@@ -171,7 +161,9 @@ export function useAutoLoad<T extends AutoLoadItem = AutoLoadItem>({
 
     if (polling && interval > 0) {
       if (enabled && !wasEnabledRef.current) {
-        router.reload(requestOptionsRef.current());
+        router.reload(
+          requestOptionsRef.current(browsingHistoryRef.current ? "prepend" : "replace"),
+        );
       }
 
       controls.start();
@@ -184,11 +176,9 @@ export function useAutoLoad<T extends AutoLoadItem = AutoLoadItem>({
     return () => controls.stop();
   }, [enabled, interval, polling]);
 
-  const scopeChanged = scopeRef.current !== scope;
-
   return {
-    items: scopeChanged ? items : visibleItems,
-    hasNewEntries: !enabled && !scopeChanged && hasNewEntries,
+    hasNewEntries: !enabled && hasNewEntries,
     loadNewEntries,
+    onBeforeNextPage,
   };
 }

@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace NckRtl\HorizonNewDawn\Http\Controllers;
 
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 use NckRtl\HorizonNewDawn\FailedJobs\Actions\RemoveFailedJob;
 use NckRtl\HorizonNewDawn\FailedJobs\FailedJobsData;
+use NckRtl\HorizonNewDawn\Http\Requests\JobIndexRequest;
 use NckRtl\HorizonNewDawn\Support\Data\PageMetaData;
 use NckRtl\HorizonNewDawn\Support\NavigationItem;
 use NckRtl\HorizonNewDawn\Support\Scrolling\HorizonScrollMetadata;
@@ -17,27 +17,59 @@ use Throwable;
 
 final class FailedJobController
 {
-    public function index(Request $request, FailedJobsData $jobs): Response
+    public function index(JobIndexRequest $request, FailedJobsData $jobs): Response
     {
-        $query = trim($request->string('tag')->toString());
-        $page = $jobs->page(
-            $request->integer('starting_at', $query === '' ? -1 : 0),
-            $query === '' ? null : $query,
+        $query = $request->tag();
+        $filters = $request->getData();
+        $startingAt = $request->startingAt();
+        $resolvePage = fn () => once(
+            fn () => $jobs->page(
+                $startingAt,
+                $query,
+                $filters,
+            ),
         );
 
         return Inertia::render('FailedJobs/Index', [
             'meta' => new PageMetaData('Failed Jobs', NavigationItem::Failed),
-            'query' => $query,
+            'query' => $query ?? '',
+            'filters' => $filters,
+            'filterCatalog' => Inertia::optional(fn () => $jobs->filters()),
+            'querySignature' => fn () => $jobs->querySignature(
+                $filters,
+                $query,
+            ),
+            'actions' => fn () => $jobs->bulkActions(),
+            'listRevision' => function () use ($resolvePage): string {
+                $page = $resolvePage();
+
+                return json_encode([
+                    $page->total,
+                    $page->items[0]->id ?? null,
+                ], JSON_THROW_ON_ERROR);
+            },
             'jobs' => Inertia::scroll(
-                [
-                    'data' => $page->items,
-                    'total' => $page->total,
-                    'retryable' => $jobs->hasRetryable(),
-                    'available' => $page->available,
-                    'message' => $page->message,
-                ],
+                function () use ($resolvePage): array {
+                    $page = $resolvePage();
+
+                    return [
+                        'data' => $page->items,
+                        'total' => $page->total,
+                        'available' => $page->available,
+                        'message' => $page->message,
+                    ];
+                },
                 'data',
-                new HorizonScrollMetadata('starting_at', null, $page->next, $page->current),
+                function (array $_value) use ($resolvePage): HorizonScrollMetadata {
+                    $page = $resolvePage();
+
+                    return new HorizonScrollMetadata(
+                        'starting_at',
+                        null,
+                        $page->next,
+                        $page->current,
+                    );
+                },
             )->matchOn('data.id'),
         ]);
     }

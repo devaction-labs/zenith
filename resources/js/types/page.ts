@@ -32,8 +32,10 @@ export type HorizonPageProps = {
     status: HorizonStatus;
     processing: boolean;
     maintenanceMode: boolean;
+    jobNavigationBreakdown?: boolean;
     capabilities?: {
       queuePausing: boolean;
+      timedQueuePausing: boolean;
     };
   };
   flash?: {

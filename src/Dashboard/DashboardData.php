@@ -19,15 +19,13 @@ use Laravel\Horizon\WaitTimeCalculator;
 use NckRtl\HorizonNewDawn\Dashboard\Data\DashboardSummaryData;
 use NckRtl\HorizonNewDawn\Dashboard\Data\DashboardSupervisorsData;
 use NckRtl\HorizonNewDawn\Dashboard\Data\DashboardWorkloadData;
-use NckRtl\HorizonNewDawn\Dashboard\Data\FailurePreviewData;
-use NckRtl\HorizonNewDawn\Dashboard\Data\RecentFailuresData;
 use NckRtl\HorizonNewDawn\Dashboard\Data\SupervisorData;
 use NckRtl\HorizonNewDawn\Dashboard\Data\SupervisorGroupData;
 use NckRtl\HorizonNewDawn\Dashboard\Data\SupervisorScalingData;
 use NckRtl\HorizonNewDawn\Dashboard\Data\WorkloadItemData;
 use NckRtl\HorizonNewDawn\Dashboard\Data\WorkloadSplitData;
 use NckRtl\HorizonNewDawn\Instances\LocalInstanceName;
-use NckRtl\HorizonNewDawn\Queues\Data\QueueWaitThresholdData;
+use NckRtl\HorizonNewDawn\Metrics\SnapshotJobsPerMinute;
 use NckRtl\HorizonNewDawn\Queues\QueuePauseStatus;
 use NckRtl\HorizonNewDawn\Queues\QueueWaitThreshold;
 use Throwable;
@@ -46,6 +44,7 @@ final readonly class DashboardData
         private DashboardBatchSummary $batchSummary,
         private RedisFactory $redis,
         private QueueWaitThreshold $waitThreshold,
+        private SnapshotJobsPerMinute $snapshotJobsPerMinute,
     ) {}
 
     public function summary(): DashboardSummaryData
@@ -101,10 +100,12 @@ final readonly class DashboardData
             $pendingState = $this->pendingState->forQueues($waits);
             $batchSummary = $this->batchSummary->get();
             $failedRetentionMinutes = max(0, (int) config('horizon.trim.failed', 10080));
-            $completedRetentionMinutes = max(0, (int) config('horizon.trim.completed', 60));
-            $failedJobs = $this->jobsByPeriod('failed_jobs', $failedRetentionMinutes);
-            $completedJobs = $this->jobsByPeriod('completed_jobs', $completedRetentionMinutes);
+            $recentlyFailedPeriodMinutes = $this->recentlyFailedPeriodMinutes();
+            $recentJobsPeriodMinutes = $this->recentJobsPeriodMinutes();
+            $completedRetentionMinutes = $this->completedRetentionMinutes();
+            $failedJobs = $this->failedJobsByPeriod($failedRetentionMinutes);
             [$queueWithMaxRuntime, $queueWithMaxThroughput] = $this->queueMetricLeaders();
+            $processedSinceSnapshot = (int) $this->metrics->throughput();
 
             return new DashboardSummaryData(
                 available: true,
@@ -115,20 +116,17 @@ final readonly class DashboardData
                 pendingReserved: $pendingState->reserved,
                 pendingReadyNow: $pendingState->readyNow,
                 pendingDelayed: $pendingState->delayed,
-                failedJobsPerMinute: round(
-                    $failedJobs['hour'] / max(1, min(60, $failedRetentionMinutes)),
-                    2,
-                ),
                 failedJobsPastHour: $failedJobs['hour'],
                 failedJobsPastDay: $failedJobs['day'],
-                failedRetentionMinutes: $failedRetentionMinutes,
-                completedJobsPerMinute: round(
-                    $completedJobs['hour'] / max(1, min(60, $completedRetentionMinutes)),
-                    2,
-                ),
-                completedJobsPastHour: $completedJobs['hour'],
-                completedJobsPastDay: $completedJobs['day'],
+                recentlyFailedJobs: $this->jobs->countRecentlyFailed(),
+                recentlyFailedPeriodMinutes: $recentlyFailedPeriodMinutes,
+                jobsPerMinute: $this->snapshotJobsPerMinute->project($processedSinceSnapshot),
+                recentJobs: $this->jobs->countRecent(),
+                recentJobsPeriodMinutes: $recentJobsPeriodMinutes,
+                processedSinceSnapshot: $processedSinceSnapshot,
+                silencedJobs: $this->jobs->countSilenced(),
                 completedRetentionMinutes: $completedRetentionMinutes,
+                batchesAvailable: $batchSummary->batchesAvailable,
                 activeBatches: $batchSummary->active,
                 batchPreviews: $batchSummary->previews,
                 processes: $processes,
@@ -151,14 +149,17 @@ final readonly class DashboardData
                 pendingReserved: null,
                 pendingReadyNow: null,
                 pendingDelayed: null,
-                failedJobsPerMinute: 0,
                 failedJobsPastHour: 0,
                 failedJobsPastDay: 0,
-                failedRetentionMinutes: max(0, (int) config('horizon.trim.failed', 10080)),
-                completedJobsPerMinute: 0,
-                completedJobsPastHour: 0,
-                completedJobsPastDay: 0,
-                completedRetentionMinutes: max(0, (int) config('horizon.trim.completed', 60)),
+                recentlyFailedJobs: 0,
+                recentlyFailedPeriodMinutes: $this->recentlyFailedPeriodMinutes(),
+                jobsPerMinute: 0,
+                recentJobs: 0,
+                recentJobsPeriodMinutes: $this->recentJobsPeriodMinutes(),
+                processedSinceSnapshot: 0,
+                silencedJobs: 0,
+                completedRetentionMinutes: $this->completedRetentionMinutes(),
+                batchesAvailable: false,
                 activeBatches: 0,
                 batchPreviews: [],
                 processes: 0,
@@ -172,20 +173,37 @@ final readonly class DashboardData
         }
     }
 
+    private function recentlyFailedPeriodMinutes(): int
+    {
+        $period = config('horizon.trim.recent_failed') ?? config('horizon.trim.failed', 10080);
+
+        return max(0, (int) $period);
+    }
+
+    private function recentJobsPeriodMinutes(): int
+    {
+        return max(0, (int) (config('horizon.trim.recent') ?? 60));
+    }
+
+    private function completedRetentionMinutes(): int
+    {
+        return max(0, (int) config('horizon.trim.completed', 60));
+    }
+
     /** @return array{hour: int, day: int} */
-    private function jobsByPeriod(string $key, int $retentionMinutes): array
+    private function failedJobsByPeriod(int $retentionMinutes): array
     {
         $connection = $this->redis->connection('horizon');
 
         return [
             'hour' => $this->jobsSince(
                 $connection,
-                $key,
+                'failed_jobs',
                 CarbonImmutable::now()->subMinutes(min(60, $retentionMinutes)),
             ),
             'day' => $this->jobsSince(
                 $connection,
-                $key,
+                'failed_jobs',
                 CarbonImmutable::now()->subMinutes(min(1440, $retentionMinutes)),
             ),
         ];
@@ -594,6 +612,7 @@ final readonly class DashboardData
             // One authoritative calculate() snapshot keeps connection:queue keys through
             // row construction. Never reattach connections by index from a second sorted
             // WorkloadRepository snapshot — wait order can change and queue names collide.
+            // Comma-delimited balance=false pools stay one primary parent with splitQueues.
             foreach ($this->waitTimes->calculate() as $descriptor => $wait) {
                 if (! is_string($descriptor) || (! is_int($wait) && ! is_float($wait))) {
                     continue;
@@ -608,64 +627,22 @@ final readonly class DashboardData
                 [$connection, $queueName] = $parsed;
                 $totalProcesses = $processes[$descriptor] ?? 0;
                 $queue = $queueConnections[$connection] ??= $this->queues->connection($connection);
+                $processesShared = str_contains($queueName, ',');
 
-                if (str_contains($queueName, ',')) {
-                    $length = 0;
-                    $cumulativeWait = 0;
-                    $cumulativeWaitCalculated = true;
-                    $splitQueues = [];
-                    $waitThresholdTargets = [];
+                if ($processesShared) {
+                    $items[] = $this->sharedPoolWorkloadItem(
+                        connection: $connection,
+                        poolName: $queueName,
+                        poolWait: $wait,
+                        totalProcesses: $totalProcesses,
+                        queue: $queue,
+                    );
 
-                    foreach (explode(',', $queueName) as $part) {
-                        $part = trim($part);
-
-                        if ($part === '') {
-                            continue;
-                        }
-
-                        $partLength = (int) $queue->readyNow($part);
-                        $length += $partLength;
-                        $cumulativeWaitCalculated = $cumulativeWaitCalculated
-                            && $this->canCalculateWait($part, $partLength);
-                        $cumulativeWait += $this->waitTimes->calculateTimeToClear(
-                            $connection,
-                            $part,
-                            $totalProcesses,
-                        );
-                        $waitThresholdTarget = $this->waitThreshold->forTarget(
-                            connection: $connection,
-                            queue: $part,
-                            waitSeconds: $cumulativeWaitCalculated ? $cumulativeWait : null,
-                            oldestPendingAt: $this->oldestPendingAt($queue, $part),
-                        );
-                        $waitThresholdTargets[] = $waitThresholdTarget;
-                        $splitQueues[] = [
-                            'name' => $part,
-                            'length' => $partLength,
-                            'wait' => $cumulativeWait,
-                            'waitThreshold' => $this->waitThreshold->summarize([$waitThresholdTarget]),
-                        ];
-                    }
-
-                    $enrichedSplits = $this->enrichSplitQueues($connection, $splitQueues);
-                    $threshold = $this->waitThreshold->summarize($waitThresholdTargets);
-                    $paused = false;
-                    $pausedUntil = null;
-                } else {
-                    $length = (int) $queue->readyNow($queueName);
-                    $enrichedSplits = null;
-                    $threshold = $this->waitThreshold->summarize([
-                        $this->waitThreshold->forTarget(
-                            connection: $connection,
-                            queue: $queueName,
-                            waitSeconds: $this->canCalculateWait($queueName, $length) ? $wait : null,
-                            oldestPendingAt: $this->oldestPendingAt($queue, $queueName),
-                        ),
-                    ]);
-                    $pauseState = $this->queuePauseStatus->for($connection, $queueName);
-                    $paused = $pauseState->paused;
-                    $pausedUntil = $pauseState->pausedUntil;
+                    continue;
                 }
+
+                $length = (int) $queue->readyNow($queueName);
+                $pauseState = $this->queuePauseStatus->for($connection, $queueName);
 
                 $items[] = new WorkloadItemData(
                     name: $queueName,
@@ -673,10 +650,19 @@ final readonly class DashboardData
                     length: $length,
                     wait: $wait,
                     processes: $totalProcesses,
-                    paused: $paused,
-                    pausedUntil: $pausedUntil,
-                    splitQueues: $enrichedSplits,
-                    waitThreshold: $threshold,
+                    processesShared: false,
+                    paused: $pauseState->paused,
+                    pausedUntil: $pauseState->pausedUntil,
+                    throughput: $this->throughputForQueue($queueName),
+                    splitQueues: null,
+                    waitThreshold: $this->waitThreshold->summarize([
+                        $this->waitThreshold->forTarget(
+                            connection: $connection,
+                            queue: $queueName,
+                            waitSeconds: $this->canCalculateWait($queueName, $length) ? $wait : null,
+                            oldestPendingAt: $this->oldestPendingAt($queue, $queueName),
+                        ),
+                    ]),
                 );
             }
 
@@ -698,6 +684,89 @@ final readonly class DashboardData
                 items: [],
                 message: 'Horizon workload is currently unavailable.',
             );
+        }
+    }
+
+    private function sharedPoolWorkloadItem(
+        string $connection,
+        string $poolName,
+        int|float $poolWait,
+        int $totalProcesses,
+        Queue $queue,
+    ): WorkloadItemData {
+        $length = 0;
+        $cumulativeWait = 0;
+        $cumulativeWaitCalculated = true;
+        $splitQueues = [];
+        $waitThresholdTargets = [];
+        $throughputSum = 0;
+        $throughputComplete = true;
+        $queueCount = 0;
+
+        foreach (explode(',', $poolName) as $part) {
+            $part = trim($part);
+
+            if ($part === '') {
+                continue;
+            }
+
+            $queueCount++;
+            $partLength = (int) $queue->readyNow($part);
+            $length += $partLength;
+            // Priority order: earlier queues in the pool must clear before later ones.
+            $cumulativeWait += $this->waitTimes->calculateTimeToClear($connection, $part, $totalProcesses);
+            $cumulativeWaitCalculated = $cumulativeWaitCalculated
+                && $this->canCalculateWait($part, $partLength);
+            $partThroughput = $this->throughputForQueue($part);
+            $pauseState = $this->queuePauseStatus->for($connection, $part);
+            $waitThresholdTarget = $this->waitThreshold->forTarget(
+                connection: $connection,
+                queue: $part,
+                waitSeconds: $cumulativeWaitCalculated ? $cumulativeWait : null,
+                oldestPendingAt: $this->oldestPendingAt($queue, $part),
+            );
+            $waitThresholdTargets[] = $waitThresholdTarget;
+
+            if ($partThroughput === null) {
+                $throughputComplete = false;
+            } else {
+                $throughputSum += $partThroughput;
+            }
+
+            $splitQueues[] = new WorkloadSplitData(
+                name: $part,
+                length: $partLength,
+                wait: $cumulativeWait,
+                paused: $pauseState->paused,
+                pausedUntil: $pauseState->pausedUntil,
+                throughput: $partThroughput,
+                waitThreshold: $this->waitThreshold->summarize([$waitThresholdTarget]),
+            );
+        }
+
+        return new WorkloadItemData(
+            name: $poolName,
+            connection: $connection,
+            length: $length,
+            wait: $poolWait,
+            processes: $totalProcesses,
+            processesShared: true,
+            paused: false,
+            pausedUntil: null,
+            throughput: $throughputComplete && $queueCount > 0 ? $throughputSum : null,
+            splitQueues: $splitQueues,
+            waitThreshold: $this->waitThreshold->summarize($waitThresholdTargets),
+        );
+    }
+
+    private function throughputForQueue(string $queue): ?int
+    {
+        try {
+            return (int) $this->metrics->throughputForQueue($queue);
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return null;
         }
     }
 
@@ -764,74 +833,6 @@ final readonly class DashboardData
             report($exception);
 
             return null;
-        }
-    }
-
-    /**
-     * @param  null|array<int, array{name: string, wait: int|float, length: int, waitThreshold: QueueWaitThresholdData}>  $splitQueues
-     * @return null|array<int, WorkloadSplitData>
-     */
-    private function enrichSplitQueues(string $connection, ?array $splitQueues): ?array
-    {
-        if ($splitQueues === null) {
-            return null;
-        }
-
-        return array_map(function (array $queue) use ($connection): WorkloadSplitData {
-            $pauseState = $this->queuePauseStatus->for($connection, $queue['name']);
-
-            return new WorkloadSplitData(
-                name: $queue['name'],
-                length: $queue['length'],
-                wait: $queue['wait'],
-                paused: $pauseState->paused,
-                pausedUntil: $pauseState->pausedUntil,
-                waitThreshold: $queue['waitThreshold'],
-            );
-        }, $splitQueues);
-    }
-
-    public function recentFailures(): RecentFailuresData
-    {
-        try {
-            $items = [];
-            $limit = max(0, (int) config('horizon-new-dawn.recent_failures_limit'));
-
-            foreach ($this->jobs->getFailed()->take($limit) as $job) {
-                if (! is_object($job)) {
-                    continue;
-                }
-
-                $id = $job->id ?? null;
-                $name = $job->name ?? null;
-                $queue = $job->queue ?? null;
-                $failedAt = $job->failed_at ?? null;
-
-                if (! is_string($id) || ! is_string($name) || ! is_string($queue) || ! is_numeric($failedAt)) {
-                    continue;
-                }
-
-                $items[] = new FailurePreviewData(
-                    id: $id,
-                    name: $name,
-                    queue: $queue,
-                    failedAt: (float) $failedAt,
-                );
-            }
-
-            return new RecentFailuresData(
-                available: true,
-                items: $items,
-                message: null,
-            );
-        } catch (Throwable $exception) {
-            report($exception);
-
-            return new RecentFailuresData(
-                available: false,
-                items: [],
-                message: 'Recent Horizon failures are currently unavailable.',
-            );
         }
     }
 }

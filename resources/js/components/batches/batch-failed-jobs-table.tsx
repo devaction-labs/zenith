@@ -42,6 +42,7 @@ export function BatchFailedJobsTable({
   notice = null,
   emptyTitle = "No failed jobs",
   emptyDescription = "There aren't any failed jobs in this batch.",
+  sortable = true,
 }: {
   jobs: readonly JobRow[];
   horizonBaseUrl: string;
@@ -50,8 +51,10 @@ export function BatchFailedJobsTable({
   notice?: string | null;
   emptyTitle?: string;
   emptyDescription?: string;
+  sortable?: boolean;
 }) {
   const sorted = useSortableRows(jobs, columns, { persist: true });
+  const rows = sortable ? sorted.rows : jobs;
 
   if (!available) {
     return (
@@ -71,32 +74,29 @@ export function BatchFailedJobsTable({
         <TableRow>
           <SortableTableHead
             label="Job"
-            columnKey="name"
-            direction={directionFor("name", sorted.sort)}
-            onSort={sorted.toggle}
-            className="px-6"
+            columnKey={sortable ? "name" : undefined}
+            direction={sortable ? directionFor("name", sorted.sort) : undefined}
+            onSort={sortable ? sorted.toggle : undefined}
           />
           <SortableTableHead
             label="Attempts"
-            columnKey="attempts"
-            direction={directionFor("attempts", sorted.sort)}
-            onSort={sorted.toggle}
-            className="w-[120px] px-6 text-right"
+            columnKey={sortable ? "attempts" : undefined}
+            direction={sortable ? directionFor("attempts", sorted.sort) : undefined}
+            onSort={sortable ? sorted.toggle : undefined}
+            className="w-[120px] text-right"
           />
           <SortableTableHead
             label="Failed At"
-            columnKey="failedAt"
-            direction={directionFor("failedAt", sorted.sort)}
-            onSort={sorted.toggle}
-            className="w-[210px] px-6"
+            columnKey={sortable ? "failedAt" : undefined}
+            direction={sortable ? directionFor("failedAt", sorted.sort) : undefined}
+            onSort={sortable ? sorted.toggle : undefined}
+            className="w-[210px]"
           />
         </TableRow>
       </TableHeader>
       <TableBody>
-        {notice && sorted.rows.length > 0 ? (
-          <TableNoticeRow columns={3}>{notice}</TableNoticeRow>
-        ) : null}
-        {sorted.rows.length === 0 ? (
+        {notice && rows.length > 0 ? <TableNoticeRow columns={3}>{notice}</TableNoticeRow> : null}
+        {rows.length === 0 ? (
           <TableEmpty
             columns={3}
             title={emptyTitle}
@@ -104,7 +104,7 @@ export function BatchFailedJobsTable({
             icon={BatchesNavigationIcon}
           />
         ) : null}
-        {sorted.rows.map((job) => {
+        {rows.map((job) => {
           const detailUrl = resolveHorizonRoute(failedJobShow(job.id), horizonBaseUrl).url;
 
           return (
@@ -130,7 +130,7 @@ export function BatchFailedJobsTable({
                 details={<span>{job.id}</span>}
               />
               <TableCell
-                className="px-6 text-right tabular-nums text-muted-foreground"
+                className="text-right tabular-nums text-muted-foreground"
                 data-test="batch-failed-attempts"
               >
                 {job.attemptsComplete !== false ? (
@@ -147,7 +147,7 @@ export function BatchFailedJobsTable({
                   </Tooltip>
                 )}
               </TableCell>
-              <TableCell className="px-6 text-muted-foreground">
+              <TableCell className="text-muted-foreground">
                 {job.failedAt === null ? "—" : dateFormatter.format(job.failedAt * 1000)}
               </TableCell>
             </TableRow>

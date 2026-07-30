@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
 import { replaceCurrentQuery } from "@/lib/url-query";
 
@@ -18,14 +18,10 @@ describe("replaceCurrentQuery", () => {
     window.history.replaceState({}, "", "/horizon/jobs/pending?queue=default");
   });
 
-  it("cancels stale background work and replaces the Inertia page URL", () => {
+  it("replaces the client-side Inertia page URL without cancelling background work", () => {
     replaceCurrentQuery({ queue: "critical" });
 
-    expect(inertia.cancelAll).toHaveBeenCalledWith({
-      async: true,
-      prefetch: false,
-      sync: false,
-    });
+    expect(inertia.cancelAll).not.toHaveBeenCalled();
     expect(inertia.replace).toHaveBeenCalledWith({
       url: "/horizon/jobs/pending?queue=critical",
       preserveScroll: true,

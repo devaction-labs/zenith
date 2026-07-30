@@ -1,44 +1,11 @@
-import { act, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
 import { PageHeader } from "@/components/shell/page-header";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarProvider } from "@/components/ui/sidebar";
-
-type InertiaEvent = "finish" | "start";
-type InertiaEventListener = (event: {
-  detail: { visit: { id: string; prefetch: boolean } };
-}) => void;
-
-const inertia = vi.hoisted(() => ({
-  listeners: new Map<string, Set<(event: unknown) => void>>(),
-  page: {
-    deferredProps: undefined as Record<string, string[]> | undefined,
-    props: {} as Record<string, unknown>,
-  },
-}));
-
-vi.mock("@inertiajs/react", () => ({
-  router: {
-    on: vi.fn((event: string, listener: (event: unknown) => void) => {
-      const listeners = inertia.listeners.get(event) ?? new Set();
-      listeners.add(listener);
-      inertia.listeners.set(event, listeners);
-
-      return () => listeners.delete(listener);
-    }),
-  },
-  usePage: () => inertia.page,
-}));
-
-function emitInertiaEvent(event: InertiaEvent, visit: { id: string; prefetch: boolean }) {
-  act(() => {
-    inertia.listeners.get(event)?.forEach((listener) => {
-      (listener as InertiaEventListener)({ detail: { visit } });
-    });
-  });
-}
+import { resetAutoRefreshStatusForTests, trackBackgroundRefresh } from "@/lib/auto-refresh-status";
 
 function renderHeader({
   autoLoad = false,
@@ -54,11 +21,25 @@ function renderHeader({
   );
 }
 
+function runTrackedRefresh(outcome: "success" | "failure", id = "poll-1") {
+  const options = trackBackgroundRefresh({});
+
+  act(() => {
+    options.onStart?.({ id } as never);
+
+    if (outcome === "success") {
+      options.onSuccess?.({ props: {} } as never);
+    } else {
+      options.onNetworkError?.(new Error("offline"));
+    }
+
+    options.onFinish?.({ id } as never);
+  });
+}
+
 describe("PageHeader", () => {
   beforeEach(() => {
-    inertia.listeners.clear();
-    inertia.page.deferredProps = undefined;
-    inertia.page.props = {};
+    resetAutoRefreshStatusForTests();
     Object.defineProperty(window, "matchMedia", {
       configurable: true,
       value: vi.fn().mockReturnValue({
@@ -69,52 +50,78 @@ describe("PageHeader", () => {
     });
   });
 
-  it("rotates the refresh icon until every active Inertia request finishes", () => {
+  it("rotates the refresh icon until every active poll finishes", () => {
     renderHeader({ autoLoad: true });
 
     const refresh = screen.getByRole("button", { name: "Auto load new entries" });
     const icon = refresh.querySelector("svg");
+    const first = trackBackgroundRefresh({});
+    const second = trackBackgroundRefresh({});
 
     expect(icon).not.toHaveClass("animate-spin");
 
-    emitInertiaEvent("start", { id: "deferred", prefetch: false });
-    emitInertiaEvent("start", { id: "poll", prefetch: false });
+    act(() => {
+      first.onStart?.({ id: "first-poll" } as never);
+      second.onStart?.({ id: "second-poll" } as never);
+    });
 
     expect(icon).toHaveClass("animate-spin");
     expect(refresh).toHaveAttribute("aria-busy", "true");
+    expect(refresh).toHaveAttribute("data-refresh-status", "refreshing");
 
-    emitInertiaEvent("finish", { id: "deferred", prefetch: false });
+    act(() => {
+      first.onSuccess?.({ props: {} } as never);
+      first.onFinish?.({ id: "first-poll" } as never);
+    });
 
     expect(icon).toHaveClass("animate-spin");
 
-    emitInertiaEvent("finish", { id: "poll", prefetch: false });
+    act(() => {
+      second.onSuccess?.({ props: {} } as never);
+      second.onFinish?.({ id: "second-poll" } as never);
+    });
 
     expect(icon).not.toHaveClass("animate-spin");
     expect(refresh).toHaveAttribute("aria-busy", "false");
+    expect(refresh).toHaveAttribute("data-refresh-status", "idle");
   });
 
-  it("does not rotate the refresh icon for background prefetches", () => {
+  it("shows a restrained failed state with an accessible name until the next success", async () => {
     renderHeader({ autoLoad: true });
 
-    const refresh = screen.getByRole("button", { name: "Auto load new entries" });
+    runTrackedRefresh("failure");
 
-    emitInertiaEvent("start", { id: "prefetch", prefetch: true });
+    const refresh = screen.getByRole("button", {
+      name: "Auto refresh failed; retrying automatically",
+    });
+    const icon = refresh.querySelector("svg");
 
-    expect(refresh.querySelector("svg")).not.toHaveClass("animate-spin");
-    expect(refresh).toHaveAttribute("aria-busy", "false");
-  });
+    expect(refresh).toHaveAttribute("data-refresh-status", "failed");
+    expect(refresh).toHaveAttribute(
+      "aria-description",
+      "The last automatic refresh failed. Horizon will keep retrying at the normal interval.",
+    );
+    expect(icon).toHaveClass("text-destructive");
+    expect(icon).not.toHaveClass("animate-spin");
 
-  it("rotates while the current page still has unresolved deferred props", () => {
-    inertia.page.deferredProps = {
-      dashboard: ["summary", "workload"],
-    };
+    fireEvent.focus(refresh);
+    fireEvent.pointerMove(refresh);
 
-    renderHeader({ autoLoad: true });
+    await waitFor(() => {
+      expect(
+        screen.getByText(
+          "The last automatic refresh failed. Horizon will keep retrying at the normal interval.",
+        ),
+      ).toBeVisible();
+    });
 
-    const refresh = screen.getByRole("button", { name: "Auto load new entries" });
+    runTrackedRefresh("success", "poll-2");
 
-    expect(refresh.querySelector("svg")).toHaveClass("animate-spin");
-    expect(refresh).toHaveAttribute("aria-busy", "true");
+    const recovered = screen.getByRole("button", { name: "Auto load new entries" });
+
+    expect(recovered).toHaveAttribute("data-refresh-status", "idle");
+    expect(recovered.querySelector("svg")).not.toHaveClass("text-destructive");
+    expect(recovered).not.toHaveAttribute("aria-description");
   });
 
   it("does not indicate background refresh requests while automatic refresh is disabled", () => {
@@ -123,10 +130,13 @@ describe("PageHeader", () => {
     const refresh = screen.getByRole("button", { name: "Auto load new entries" });
     const icon = refresh.querySelector("svg");
 
-    emitInertiaEvent("start", { id: "poll", prefetch: false });
+    runTrackedRefresh("failure");
 
     expect(icon).not.toHaveClass("animate-spin");
+    expect(icon).not.toHaveClass("text-destructive");
     expect(icon).toHaveStyle({ rotate: "0turn" });
     expect(refresh).toHaveAttribute("aria-busy", "false");
+    expect(refresh).toHaveAttribute("data-refresh-status", "idle");
+    expect(refresh).toHaveAccessibleName("Auto load new entries");
   });
 });

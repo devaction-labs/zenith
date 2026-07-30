@@ -1,21 +1,23 @@
 import { router, usePoll } from "@inertiajs/react";
 import { useEffect, useRef } from "react";
 
-const dashboardProps = ["summary", "workload", "supervisors"];
-const emptyProps: readonly string[] = [];
+import { trackBackgroundRefresh } from "@/lib/auto-refresh-status";
 
+const dashboardProps = ["summary", "workload", "supervisors"];
 export function usePageRefresh(
   interval: number,
   props: readonly string[],
   enabled: boolean,
-  resetProps: readonly string[] = emptyProps,
+  includeSharedProps = true,
 ) {
-  const requestOptions = () => ({
-    only: [...new Set([...props, "horizon", "navigationCounts"])],
-    ...(resetProps.length > 0 ? { reset: [...resetProps] } : {}),
-    preserveUrl: true,
-    showProgress: false,
-  });
+  const requestOptions = () =>
+    trackBackgroundRefresh({
+      only: [
+        ...new Set([...props, ...(includeSharedProps ? ["horizon", "navigationCounts"] : [])]),
+      ],
+      preserveUrl: true,
+      showProgress: false,
+    });
   const requestOptionsRef = useRef(requestOptions);
   const wasPollingRef = useRef(enabled && interval > 0);
 
@@ -46,7 +48,7 @@ export function usePageRefresh(
     wasPollingRef.current = shouldPoll;
 
     return () => controls.stop();
-  }, [enabled, interval]);
+  }, [enabled, includeSharedProps, interval]);
 }
 
 export function useDashboardRefresh(interval: number, enabled: boolean, props = dashboardProps) {

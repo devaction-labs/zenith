@@ -155,8 +155,14 @@ it('returns an unavailable catalog when the repository cursor increases on a lat
         ->and($catalog->connections)->toBe([]);
 });
 
-it('uses a one-second cache ttl for a 1500ms poll interval', function (): void {
-    config()->set('horizon-new-dawn.poll_interval', 1500);
+it('uses the configured or default poll interval for its cache ttl', function (
+    ?int $pollInterval,
+    int $expectedCacheSeconds,
+): void {
+    config()->set(
+        'horizon-new-dawn',
+        $pollInterval === null ? [] : ['poll_interval' => $pollInterval],
+    );
 
     $repository = mockDashboardContract(BatchRepository::class);
     dashboardReturnsUsing(
@@ -177,7 +183,7 @@ it('uses a one-second cache ttl for a 1500ms poll interval', function (): void {
         'remember',
         [
             'horizon-new-dawn:batch-filter-catalog:v1',
-            1,
+            $expectedCacheSeconds,
             Mockery::on(static fn (mixed $value): bool => $value instanceof Closure),
         ],
         'once',
@@ -191,10 +197,15 @@ it('uses a one-second cache ttl for a 1500ms poll interval', function (): void {
 
     expect($catalog->get()->toArray())->toBe([
         'available' => true,
+        'complete' => true,
+        'message' => null,
         'queues' => ['imports'],
         'connections' => ['redis'],
     ]);
-});
+})->with([
+    'configured 1500ms interval' => [1500, 1],
+    'cached config without the interval' => [null, 5],
+]);
 
 it('shares a normalized cached catalog for one poll interval and rebuilds invalid payloads', function (): void {
     config()->set('horizon-new-dawn.poll_interval', 5000);
@@ -223,6 +234,8 @@ it('shares a normalized cached catalog for one poll interval and rebuilds invali
 
     $cache->put('horizon-new-dawn:batch-filter-catalog:v1', [
         'available' => true,
+        'complete' => true,
+        'message' => null,
         'queues' => ['imports', 123],
         'connections' => ['redis'],
     ], 5);
@@ -231,6 +244,8 @@ it('shares a normalized cached catalog for one poll interval and rebuilds invali
 
     expect($first->toArray())->toBe([
         'available' => true,
+        'complete' => true,
+        'message' => null,
         'queues' => ['imports'],
         'connections' => ['redis'],
     ])->and($second->toArray())->toBe($first->toArray())
@@ -270,9 +285,69 @@ it('falls back to a repository-built catalog when the cache store fails', functi
 
     expect($catalog->toArray())->toBe([
         'available' => true,
+        'complete' => true,
+        'message' => null,
         'queues' => ['imports'],
         'connections' => ['redis'],
     ]);
+});
+
+it('returns every queue and connection from a multipage retained scan', function (): void {
+    config()->set('horizon-new-dawn.poll_interval', 0);
+    // Former public default was 1000; page size is 100, so this forces a page past the ceiling.
+    config()->set('horizon-new-dawn.retained_batch_scan_limit', 1000);
+
+    $calls = 0;
+    $repository = mockDashboardContract(BatchRepository::class);
+    dashboardReturnsUsing(
+        $repository,
+        'get',
+        static function (int $limit, ?string $before) use (&$calls): array {
+            $calls++;
+
+            expect($limit)->toBe(100);
+
+            $start = match ($before) {
+                null => 1001,
+                default => ((int) str_replace('batch-', '', (string) $before)) - 1,
+            };
+
+            if ($start < 1) {
+                return [];
+            }
+
+            $end = max(1, $start - $limit + 1);
+
+            return array_map(
+                static function (int $index) {
+                    $batch = horizonBatch(sprintf('batch-%04d', $index));
+                    $batch->options = match ($index) {
+                        1001 => ['connection' => 'redis', 'queue' => 'imports'],
+                        500 => ['connection' => 'database', 'queue' => 'reports'],
+                        1 => ['connection' => 'sqs', 'queue' => 'mail'],
+                        default => ['connection' => 'redis', 'queue' => 'imports'],
+                    };
+
+                    return $batch;
+                },
+                range($start, $end),
+            );
+        },
+    );
+
+    $catalog = (new BatchFilterCatalog(
+        $repository,
+        catalogBatchData($repository),
+        app(CacheFactory::class),
+    ))->get();
+
+    expect($catalog->toArray())->toBe([
+        'available' => true,
+        'complete' => true,
+        'message' => null,
+        'queues' => ['imports', 'mail', 'reports'],
+        'connections' => ['database', 'redis', 'sqs'],
+    ])->and($calls)->toBe(12);
 });
 
 function catalogBatchData(BatchRepository $repository): BatchesData

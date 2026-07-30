@@ -1,11 +1,15 @@
-import { useLayoutEffect, useRef } from "react";
+import { useMemo } from "react";
 
 import { BatchFailedJobsActions } from "@/components/batches/batch-actions";
 import { BatchFailedJobsTable } from "@/components/batches/batch-failed-jobs-table";
 import { JobTable } from "@/components/jobs/job-table";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ResponsiveTabsHeader } from "@/components/responsive-tabs-header";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { useScheduledJobClock } from "@/hooks/use-scheduled-job-clock";
+import { useSortableRows, type SortColumn } from "@/hooks/use-sortable-rows";
+import { pendingJobState } from "@/lib/pending-job-state";
 import type { BatchJobList, BatchJobTab } from "@/types/batches";
+import type { JobRow } from "@/types/jobs";
 
 const tabs: { value: BatchJobTab; label: string; shortLabel: string }[] = [
   { value: "pending", label: "Pending Jobs", shortLabel: "Pending" },
@@ -26,25 +30,20 @@ export function BatchJobsTabs({
   horizonBaseUrl: string;
   batchId: string;
 }) {
-  const tabsListRef = useRef<HTMLDivElement>(null);
-
-  useLayoutEffect(() => {
-    const list = tabsListRef.current;
-    const activeTab = list?.querySelector<HTMLElement>("[data-active]");
-
-    if (!list || !activeTab) {
+  const availableTabs = tabs
+    .filter((tab) => tab.value !== "pending" || jobs.pending.total > 0 || value === "pending")
+    .map((tab) => ({
+      ...tab,
+      count: jobs[tab.value].total,
+    }));
+  const selectedTab = availableTabs.find((tab) => tab.value === value);
+  const selectTab = (next: BatchJobTab | null) => {
+    if (!next || next === value) {
       return;
     }
 
-    const listBounds = list.getBoundingClientRect();
-    const tabBounds = activeTab.getBoundingClientRect();
-
-    if (tabBounds.left < listBounds.left) {
-      list.scrollLeft -= listBounds.left - tabBounds.left;
-    } else if (tabBounds.right > listBounds.right) {
-      list.scrollLeft += tabBounds.right - listBounds.right;
-    }
-  }, [value]);
+    onValueChange(next);
+  };
 
   return (
     <Tabs
@@ -52,42 +51,34 @@ export function BatchJobsTabs({
       onValueChange={(next: string) => onValueChange(next as BatchJobTab)}
       className="gap-0"
     >
-      <div className="flex items-center border-b border-separator pr-6">
-        <TabsList
-          ref={tabsListRef}
-          variant="line"
-          aria-label="Batch jobs"
-          className="min-w-0 flex-1 justify-start gap-2 overflow-x-auto rounded-none px-3 py-0"
-        >
-          {tabs
-            .filter((tab) => tab.value !== "pending" || jobs.pending.total > 0)
-            .map((tab) => (
-              <TabsTrigger
-                className="h-auto flex-none rounded-none px-3 py-4 text-[13.5px]"
-                value={tab.value}
-                key={tab.value}
-                aria-label={`${tab.shortLabel} ${jobs[tab.value].total}`}
-              >
-                <span>
-                  <span>{tab.shortLabel}</span> <span>Jobs</span>
-                </span>
-                <Badge className="h-4 min-w-4 px-1.5 text-[10.5px]" variant="secondary">
-                  {jobs[tab.value].total}
-                </Badge>
-              </TabsTrigger>
-            ))}
-        </TabsList>
+      <ResponsiveTabsHeader
+        value={value}
+        items={availableTabs.map((tab) => ({
+          value: tab.value,
+          label: tab.label,
+          desktopLabel: (
+            <span>
+              <span>{tab.shortLabel}</span> <span>Jobs</span>
+            </span>
+          ),
+          count: tab.count,
+          ariaLabel: `${tab.shortLabel} ${tab.count}`,
+        }))}
+        ariaLabel="Batch jobs"
+        onValueChange={selectTab}
+        actions={
+          value === "failed" ? (
+            <BatchFailedJobsActions
+              batchId={batchId}
+              horizonBaseUrl={horizonBaseUrl}
+              disabled={jobs.failed.total === 0}
+            />
+          ) : undefined
+        }
+        className="border-b border-separator sm:pr-6"
+      />
 
-        {value === "failed" ? (
-          <BatchFailedJobsActions
-            batchId={batchId}
-            horizonBaseUrl={horizonBaseUrl}
-            disabled={jobs.failed.total === 0}
-          />
-        ) : null}
-      </div>
-
-      <h2 className="sr-only">{tabs.find((tab) => tab.value === value)?.label}</h2>
+      <h2 className="sr-only">{selectedTab?.label}</h2>
 
       <BatchJobTabContent status="pending" list={jobs.pending} horizonBaseUrl={horizonBaseUrl} />
       <BatchJobTabContent
@@ -115,7 +106,7 @@ function BatchJobTabContent({
       : `No ${status} jobs`;
   const emptyDescription =
     list.total > 0 && list.rows.length === 0 && !list.complete
-      ? `Horizon has already trimmed the retained details for these ${status} jobs.`
+      ? `Horizon has already trimmed these ${status} jobs.`
       : `This batch has no ${status} jobs.`;
   const notice = list.available && !list.complete ? list.message : null;
 
@@ -130,19 +121,81 @@ function BatchJobTabContent({
           notice={notice}
           emptyTitle={emptyTitle}
           emptyDescription={emptyDescription}
+          sortable={list.complete}
         />
       ) : (
-        <JobTable
-          jobs={list.rows}
-          type={status}
+        <BatchRetainedJobsTable
+          status={status}
+          list={list}
           horizonBaseUrl={horizonBaseUrl}
-          available={list.available}
-          message={list.message}
           notice={notice}
           emptyTitle={emptyTitle}
           emptyDescription={emptyDescription}
         />
       )}
     </TabsContent>
+  );
+}
+
+function BatchRetainedJobsTable({
+  status,
+  list,
+  horizonBaseUrl,
+  notice,
+  emptyTitle,
+  emptyDescription,
+}: {
+  status: Exclude<BatchJobTab, "failed">;
+  list: BatchJobList;
+  horizonBaseUrl: string;
+  notice: string | null;
+  emptyTitle: string;
+  emptyDescription: string;
+}) {
+  const now = useScheduledJobClock(list.rows);
+  const columns = useMemo<SortColumn<JobRow>[]>(
+    () => [
+      { key: "name", value: (job) => job.name },
+      ...(status === "pending"
+        ? [{ key: "status", value: (job: JobRow) => pendingJobState(job, now) }]
+        : []),
+      { key: "pushedAt", value: (job) => job.pushedAt },
+      ...(status === "completed"
+        ? [
+            { key: "completedAt", value: (job: JobRow) => job.completedAt },
+            { key: "runtime", value: (job: JobRow) => job.runtime },
+          ]
+        : []),
+    ],
+    [now, status],
+  );
+  const sorted = useSortableRows(list.rows, columns, {
+    persist: true,
+    prefix: `batch_${status}`,
+    defaultSort: status === "completed" ? { key: "completedAt", direction: "desc" } : undefined,
+  });
+
+  return (
+    <JobTable
+      jobs={list.complete ? sorted.rows : list.rows}
+      type={status}
+      horizonBaseUrl={horizonBaseUrl}
+      available={list.available}
+      message={list.message}
+      notice={notice}
+      emptyTitle={emptyTitle}
+      emptyDescription={emptyDescription}
+      showPendingActions={false}
+      sorting={
+        list.complete
+          ? {
+              key: sorted.sort?.key ?? null,
+              direction: sorted.sort?.direction ?? "asc",
+              columns: columns.map((column) => column.key),
+              onSort: sorted.toggle,
+            }
+          : undefined
+      }
+    />
   );
 }

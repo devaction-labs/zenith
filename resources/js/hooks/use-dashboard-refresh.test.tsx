@@ -1,7 +1,8 @@
-import { render } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { act, render } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
 import { useDashboardRefresh, usePageRefresh } from "@/hooks/use-dashboard-refresh";
+import { getAutoRefreshStatus, resetAutoRefreshStatusForTests } from "@/lib/auto-refresh-status";
 
 const { reload, start, stop, usePoll } = vi.hoisted(() => ({
   reload: vi.fn(),
@@ -29,8 +30,8 @@ function RefreshHarness({
   return null;
 }
 
-function PageRefreshHarness({ resetProps }: { resetProps?: string[] }) {
-  usePageRefresh(5000, ["summary", "activity"], true, resetProps);
+function PageRefreshHarness({ includeSharedProps }: { includeSharedProps: boolean }) {
+  usePageRefresh(5000, ["summary"], true, includeSharedProps);
 
   return null;
 }
@@ -42,6 +43,7 @@ describe("useDashboardRefresh", () => {
     stop.mockReset();
     usePoll.mockReset();
     usePoll.mockReturnValue({ start, stop });
+    resetAutoRefreshStatusForTests();
   });
 
   it("polls dashboard props through Inertia at the configured interval", () => {
@@ -52,11 +54,16 @@ describe("useDashboardRefresh", () => {
       mode: "cancel",
     });
     expect(start).toHaveBeenCalledOnce();
-    expect(usePoll.mock.calls[0][1]()).toEqual({
+    expect(usePoll.mock.calls[0][1]()).toMatchObject({
       only: ["summary", "workload", "supervisors", "horizon", "navigationCounts"],
       preserveUrl: true,
       showProgress: false,
     });
+    expect(usePoll.mock.calls[0][1]().onStart).toEqual(expect.any(Function));
+    expect(usePoll.mock.calls[0][1]().onSuccess).toEqual(expect.any(Function));
+    expect(usePoll.mock.calls[0][1]().onNetworkError).toEqual(expect.any(Function));
+    expect(usePoll.mock.calls[0][1]().onHttpException).toEqual(expect.any(Function));
+    expect(usePoll.mock.calls[0][1]().onFinish).toEqual(expect.any(Function));
   });
 
   it("does not restart or reload an already active poll on a page rerender", () => {
@@ -74,20 +81,19 @@ describe("useDashboardRefresh", () => {
   it("refreshes an explicit detail-page prop", () => {
     render(<RefreshHarness interval={5000} props={["batch"]} />);
 
-    expect(usePoll.mock.calls[0][1]()).toEqual({
+    expect(usePoll.mock.calls[0][1]()).toMatchObject({
       only: ["batch", "horizon", "navigationCounts"],
       preserveUrl: true,
       showProgress: false,
     });
   });
 
-  it("resets selected infinite-scroll props during a page refresh", () => {
-    render(<PageRefreshHarness resetProps={["activity"]} />);
+  it("can refresh an independent prop without duplicating shared shell props", () => {
+    render(<PageRefreshHarness includeSharedProps={false} />);
 
-    expect(usePoll.mock.calls[0][1]()).toEqual({
-      only: ["summary", "activity", "horizon", "navigationCounts"],
+    expect(usePoll.mock.calls[0][1]()).toMatchObject({
+      only: ["summary"],
       preserveUrl: true,
-      reset: ["activity"],
       showProgress: false,
     });
   });
@@ -123,10 +129,41 @@ describe("useDashboardRefresh", () => {
     rerender(<RefreshHarness interval={5000} enabled />);
 
     expect(reload).toHaveBeenCalledOnce();
-    expect(reload).toHaveBeenCalledWith({
+    expect(reload.mock.calls[0][0]).toMatchObject({
       only: ["summary", "workload", "supervisors", "horizon", "navigationCounts"],
       preserveUrl: true,
       showProgress: false,
     });
+    expect(reload.mock.calls[0][0].onNetworkError).toEqual(expect.any(Function));
+  });
+
+  it("surfaces poll failures and clears them after the next successful refresh", () => {
+    render(<RefreshHarness interval={5000} />);
+
+    const createOptions = usePoll.mock.calls[0][1] as () => {
+      onStart: (visit: { id: string }) => void;
+      onSuccess: (page: { props: Record<string, unknown> }) => void;
+      onNetworkError: (error: Error) => void;
+      onFinish: (visit: { id: string }) => void;
+    };
+    const failedOptions = createOptions();
+
+    act(() => {
+      failedOptions.onStart({ id: "poll-1" });
+      failedOptions.onNetworkError(new Error("offline"));
+      failedOptions.onFinish({ id: "poll-1" });
+    });
+
+    expect(getAutoRefreshStatus()).toBe("failed");
+
+    const recoveredOptions = createOptions();
+
+    act(() => {
+      recoveredOptions.onStart({ id: "poll-2" });
+      recoveredOptions.onSuccess({ props: {} });
+      recoveredOptions.onFinish({ id: "poll-2" });
+    });
+
+    expect(getAutoRefreshStatus()).toBe("idle");
   });
 });

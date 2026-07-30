@@ -2,17 +2,22 @@
 
 declare(strict_types=1);
 
+use Illuminate\Bus\BatchFactory;
 use Illuminate\Bus\BatchRepository;
+use Illuminate\Bus\DatabaseBatchRepository;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Illuminate\Contracts\Queue\Factory as QueueFactory;
 use Illuminate\Contracts\Redis\Factory as RedisFactory;
 use Illuminate\Redis\Connections\Connection;
+use Illuminate\Support\Facades\Exceptions;
+use Illuminate\Support\Facades\Schema;
 use Laravel\Horizon\Contracts\JobRepository;
 use Laravel\Horizon\Contracts\MasterSupervisorRepository;
 use Laravel\Horizon\Contracts\MetricsRepository;
 use Laravel\Horizon\Contracts\SupervisorRepository;
 use Laravel\Horizon\WaitTimeCalculator;
 use NckRtl\HorizonNewDawn\Batches\BatchRepositoryOverview;
+use NckRtl\HorizonNewDawn\Batches\DatabaseBatchCapability;
 use NckRtl\HorizonNewDawn\Queues\QueuePauseStatus;
 use NckRtl\HorizonNewDawn\Queues\QueuesData;
 use NckRtl\HorizonNewDawn\Queues\QueueWaitThreshold;
@@ -72,12 +77,44 @@ it('counts batches through the configured repository', function (): void {
     expect(navigationCounts()->get()->batches)->toBe(4);
 });
 
+it('counts every retained batch page for navigation', function (): void {
+    expect(navigationCounts()->get()->batches)->toBe(4);
+});
+
+it('returns a null batch navigation count without reporting when the database batch table is missing', function (): void {
+    config()->set('queue.batching.database', null);
+    config()->set('queue.batching.table', 'job_batches');
+    config()->set('horizon-new-dawn.poll_interval', 0);
+    Schema::dropIfExists('horizon_new_dawn_batch_metadata');
+    Schema::dropIfExists('job_batches');
+
+    $repository = new DatabaseBatchRepository(
+        app(BatchFactory::class),
+        app('db')->connection(),
+        'job_batches',
+    );
+    app()->instance(BatchRepository::class, $repository);
+    app()->instance(DatabaseBatchCapability::class, new DatabaseBatchCapability($repository));
+
+    Exceptions::fake();
+
+    $counts = navigationCounts(withDefaultBatches: false)->get();
+
+    expect($counts->batches)->toBeNull();
+    Exceptions::assertNothingReported();
+});
+
+/**
+ * @param  bool  $withDefaultBatches  When false, uses the container BatchRepository binding.
+ */
 function navigationCounts(
     bool $monitoringFails = false,
     bool $batchFails = false,
+    bool $withDefaultBatches = true,
 ): NavigationCounts {
     config()->set('queue.batching.database', null);
     config()->set('horizon-new-dawn.poll_interval', 0);
+
     $redisConnection = mockDashboardContract(Connection::class);
 
     if ($monitoringFails) {
@@ -120,25 +157,29 @@ function navigationCounts(
         app(QueueWaitThreshold::class),
     );
 
-    $batches = mockDashboardContract(BatchRepository::class);
+    if ($withDefaultBatches) {
+        $batches = mockDashboardContract(BatchRepository::class);
 
-    if ($batchFails) {
-        dashboardThrows($batches, 'get', new RuntimeException('batch repository unavailable'));
+        if ($batchFails) {
+            dashboardThrows($batches, 'get', new RuntimeException('batch repository unavailable'));
+        } else {
+            dashboardReturnsUsing(
+                $batches,
+                'get',
+                static fn (int $limit, ?string $before): array => match ($before) {
+                    null => array_slice([
+                        horizonBatch('batch-4'),
+                        horizonBatch('batch-3'),
+                        horizonBatch('batch-2'),
+                        horizonBatch('batch-1'),
+                    ], 0, $limit),
+                    'batch-1' => [],
+                    default => throw new LogicException("Unexpected batch cursor [{$before}]."),
+                },
+            );
+        }
     } else {
-        dashboardReturnsUsing(
-            $batches,
-            'get',
-            static fn (int $limit, ?string $before): array => match ($before) {
-                null => [
-                    horizonBatch('batch-4'),
-                    horizonBatch('batch-3'),
-                    horizonBatch('batch-2'),
-                    horizonBatch('batch-1'),
-                ],
-                'batch-1' => [],
-                default => throw new LogicException("Unexpected batch cursor [{$before}]."),
-            },
-        );
+        $batches = app(BatchRepository::class);
     }
 
     return new NavigationCounts(
@@ -147,5 +188,6 @@ function navigationCounts(
         new BatchRepositoryOverview($batches, app(CacheFactory::class)),
         $queues,
         $masters,
+        new DatabaseBatchCapability($batches),
     );
 }
