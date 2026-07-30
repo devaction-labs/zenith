@@ -131,7 +131,9 @@
   --accent: #efeff1;
   --accent-foreground: #18181b;
   --destructive: #b91c1c;
-  --destructive-action: var(--color-red-600);
+  /* Action labels (14px dropdown items) need ≥4.5:1 on white. Tailwind red-600
+     is only ~4.35:1; red-800 meets AA for normal text. */
+  --destructive-action: var(--color-red-800);
   --border: #e4e4e7;
   --input: #e9e9ec;
   --ring: #7746ec;

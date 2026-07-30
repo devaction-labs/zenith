@@ -47,13 +47,27 @@ describe('Horizon interface interactions', function (): void {
     it('keeps global failed-job actions available for large retained sets', function (): void {
         bindBrowserFailedJobBulkLimitFixtures();
 
-        visit('/horizon/failed')
+        $page = visit('/horizon/failed')
             ->click('button[aria-label="Failed jobs actions"]')
             ->assertSee('Retry all')
             ->assertSee('Clear all failed jobs')
             ->assertDontSee('exceed the configured limit')
             ->assertMissing('[data-test="retry-all-failed-jobs"][aria-disabled="true"]')
-            ->assertMissing('[data-test="clear-all-failed-jobs"][aria-disabled="true"]')
+            ->assertMissing('[data-test="clear-all-failed-jobs"][aria-disabled="true"]');
+
+        // Axe color-contrast samples painted pixels; wait until the open-menu
+        // fade finishes so semi-transparent frames are not measured.
+        $page->script(<<<'JS'
+            () => new Promise((resolve) => {
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        window.setTimeout(resolve, 300)
+                    })
+                })
+            })
+        JS);
+
+        $page
             ->assertNoJavaScriptErrors()
             ->assertNoConsoleLogs()
             ->assertNoAccessibilityIssues();
@@ -553,7 +567,8 @@ describe('Horizon interface interactions', function (): void {
         visit('/horizon')
             ->on()->iPhone14Pro()
             ->click('Toggle Sidebar')
-            ->click('Queues')
+            ->assertPresent('[data-mobile="true"] a[href$="/horizon/queues"]')
+            ->click('[data-mobile="true"] a[href$="/horizon/queues"]')
             ->assertPathIs('/horizon/queues')
             ->assertSee('Queues')
             ->assertNoJavaScriptErrors()

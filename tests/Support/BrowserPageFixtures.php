@@ -9,10 +9,12 @@ use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Illuminate\Contracts\Config\Repository as ConfigRepository;
 use Illuminate\Contracts\Queue\Factory as QueueFactory;
 use Illuminate\Contracts\Queue\Queue;
+use Illuminate\Contracts\Redis\Factory as RedisFactory;
 use Illuminate\Queue\QueueManager;
 use Illuminate\Queue\RedisQueue;
 use Illuminate\Redis\Connections\Connection;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Bus;
 use Laravel\Horizon\Contracts\HorizonCommandQueue;
 use Laravel\Horizon\Contracts\JobRepository;
 use Laravel\Horizon\Contracts\MasterSupervisorRepository;
@@ -52,13 +54,31 @@ function bindBrowserPageFixtures(
     int $silencedJobCount = 1,
 ): void {
     Horizon::auth(static fn (): bool => true);
+    // Browser suites must not require live Redis or execute bulk workers. Fake the
+    // bus and use an async bulk connection name so BulkOperationDispatcher accepts
+    // the queue while Bus::fake() records the coordinator job for toast success.
+    Bus::fake();
     config()->set('horizon-new-dawn.poll_interval', 0);
+    config()->set('horizon-new-dawn.bulk_operations.connection', 'operations');
+    config()->set('horizon-new-dawn.bulk_operations.queue', 'horizon-maintenance');
     config()->set('queue.connections.redis.retry_after', 120);
     $capabilities = new FrameworkCapabilities(queuePausing: false, timedQueuePausing: false);
     app()->instance(FrameworkCapabilities::class, $capabilities);
 
+    // LocalInstanceName requires basename + '-' + exactly four alphanumerics.
+    $instanceName = MasterSupervisor::basename().'-br01';
     $masters = mockDashboardContract(MasterSupervisorRepository::class);
-    dashboardReturns($masters, 'all', [(object) ['status' => 'running']]);
+    dashboardReturns($masters, 'all', [
+        (object) [
+            'name' => $instanceName,
+            'environment' => 'testing',
+            'pid' => 1204,
+            'status' => 'running',
+        ],
+    ]);
+    // DashboardData resolves these contracts from the container — binding is
+    // required (see bindBrowserSupervisorScalingFixtures), not only constructing mocks.
+    app()->instance(MasterSupervisorRepository::class, $masters);
     app()->instance(HorizonRuntime::class, new HorizonRuntime($masters));
 
     $pending = horizonJob(0, 'pending-1');
@@ -146,6 +166,7 @@ function bindBrowserPageFixtures(
             default => [],
         },
     );
+    app()->instance(TagRepository::class, $tags);
 
     $failedJobs = new FailedJobsData(
         $jobs,
@@ -194,21 +215,21 @@ function bindBrowserPageFixtures(
     app()->instance(BatchesData::class, $batches);
 
     $supervisors = mockDashboardContract(SupervisorRepository::class);
-    dashboardReturns($supervisors, 'all', [
-        (object) ['processes' => ['redis:reports' => 2]],
-    ]);
-    dashboardReturns($supervisors, 'find', (object) [
-        'name' => 'horizon-web-01:supervisor-1',
-        'master' => 'horizon-web-01',
+    $supervisorRecord = (object) [
+        'name' => $instanceName.':supervisor-1',
+        'master' => $instanceName,
         'status' => 'running',
-        'processes' => ['redis:critical,default' => 4],
+        'processes' => ['redis:reports' => 2, 'redis:critical,default' => 4],
         'options' => [
             'connection' => 'redis',
             'queue' => 'critical,default',
             'balance' => 'auto',
             'timeout' => 90,
         ],
-    ]);
+    ];
+    dashboardReturns($supervisors, 'all', [$supervisorRecord]);
+    dashboardReturns($supervisors, 'find', $supervisorRecord);
+    app()->instance(SupervisorRepository::class, $supervisors);
     app()->instance(SupervisorDetails::class, new SupervisorDetails(
         $supervisors,
         app(ConfigRepository::class),
@@ -221,8 +242,34 @@ function bindBrowserPageFixtures(
     dashboardReturns($queue, 'creationTimeOfOldestPendingJob', null);
     $queueFactory = mockDashboardContract(QueueFactory::class);
     dashboardReturns($queueFactory, 'connection', $queue);
+    app()->instance(QueueFactory::class, $queueFactory);
+
     $waitTimes = mockDashboardContract(WaitTimeCalculator::class);
+    dashboardReturns($waitTimes, 'calculate', [
+        'redis:reports' => 1,
+        'redis:critical,default' => 2,
+    ]);
     dashboardReturns($waitTimes, 'calculateTimeToClear', 0);
+    app()->instance(WaitTimeCalculator::class, $waitTimes);
+
+    // Dashboard summary reads failed-job windows and snapshot leaders from the
+    // horizon Redis connection; stub it so the no-Redis CI tests job stays offline.
+    $horizonConnection = mockDashboardContract(Connection::class);
+    dashboardReturns($horizonConnection, 'zcount', 0);
+    dashboardReturns($horizonConnection, 'zrange', []);
+    dashboardReturns($horizonConnection, 'get', null);
+    $redis = mockDashboardContract(RedisFactory::class);
+    dashboardReturns($redis, 'connection', $horizonConnection);
+    app()->instance(RedisFactory::class, $redis);
+    app()->instance(SnapshotJobsPerMinute::class, new SnapshotJobsPerMinute($redis));
+
+    // Async bulk connection for BulkOperationDispatcher (must not be Sync/Null).
+    // Bus::fake() above records coordinator jobs without executing Redis workers.
+    app()->instance(QueueManager::class, new BrowserPendingJobQueueManager(
+        app(),
+        new BrowserPendingJobRedisQueue(new BrowserPendingJobRedisConnection),
+    ));
+
     $pauseStatus = new QueuePauseStatus(
         app(QueueManager::class),
         new QueuePauseMetadata(app(CacheFactory::class)),
@@ -258,10 +305,6 @@ function bindBrowserPageFixtures(
     ));
     app()->instance(QueueActivityData::class, new QueueActivityData($queueJobs, $queueBatches));
 
-    app()->instance(QueueManager::class, new BrowserPendingJobQueueManager(
-        app(),
-        new BrowserPendingJobRedisQueue(new BrowserPendingJobRedisConnection),
-    ));
     app()->instance(ForgetsPendingJob::class, new class implements ForgetsPendingJob
     {
         public function forgetPending(string $id, array $tags): bool

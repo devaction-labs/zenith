@@ -491,7 +491,7 @@
     "src": "resources/images/favicon.svg"
   },
   "resources/js/app.tsx": {
-    "file": "assets/app-Wpf992h_.js",
+    "file": "assets/app-DOuNvepH.js",
     "name": "app",
     "src": "resources/js/app.tsx",
     "isEntry": true,
@@ -522,7 +522,7 @@
       "resources/js/pages/supervisors/show.tsx"
     ],
     "css": [
-      "assets/app-BCppRrRj.css"
+      "assets/app-nvRqnZ0j.css"
     ]
   },
   "resources/js/components/metrics/metric-chart.tsx": {
@@ -609,7 +609,7 @@
     ]
   },
   "resources/js/pages/failed-jobs/index.tsx": {
-    "file": "assets/failed-jobs-C7kLdJVU.js",
+    "file": "assets/failed-jobs-NAwo1lYA.js",
     "name": "failed-jobs",
     "src": "resources/js/pages/failed-jobs/index.tsx",
     "isDynamicEntry": true,
@@ -662,7 +662,7 @@
     ]
   },
   "resources/js/pages/jobs/index.tsx": {
-    "file": "assets/jobs-B7Wc8Zop.js",
+    "file": "assets/jobs-BSUxZ_9B.js",
     "name": "jobs",
     "src": "resources/js/pages/jobs/index.tsx",
     "isDynamicEntry": true,
