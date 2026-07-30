@@ -1,9 +1,13 @@
-@import "tailwindcss";
+/* Disable automatic repo-wide detection so untracked trees (e.g. public/**)
+   cannot inflate production CSS relative to a clean CI checkout. */
+@import "tailwindcss" source(none);
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
-@custom-variant dark (&:is(.dark *));
+@source "../js";
+@source "../views";
 
+@custom-variant dark (&:is(.dark *));
 @theme inline {
   /* Desktop shell seam (1140px at 16px root). rem units sort with sm/md/… so shell wins after sm. */
   --breakpoint-shell: 71.25rem;
