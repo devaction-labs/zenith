@@ -21,23 +21,26 @@
         }
     ],
     "require": {
-        "php": "^8.3",
+        "php": "^8.4",
         "inertiajs/inertia-laravel": "^3.2",
-        "laravel/framework": "^12.38.0|^13.0",
+        "laravel/framework": "^13.23.0",
         "laravel/horizon": "^5.46.0",
         "spatie/laravel-data": "^4.0"
     },
     "require-dev": {
+        "driftingly/rector-laravel": "^2.6",
         "larastan/larastan": "^3.0",
         "laravel/boost": "^2.4",
         "laravel/pint": "^1.0",
         "laravel/wayfinder": "^0.1.20",
         "mockery/mockery": "^1.6",
-        "orchestra/testbench": "^10.7|^11.0",
-        "pestphp/pest": "^4.0",
-        "pestphp/pest-plugin-browser": "^4.3",
-        "pestphp/pest-plugin-laravel": "^4.0",
-        "predis/predis": "^3.0"
+        "orchestra/testbench": "^11.1",
+        "pestphp/pest": "^5.0",
+        "pestphp/pest-plugin-browser": "^5.0",
+        "pestphp/pest-plugin-laravel": "^5.0",
+        "pestphp/pest-plugin-phpstan": "^5.0",
+        "predis/predis": "^3.0",
+        "rector/rector": "^2.6"
     },
     "autoload": {
         "psr-4": {
@@ -66,6 +69,8 @@
         "analyse": "@php -d memory_limit=1G vendor/bin/phpstan analyse",
         "format": "vendor/bin/pint",
         "format:test": "vendor/bin/pint --test",
+        "rector": "vendor/bin/rector process --dry-run --ansi",
+        "rector:fix": "vendor/bin/rector process --ansi",
         "test": "vendor/bin/pest --testsuite=Package",
         "test:browser": "vendor/bin/pest --testsuite=Browser",
         "test:compatibility": "vendor/bin/pest --testsuite=Compatibility",

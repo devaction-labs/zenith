@@ -97,7 +97,11 @@ final class DelayedJobReleaseRedisQueue extends RedisQueue
 
     public function getQueue($queue): string
     {
-        return 'queues:'.($queue ?: 'default');
+        $name = $queue instanceof BackedEnum
+            ? (string) $queue->value
+            : (is_string($queue) && $queue !== '' ? $queue : 'default');
+
+        return 'queues:'.$name;
     }
 
     /** @return array<int, string> */

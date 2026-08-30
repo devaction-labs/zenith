@@ -32,17 +32,17 @@ Compared with Horizon's bundled interface, New Dawn adds:
 
 ## Requirements
 
-- PHP 8.3 or newer
-- Laravel 12.38 or newer, or Laravel 13
+- PHP 8.4 or newer
+- Laravel 13.23 or newer
 - Laravel Horizon 5.46.0 or newer within the 5.x series
 
 These floors are deliberate:
 
-- PHP 8.3 is the lowest PHP version covered by the package's release matrix. New Dawn does not claim compatibility with runtimes it does not continuously test.
-- Laravel 12.38 contains the framework fix needed to register console commands correctly with current Symfony Console releases. Earlier Laravel 12 releases can fail while booting Artisan. Laravel 11 is excluded because it is end-of-life.
+- PHP 8.4 is required by Pest 5 and is the lowest PHP version covered by the package's release matrix. New Dawn does not claim compatibility with runtimes it does not continuously test.
+- Laravel 13.23 is required by `pestphp/pest-plugin-laravel` 5. Laravel 12 is no longer part of the supported contract.
 - Horizon 5.46.0 is the oldest Horizon release exercised by New Dawn's full package suite, real Redis worker smoke test, and consuming-application browser checks. Older Horizon releases are not part of the supported contract.
 
-Queue pausing is available when the installed Laravel version provides its complete queue-pause API (Laravel 12.40.2 or newer). On Laravel 12.38 through 12.40.1, New Dawn hides only the unsupported pause and resume controls; retrying failures and clearing queues remain available. Pausing or resuming every queue at once (`Queue::pauseAll()` / `Queue::resumeAll()`) additionally requires Laravel 13.25 or newer; earlier versions hide only those global controls.
+Queue pausing is available throughout the supported Laravel 13 matrix. Pausing or resuming every queue at once (`Queue::pauseAll()` / `Queue::resumeAll()`) additionally requires Laravel 13.25 or newer; earlier versions hide only those global controls.
 
 Standalone Redis 6.2 or newer and standalone Valkey 8 are supported with
 Predis and PhpRedis. Redis Cluster is supported by copying Horizon source

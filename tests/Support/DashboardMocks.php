@@ -7,8 +7,6 @@ namespace DevactionLabs\HorizonNewDawn\Tests\Support;
 use Closure;
 use LogicException;
 use Mockery;
-use Mockery\CompositeExpectation;
-use Mockery\Expectation;
 use Mockery\MockInterface;
 use Throwable;
 
@@ -31,40 +29,12 @@ function mockDashboardContract(string $class): object
 
 function dashboardReturns(MockInterface $mock, string $method, mixed $value): void
 {
-    $expectation = $mock->shouldReceive($method);
-
-    if ($expectation instanceof Expectation) {
-        $expectation->andReturn($value);
-
-        return;
-    }
-
-    if ($expectation instanceof CompositeExpectation) {
-        $expectation->__call('andReturn', [$value]);
-
-        return;
-    }
-
-    throw new LogicException("Unable to configure {$method} expectation.");
+    $mock->shouldReceive($method)->andReturn($value);
 }
 
 function dashboardReturnsUsing(MockInterface $mock, string $method, Closure $return): void
 {
-    $expectation = $mock->shouldReceive($method);
-
-    if ($expectation instanceof Expectation) {
-        $expectation->andReturnUsing($return);
-
-        return;
-    }
-
-    if ($expectation instanceof CompositeExpectation) {
-        $expectation->__call('andReturnUsing', [$return]);
-
-        return;
-    }
-
-    throw new LogicException("Unable to configure {$method} expectation.");
+    $mock->shouldReceive($method)->andReturnUsing($return);
 }
 
 /**
@@ -83,63 +53,29 @@ function dashboardExpects(
 ): void {
     $expectation = $mock->shouldReceive($method);
 
-    if ($expectation instanceof Expectation) {
-        if ($arguments !== []) {
-            $expectation->with(...$arguments);
-        }
+    if ($arguments !== []) {
+        $expectation->with(...$arguments);
+    }
 
-        $expectation->{$times}();
+    $expectation->{$times}();
 
-        if ($ordered) {
-            $expectation->ordered();
-        }
+    if ($ordered) {
+        $expectation->ordered();
+    }
 
-        if ($returnUsing instanceof Closure) {
-            $expectation->andReturnUsing($returnUsing);
-
-            return;
-        }
-
-        if ($exception instanceof Throwable) {
-            $expectation->andThrow($exception);
-
-            return;
-        }
-
-        $expectation->andReturn($value);
+    if ($returnUsing instanceof Closure) {
+        $expectation->andReturnUsing($returnUsing);
 
         return;
     }
 
-    if ($expectation instanceof CompositeExpectation) {
-        if ($arguments !== []) {
-            $expectation->__call('with', $arguments);
-        }
-
-        $expectation->__call($times, []);
-
-        if ($ordered) {
-            $expectation->__call('ordered', []);
-        }
-
-        if ($returnUsing instanceof Closure) {
-            $expectation->__call('andReturnUsing', [$returnUsing]);
-
-            return;
-        }
-
-        if ($exception instanceof Throwable) {
-            $expectation->__call('andThrow', [$exception]);
-
-            return;
-        }
-
-        $expectation->__call('andReturn', [$value]);
+    if ($exception instanceof Throwable) {
+        $expectation->andThrow($exception);
 
         return;
     }
 
-    throw new LogicException("Unable to configure {$method} expectation.");
+    $expectation->andReturn($value);
 }
 
 /** @param array<int, mixed> $arguments */
@@ -149,61 +85,17 @@ function dashboardReturnsFor(
     array $arguments,
     mixed $value,
 ): void {
-    $expectation = $mock->shouldReceive($method);
-
-    if ($expectation instanceof Expectation) {
-        $expectation->with(...$arguments)->once()->andReturn($value);
-
-        return;
-    }
-
-    if ($expectation instanceof CompositeExpectation) {
-        $expectation->__call('with', $arguments);
-        $expectation->__call('once', []);
-        $expectation->andReturn($value);
-
-        return;
-    }
-
-    throw new LogicException("Unable to configure {$method} expectation.");
+    $mock->shouldReceive($method)->with(...$arguments)->once()->andReturn($value);
 }
 
 function dashboardThrows(MockInterface $mock, string $method, Throwable $exception): void
 {
-    $expectation = $mock->shouldReceive($method);
-
-    if ($expectation instanceof Expectation) {
-        $expectation->andThrow($exception);
-
-        return;
-    }
-
-    if ($expectation instanceof CompositeExpectation) {
-        $expectation->__call('andThrow', [$exception]);
-
-        return;
-    }
-
-    throw new LogicException("Unable to configure {$method} exception.");
+    $mock->shouldReceive($method)->andThrow($exception);
 }
 
 function dashboardNeverReceives(MockInterface $mock, string $method): void
 {
-    $expectation = $mock->shouldReceive($method);
-
-    if ($expectation instanceof Expectation) {
-        $expectation->never();
-
-        return;
-    }
-
-    if ($expectation instanceof CompositeExpectation) {
-        $expectation->__call('never', []);
-
-        return;
-    }
-
-    throw new LogicException("Unable to configure {$method} rejection.");
+    $mock->shouldReceive($method)->never();
 }
 
 /** @param array<int, mixed> $arguments */
@@ -213,21 +105,5 @@ function dashboardThrowsFor(
     array $arguments,
     Throwable $exception,
 ): void {
-    $expectation = $mock->shouldReceive($method);
-
-    if ($expectation instanceof Expectation) {
-        $expectation->with(...$arguments)->once()->andThrow($exception);
-
-        return;
-    }
-
-    if ($expectation instanceof CompositeExpectation) {
-        $expectation->__call('with', $arguments);
-        $expectation->__call('once', []);
-        $expectation->__call('andThrow', [$exception]);
-
-        return;
-    }
-
-    throw new LogicException("Unable to configure {$method} exception.");
+    $mock->shouldReceive($method)->with(...$arguments)->once()->andThrow($exception);
 }
