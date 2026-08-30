@@ -247,7 +247,13 @@ it('queries retained jobs through the configured real Redis client', function ()
             throw new LogicException('Expected a retained job cursor.');
         }
 
-        $cursorBoundaryId = $firstPageIds[array_key_last($firstPageIds)];
+        $lastKey = array_key_last($firstPageIds);
+
+        if ($lastKey === null) {
+            throw new LogicException('Expected retained jobs on the first page.');
+        }
+
+        $cursorBoundaryId = $firstPageIds[$lastKey];
         $cursorPosition = (new RetainedJobCursor)->decode(
             $cursor,
             RetainedJobType::Completed,

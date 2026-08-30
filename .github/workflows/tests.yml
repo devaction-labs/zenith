@@ -37,7 +37,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - php: '8.4'
+          - php: '8.5'
             laravel: '13.23 minimum / Horizon 5.46 minimum'
             framework: '13.23.0'
             horizon: '5.46.0'
@@ -46,7 +46,7 @@ jobs:
             pest_plugin_laravel: '5.0.1'
             testbench: '11.2.0'
             without-boost: true
-          - php: '8.4'
+          - php: '8.5'
             laravel: '13.25 (pause-all enabled)'
             framework: '13.25.0'
             horizon: '5.46.0'

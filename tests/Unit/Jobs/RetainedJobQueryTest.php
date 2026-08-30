@@ -1893,7 +1893,13 @@ describe('RetainedJobQuery', function (): void {
             -1,
         );
         $firstIds = $first->jobs->pluck('id')->all();
-        $cursorId = $firstIds[array_key_last($firstIds)];
+        $lastKey = array_key_last($firstIds);
+
+        if ($lastKey === null) {
+            throw new LogicException('Expected retained jobs on the first page.');
+        }
+
+        $cursorId = $firstIds[$lastKey];
         $redis->zrem($sourceKey, $cursorId);
 
         $second = $fixture['query']->page(
@@ -1945,7 +1951,13 @@ describe('RetainedJobQuery', function (): void {
             -1,
         );
         $firstIds = $first->jobs->pluck('id')->all();
-        $cursorId = $firstIds[array_key_last($firstIds)];
+        $lastKey = array_key_last($firstIds);
+
+        if ($lastKey === null) {
+            throw new LogicException('Expected retained jobs on the first page.');
+        }
+
+        $cursorId = $firstIds[$lastKey];
         $redis->zrem('pending_jobs', $cursorId);
 
         $second = $fixture['query']->page(

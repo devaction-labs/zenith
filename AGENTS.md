@@ -9,7 +9,7 @@ Horizon New Dawn is a Laravel 13 package that replaces Laravel Horizon's bundled
 
 ## Versions
 
-- Support only PHP 8.4+, Laravel 13.23+, Horizon 5.46.0+, Inertia 3, React 19, Tailwind 4, and Wayfinder 0.1.
+- Support only PHP 8.5+, Laravel 13.23+, Horizon 5.46.0+, Inertia 3, React 19, Tailwind 4, and Wayfinder 0.1.
 - Do not add compatibility branches for older major versions.
 - Use Bun for frontend dependencies and scripts.
 

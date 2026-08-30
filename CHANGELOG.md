@@ -8,7 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Changed
 
-- Raised the supported runtime floors to PHP 8.4 and Laravel 13.23, required by Pest 5 and `pestphp/pest-plugin-laravel` 5. Laravel 12 and PHP 8.3 are no longer part of the supported contract.
+- Raised the supported runtime floors to PHP 8.5 and Laravel 13.23, required by Pest 5 and `pestphp/pest-plugin-laravel` 5. Laravel 12 and PHP 8.3/8.4 are no longer part of the supported contract.
 - Upgraded the test suite to Pest 5 and PHPUnit 13, and added `pestphp/pest-plugin-phpstan` so PHPStan understands Pest's test API.
 - Installed Rector 2 with the community Laravel plugin (`driftingly/rector-laravel`) for composer-based Laravel upgrades.
 

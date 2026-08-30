@@ -32,13 +32,13 @@ Compared with Horizon's bundled interface, New Dawn adds:
 
 ## Requirements
 
-- PHP 8.4 or newer
+- PHP 8.5 or newer
 - Laravel 13.23 or newer
 - Laravel Horizon 5.46.0 or newer within the 5.x series
 
 These floors are deliberate:
 
-- PHP 8.4 is required by Pest 5 and is the lowest PHP version covered by the package's release matrix. New Dawn does not claim compatibility with runtimes it does not continuously test.
+- PHP 8.5 is the lowest PHP version covered by the package's release matrix. New Dawn does not claim compatibility with runtimes it does not continuously test.
 - Laravel 13.23 is required by `pestphp/pest-plugin-laravel` 5. Laravel 12 is no longer part of the supported contract.
 - Horizon 5.46.0 is the oldest Horizon release exercised by New Dawn's full package suite, real Redis worker smoke test, and consuming-application browser checks. Older Horizon releases are not part of the supported contract.
 

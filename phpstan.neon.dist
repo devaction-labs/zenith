@@ -7,7 +7,7 @@ parameters:
         - src
         - tests
     level: 8
-    phpVersion: 80400
+    phpVersion: 80500
     tmpDir: .phpstan.cache
     ignoreErrors:
         - identifier: pest.expectation.redundant
