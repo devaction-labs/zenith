@@ -2,20 +2,20 @@
 
 declare(strict_types=1);
 
+use DevactionLabs\HorizonNewDawn\Batches\Actions\RetryBatch;
+use DevactionLabs\HorizonNewDawn\FailedJobs\Actions\RetryFailedJob;
+use DevactionLabs\HorizonNewDawn\FailedJobs\FailedJobRetryEligibility;
 use Illuminate\Bus\BatchRepository;
 use Illuminate\Contracts\Bus\Dispatcher;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Bus;
 use Laravel\Horizon\Contracts\JobRepository;
 use Laravel\Horizon\Jobs\RetryFailedJob as HorizonRetryFailedJob;
-use NckRtl\HorizonNewDawn\Batches\Actions\RetryBatch;
-use NckRtl\HorizonNewDawn\FailedJobs\Actions\RetryFailedJob;
-use NckRtl\HorizonNewDawn\FailedJobs\FailedJobRetryEligibility;
 
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardReturnsFor;
-use function NckRtl\HorizonNewDawn\Tests\Support\horizonBatch;
-use function NckRtl\HorizonNewDawn\Tests\Support\horizonJob;
-use function NckRtl\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturnsFor;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\horizonBatch;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\horizonJob;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
 
 describe('RetryBatch', function (): void {
     it('retries eligible failed leaves once', function (): void {

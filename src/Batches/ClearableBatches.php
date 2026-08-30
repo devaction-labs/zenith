@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Batches;
+namespace DevactionLabs\HorizonNewDawn\Batches;
 
+use DevactionLabs\HorizonNewDawn\Batches\Data\BatchClearCountsData;
+use DevactionLabs\HorizonNewDawn\Jobs\JobsData;
 use Illuminate\Bus\Batch;
 use Illuminate\Bus\BatchRepository;
 use JsonException;
 use Laravel\Horizon\Contracts\JobRepository;
-use NckRtl\HorizonNewDawn\Batches\Data\BatchClearCountsData;
-use NckRtl\HorizonNewDawn\Jobs\JobsData;
 use Throwable;
 
 final readonly class ClearableBatches

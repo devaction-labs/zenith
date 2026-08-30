@@ -7,9 +7,9 @@ use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Laravel\Horizon\Horizon;
 
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardReturnsFor;
-use function NckRtl\HorizonNewDawn\Tests\Support\horizonBatch;
-use function NckRtl\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturnsFor;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\horizonBatch;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
 use function Pest\Laravel\post;
 use function Pest\Laravel\withoutMiddleware;
 

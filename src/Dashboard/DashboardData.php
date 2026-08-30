@@ -2,9 +2,21 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Dashboard;
+namespace DevactionLabs\HorizonNewDawn\Dashboard;
 
 use Carbon\CarbonImmutable;
+use DevactionLabs\HorizonNewDawn\Dashboard\Data\DashboardSummaryData;
+use DevactionLabs\HorizonNewDawn\Dashboard\Data\DashboardSupervisorsData;
+use DevactionLabs\HorizonNewDawn\Dashboard\Data\DashboardWorkloadData;
+use DevactionLabs\HorizonNewDawn\Dashboard\Data\SupervisorData;
+use DevactionLabs\HorizonNewDawn\Dashboard\Data\SupervisorGroupData;
+use DevactionLabs\HorizonNewDawn\Dashboard\Data\SupervisorScalingData;
+use DevactionLabs\HorizonNewDawn\Dashboard\Data\WorkloadItemData;
+use DevactionLabs\HorizonNewDawn\Dashboard\Data\WorkloadSplitData;
+use DevactionLabs\HorizonNewDawn\Instances\LocalInstanceName;
+use DevactionLabs\HorizonNewDawn\Metrics\SnapshotJobsPerMinute;
+use DevactionLabs\HorizonNewDawn\Queues\QueuePauseStatus;
+use DevactionLabs\HorizonNewDawn\Queues\QueueWaitThreshold;
 use Illuminate\Contracts\Queue\Factory as QueueFactory;
 use Illuminate\Contracts\Queue\Queue;
 use Illuminate\Contracts\Redis\Factory as RedisFactory;
@@ -16,18 +28,6 @@ use Laravel\Horizon\Contracts\MasterSupervisorRepository;
 use Laravel\Horizon\Contracts\MetricsRepository;
 use Laravel\Horizon\Contracts\SupervisorRepository;
 use Laravel\Horizon\WaitTimeCalculator;
-use NckRtl\HorizonNewDawn\Dashboard\Data\DashboardSummaryData;
-use NckRtl\HorizonNewDawn\Dashboard\Data\DashboardSupervisorsData;
-use NckRtl\HorizonNewDawn\Dashboard\Data\DashboardWorkloadData;
-use NckRtl\HorizonNewDawn\Dashboard\Data\SupervisorData;
-use NckRtl\HorizonNewDawn\Dashboard\Data\SupervisorGroupData;
-use NckRtl\HorizonNewDawn\Dashboard\Data\SupervisorScalingData;
-use NckRtl\HorizonNewDawn\Dashboard\Data\WorkloadItemData;
-use NckRtl\HorizonNewDawn\Dashboard\Data\WorkloadSplitData;
-use NckRtl\HorizonNewDawn\Instances\LocalInstanceName;
-use NckRtl\HorizonNewDawn\Metrics\SnapshotJobsPerMinute;
-use NckRtl\HorizonNewDawn\Queues\QueuePauseStatus;
-use NckRtl\HorizonNewDawn\Queues\QueueWaitThreshold;
 use Throwable;
 
 final readonly class DashboardData
@@ -136,6 +136,7 @@ final readonly class DashboardData
                 queueWithMaxRuntime: $this->normalizeQueueName($queueWithMaxRuntime),
                 queueWithMaxThroughput: $this->normalizeQueueName($queueWithMaxThroughput),
                 message: null,
+                allPaused: $this->queuePauseStatus->allPaused(),
             );
         } catch (Throwable $exception) {
             report($exception);

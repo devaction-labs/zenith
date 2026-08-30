@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Support;
+namespace DevactionLabs\HorizonNewDawn\Support;
 
 enum NavigationItem: string
 {
@@ -16,4 +16,5 @@ enum NavigationItem: string
     case Completed = 'completed';
     case Silenced = 'silenced';
     case Failed = 'failed';
+    case Audit = 'audit';
 }

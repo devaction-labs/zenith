@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Batches;
+namespace DevactionLabs\HorizonNewDawn\Batches;
 
+use DevactionLabs\HorizonNewDawn\Jobs\Data\JobRowData;
+use DevactionLabs\HorizonNewDawn\Jobs\JobsData;
 use JsonException;
-use NckRtl\HorizonNewDawn\Jobs\Data\JobRowData;
-use NckRtl\HorizonNewDawn\Jobs\JobsData;
 
 final readonly class BatchFailedJobLineages
 {

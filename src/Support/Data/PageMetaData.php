@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Support\Data;
+namespace DevactionLabs\HorizonNewDawn\Support\Data;
 
-use NckRtl\HorizonNewDawn\Support\NavigationItem;
+use DevactionLabs\HorizonNewDawn\Support\NavigationItem;
 use Spatie\LaravelData\Data;
 
 final class PageMetaData extends Data

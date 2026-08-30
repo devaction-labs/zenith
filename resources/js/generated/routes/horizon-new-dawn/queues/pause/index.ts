@@ -1,6 +1,6 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../../../wayfinder'
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\QueuePauseController::store
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\QueuePauseController::store
 * @see src/Http/Controllers/QueuePauseController.php:21
 * @route '/horizon/queues/{connection}/{queue}/pause'
 */
@@ -15,7 +15,7 @@ store.definition = {
 } satisfies RouteDefinition<["post"]>
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\QueuePauseController::store
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\QueuePauseController::store
 * @see src/Http/Controllers/QueuePauseController.php:21
 * @route '/horizon/queues/{connection}/{queue}/pause'
 */
@@ -41,7 +41,7 @@ store.url = (args: { connection: string | number, queue: string | number } | [co
 }
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\QueuePauseController::store
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\QueuePauseController::store
 * @see src/Http/Controllers/QueuePauseController.php:21
 * @route '/horizon/queues/{connection}/{queue}/pause'
 */
@@ -51,7 +51,7 @@ store.post = (args: { connection: string | number, queue: string | number } | [c
 })
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\QueuePauseController::destroy
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\QueuePauseController::destroy
 * @see src/Http/Controllers/QueuePauseController.php:43
 * @route '/horizon/queues/{connection}/{queue}/pause'
 */
@@ -66,7 +66,7 @@ destroy.definition = {
 } satisfies RouteDefinition<["delete"]>
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\QueuePauseController::destroy
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\QueuePauseController::destroy
 * @see src/Http/Controllers/QueuePauseController.php:43
 * @route '/horizon/queues/{connection}/{queue}/pause'
 */
@@ -92,7 +92,7 @@ destroy.url = (args: { connection: string | number, queue: string | number } | [
 }
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\QueuePauseController::destroy
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\QueuePauseController::destroy
 * @see src/Http/Controllers/QueuePauseController.php:43
 * @route '/horizon/queues/{connection}/{queue}/pause'
 */

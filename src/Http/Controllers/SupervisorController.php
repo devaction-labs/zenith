@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Http\Controllers;
+namespace DevactionLabs\HorizonNewDawn\Http\Controllers;
 
+use DevactionLabs\HorizonNewDawn\Supervisors\SupervisorDetails;
+use DevactionLabs\HorizonNewDawn\Support\Data\PageMetaData;
+use DevactionLabs\HorizonNewDawn\Support\NavigationItem;
 use Inertia\Inertia;
 use Inertia\Response;
-use NckRtl\HorizonNewDawn\Supervisors\SupervisorDetails;
-use NckRtl\HorizonNewDawn\Support\Data\PageMetaData;
-use NckRtl\HorizonNewDawn\Support\NavigationItem;
 
 final class SupervisorController
 {

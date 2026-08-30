@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Http\Requests;
+namespace DevactionLabs\HorizonNewDawn\Http\Requests;
 
 use Closure;
+use DevactionLabs\HorizonNewDawn\Monitoring\MonitoringTagGuard;
 use Illuminate\Foundation\Http\FormRequest;
-use NckRtl\HorizonNewDawn\Monitoring\MonitoringTagGuard;
 
 final class MonitorTagRequest extends FormRequest
 {

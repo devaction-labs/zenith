@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../../wayfinder'
 import pause from './pause'
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\SupervisorController::show
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\SupervisorController::show
 * @see src/Http/Controllers/SupervisorController.php:15
 * @route '/horizon/supervisors/{supervisor}'
 */
@@ -16,7 +16,7 @@ show.definition = {
 } satisfies RouteDefinition<["get","head"]>
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\SupervisorController::show
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\SupervisorController::show
 * @see src/Http/Controllers/SupervisorController.php:15
 * @route '/horizon/supervisors/{supervisor}'
 */
@@ -43,7 +43,7 @@ show.url = (args: { supervisor: string | number } | [supervisor: string | number
 }
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\SupervisorController::show
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\SupervisorController::show
 * @see src/Http/Controllers/SupervisorController.php:15
 * @route '/horizon/supervisors/{supervisor}'
 */
@@ -53,7 +53,7 @@ show.get = (args: { supervisor: string | number } | [supervisor: string | number
 })
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\SupervisorController::show
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\SupervisorController::show
 * @see src/Http/Controllers/SupervisorController.php:15
 * @route '/horizon/supervisors/{supervisor}'
 */

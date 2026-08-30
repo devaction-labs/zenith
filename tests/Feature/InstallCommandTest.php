@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
+use DevactionLabs\HorizonNewDawn\Batches\DatabaseBatchCapability;
+use DevactionLabs\HorizonNewDawn\Support\ComposerAssetHook;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Testing\PendingCommand;
-use NckRtl\HorizonNewDawn\Batches\DatabaseBatchCapability;
-use NckRtl\HorizonNewDawn\Support\ComposerAssetHook;
 
 use function Pest\Laravel\artisan;
 
@@ -65,6 +65,28 @@ it('publishes the package configuration and compiled assets', function (): void 
     foreach ($filesystem->allFiles($source) as $file) {
         expect($destination.'/'.$file->getRelativePathname())->toBeFile();
     }
+});
+
+it('warns when Redis Cluster connections are configured', function (): void {
+    config()->set('database.redis.clusters', [
+        'default' => [
+            [
+                'host' => '127.0.0.1',
+                'port' => 6379,
+            ],
+        ],
+    ]);
+
+    $command = artisan('horizon-new-dawn:install', ['--force' => true]);
+
+    if (! $command instanceof PendingCommand) {
+        throw new RuntimeException('The install command did not return a pending command.');
+    }
+
+    $command
+        ->expectsOutputToContain('Redis Cluster detected')
+        ->assertSuccessful()
+        ->execute();
 });
 
 it('installs when cached configuration predates the package', function (): void {

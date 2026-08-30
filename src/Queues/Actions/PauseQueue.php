@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Queues\Actions;
+namespace DevactionLabs\HorizonNewDawn\Queues\Actions;
 
 use Carbon\CarbonImmutable;
+use DevactionLabs\HorizonNewDawn\Queues\Data\PauseQueueData;
+use DevactionLabs\HorizonNewDawn\Queues\QueuePauseMetadata;
+use DevactionLabs\HorizonNewDawn\Support\FrameworkCapabilities;
 use Illuminate\Queue\QueueManager;
-use NckRtl\HorizonNewDawn\Queues\Data\PauseQueueData;
-use NckRtl\HorizonNewDawn\Queues\QueuePauseMetadata;
-use NckRtl\HorizonNewDawn\Support\FrameworkCapabilities;
 
 final readonly class PauseQueue
 {

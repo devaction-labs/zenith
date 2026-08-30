@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-use NckRtl\HorizonNewDawn\BulkOperations\BulkOperationMissingStateException;
-use NckRtl\HorizonNewDawn\BulkOperations\BulkOperationSnapshot;
+use DevactionLabs\HorizonNewDawn\BulkOperations\BulkOperationMissingStateException;
+use DevactionLabs\HorizonNewDawn\BulkOperations\BulkOperationSnapshot;
 
-use function NckRtl\HorizonNewDawn\Tests\Support\bulkSnapshot;
-use function NckRtl\HorizonNewDawn\Tests\Support\bulkSnapshotRedis;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\bulkSnapshot;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\bulkSnapshotRedis;
 
 it('copies a point-in-time sorted set without serializing members into PHP', function (): void {
     $redis = bulkSnapshotRedis();

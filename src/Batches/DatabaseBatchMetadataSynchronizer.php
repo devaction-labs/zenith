@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Batches;
+namespace DevactionLabs\HorizonNewDawn\Batches;
 
 use Illuminate\Contracts\Config\Repository as ConfigRepository;
 use Illuminate\Database\PostgresConnection;

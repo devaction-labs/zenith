@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
+use DevactionLabs\HorizonNewDawn\Dashboard\DashboardBatchSummary;
 use Illuminate\Bus\BatchFactory;
 use Illuminate\Bus\BatchRepository;
 use Illuminate\Bus\DatabaseBatchRepository;
 use Illuminate\Support\Facades\Schema;
-use NckRtl\HorizonNewDawn\Dashboard\DashboardBatchSummary;
 
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardReturnsUsing;
-use function NckRtl\HorizonNewDawn\Tests\Support\horizonBatch;
-use function NckRtl\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturnsUsing;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\horizonBatch;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
 
 it('counts and previews active batches from repository pages', function (): void {
     config()->set('queue.batching.database', null);

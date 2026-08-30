@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Metrics;
+namespace DevactionLabs\HorizonNewDawn\Metrics;
 
+use DevactionLabs\HorizonNewDawn\Metrics\Data\MetricPreviewData;
+use DevactionLabs\HorizonNewDawn\Metrics\Data\MetricRowData;
+use DevactionLabs\HorizonNewDawn\Metrics\Data\MetricSnapshotData;
+use DevactionLabs\HorizonNewDawn\Metrics\Data\MetricsPageData;
 use Laravel\Horizon\Contracts\MetricsRepository;
-use NckRtl\HorizonNewDawn\Metrics\Data\MetricPreviewData;
-use NckRtl\HorizonNewDawn\Metrics\Data\MetricRowData;
-use NckRtl\HorizonNewDawn\Metrics\Data\MetricSnapshotData;
-use NckRtl\HorizonNewDawn\Metrics\Data\MetricsPageData;
 use Throwable;
 
 final readonly class MetricsData

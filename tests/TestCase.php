@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Tests;
+namespace DevactionLabs\HorizonNewDawn\Tests;
 
+use DevactionLabs\HorizonNewDawn\HorizonNewDawnServiceProvider;
 use Illuminate\Filesystem\Filesystem;
 use Inertia\ServiceProvider as InertiaServiceProvider;
 use Laravel\Horizon\HorizonServiceProvider;
-use NckRtl\HorizonNewDawn\HorizonNewDawnServiceProvider;
 use Orchestra\Testbench\TestCase as Orchestra;
 use Spatie\LaravelData\LaravelDataServiceProvider;
 

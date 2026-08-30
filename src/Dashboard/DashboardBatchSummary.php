@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Dashboard;
+namespace DevactionLabs\HorizonNewDawn\Dashboard;
 
-use NckRtl\HorizonNewDawn\Batches\BatchRepositoryOverview;
-use NckRtl\HorizonNewDawn\Batches\DatabaseBatchCapability;
-use NckRtl\HorizonNewDawn\Dashboard\Data\DashboardBatchPreviewData;
-use NckRtl\HorizonNewDawn\Dashboard\Data\DashboardBatchSummaryData;
+use DevactionLabs\HorizonNewDawn\Batches\BatchRepositoryOverview;
+use DevactionLabs\HorizonNewDawn\Batches\DatabaseBatchCapability;
+use DevactionLabs\HorizonNewDawn\Dashboard\Data\DashboardBatchPreviewData;
+use DevactionLabs\HorizonNewDawn\Dashboard\Data\DashboardBatchSummaryData;
 
 final readonly class DashboardBatchSummary
 {

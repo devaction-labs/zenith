@@ -2,6 +2,22 @@
 
 declare(strict_types=1);
 
+use DevactionLabs\HorizonNewDawn\Assets\AssetManifest;
+use DevactionLabs\HorizonNewDawn\Batches\BatchesData;
+use DevactionLabs\HorizonNewDawn\Batches\BatchJobsData;
+use DevactionLabs\HorizonNewDawn\FailedJobs\FailedJobRetryEligibility;
+use DevactionLabs\HorizonNewDawn\FailedJobs\FailedJobsData;
+use DevactionLabs\HorizonNewDawn\Jobs\JobsData;
+use DevactionLabs\HorizonNewDawn\Metrics\MetricsData;
+use DevactionLabs\HorizonNewDawn\Metrics\SnapshotJobsPerMinute;
+use DevactionLabs\HorizonNewDawn\Queues\QueueActivityData;
+use DevactionLabs\HorizonNewDawn\Queues\QueueBatchesData;
+use DevactionLabs\HorizonNewDawn\Queues\QueueJobsData;
+use DevactionLabs\HorizonNewDawn\Queues\QueuePauseStatus;
+use DevactionLabs\HorizonNewDawn\Queues\QueuesData;
+use DevactionLabs\HorizonNewDawn\Queues\QueueSummary;
+use DevactionLabs\HorizonNewDawn\Queues\QueueWaitThreshold;
+use DevactionLabs\HorizonNewDawn\Support\HorizonRuntime;
 use Illuminate\Bus\BatchRepository;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Illuminate\Contracts\Queue\Factory as QueueFactory;
@@ -14,29 +30,13 @@ use Laravel\Horizon\Contracts\SupervisorRepository;
 use Laravel\Horizon\Contracts\TagRepository;
 use Laravel\Horizon\Horizon;
 use Laravel\Horizon\WaitTimeCalculator;
-use NckRtl\HorizonNewDawn\Assets\AssetManifest;
-use NckRtl\HorizonNewDawn\Batches\BatchesData;
-use NckRtl\HorizonNewDawn\Batches\BatchJobsData;
-use NckRtl\HorizonNewDawn\FailedJobs\FailedJobRetryEligibility;
-use NckRtl\HorizonNewDawn\FailedJobs\FailedJobsData;
-use NckRtl\HorizonNewDawn\Jobs\JobsData;
-use NckRtl\HorizonNewDawn\Metrics\MetricsData;
-use NckRtl\HorizonNewDawn\Metrics\SnapshotJobsPerMinute;
-use NckRtl\HorizonNewDawn\Queues\QueueActivityData;
-use NckRtl\HorizonNewDawn\Queues\QueueBatchesData;
-use NckRtl\HorizonNewDawn\Queues\QueueJobsData;
-use NckRtl\HorizonNewDawn\Queues\QueuePauseStatus;
-use NckRtl\HorizonNewDawn\Queues\QueuesData;
-use NckRtl\HorizonNewDawn\Queues\QueueSummary;
-use NckRtl\HorizonNewDawn\Queues\QueueWaitThreshold;
-use NckRtl\HorizonNewDawn\Support\HorizonRuntime;
 
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardExpects;
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardNeverReceives;
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardReturns;
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardReturnsFor;
-use function NckRtl\HorizonNewDawn\Tests\Support\horizonJob;
-use function NckRtl\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardExpects;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardNeverReceives;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturns;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturnsFor;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\horizonJob;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
 use function Pest\Laravel\get;
 use function Pest\Laravel\getJson;
 

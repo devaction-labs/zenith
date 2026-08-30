@@ -3,25 +3,25 @@
 declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
+use DevactionLabs\HorizonNewDawn\FailedJobs\FailedJobRetryEligibility;
+use DevactionLabs\HorizonNewDawn\FailedJobs\FailedJobsData;
+use DevactionLabs\HorizonNewDawn\Jobs\JobsData;
+use DevactionLabs\HorizonNewDawn\Queues\Data\QueueRetainedJobsData;
+use DevactionLabs\HorizonNewDawn\Queues\QueueActivityTab;
+use DevactionLabs\HorizonNewDawn\Queues\QueueJobsData;
+use DevactionLabs\HorizonNewDawn\Support\PollInterval;
+use DevactionLabs\HorizonNewDawn\Tests\Support\HorizonJob;
 use Illuminate\Cache\CacheManager;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Laravel\Horizon\Contracts\JobRepository;
 use Laravel\Horizon\Contracts\TagRepository;
-use NckRtl\HorizonNewDawn\FailedJobs\FailedJobRetryEligibility;
-use NckRtl\HorizonNewDawn\FailedJobs\FailedJobsData;
-use NckRtl\HorizonNewDawn\Jobs\JobsData;
-use NckRtl\HorizonNewDawn\Queues\Data\QueueRetainedJobsData;
-use NckRtl\HorizonNewDawn\Queues\QueueActivityTab;
-use NckRtl\HorizonNewDawn\Queues\QueueJobsData;
-use NckRtl\HorizonNewDawn\Support\PollInterval;
-use NckRtl\HorizonNewDawn\Tests\Support\HorizonJob;
 
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardExpects;
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardReturnsFor;
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardThrowsFor;
-use function NckRtl\HorizonNewDawn\Tests\Support\horizonJob;
-use function NckRtl\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardExpects;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturnsFor;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardThrowsFor;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\horizonJob;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
 
 function retainedQueueJobsData(JobRepository $repository): QueueJobsData
 {

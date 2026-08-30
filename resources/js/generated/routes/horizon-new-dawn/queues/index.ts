@@ -1,11 +1,12 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../../wayfinder'
 import clearAll from './clear-all'
+import pauseAll from './pause-all'
 import pause from './pause'
 import clear from './clear'
 import retryFailed from './retry-failed'
 import batches from './batches'
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\QueueController::index
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\QueueController::index
 * @see src/Http/Controllers/QueueController.php:27
 * @route '/horizon/queues'
 */
@@ -20,7 +21,7 @@ index.definition = {
 } satisfies RouteDefinition<["get","head"]>
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\QueueController::index
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\QueueController::index
 * @see src/Http/Controllers/QueueController.php:27
 * @route '/horizon/queues'
 */
@@ -29,7 +30,7 @@ index.url = (options?: RouteQueryOptions) => {
 }
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\QueueController::index
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\QueueController::index
 * @see src/Http/Controllers/QueueController.php:27
 * @route '/horizon/queues'
 */
@@ -39,7 +40,7 @@ index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\QueueController::index
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\QueueController::index
 * @see src/Http/Controllers/QueueController.php:27
 * @route '/horizon/queues'
 */
@@ -49,7 +50,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 })
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\QueueController::show
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\QueueController::show
 * @see src/Http/Controllers/QueueController.php:35
 * @route '/horizon/queues/{queue}'
 */
@@ -64,7 +65,7 @@ show.definition = {
 } satisfies RouteDefinition<["get","head"]>
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\QueueController::show
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\QueueController::show
 * @see src/Http/Controllers/QueueController.php:35
 * @route '/horizon/queues/{queue}'
 */
@@ -91,7 +92,7 @@ show.url = (args: { queue: string | number } | [queue: string | number ] | strin
 }
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\QueueController::show
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\QueueController::show
 * @see src/Http/Controllers/QueueController.php:35
 * @route '/horizon/queues/{queue}'
 */
@@ -101,7 +102,7 @@ show.get = (args: { queue: string | number } | [queue: string | number ] | strin
 })
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\QueueController::show
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\QueueController::show
 * @see src/Http/Controllers/QueueController.php:35
 * @route '/horizon/queues/{queue}'
 */
@@ -113,6 +114,7 @@ show.head = (args: { queue: string | number } | [queue: string | number ] | stri
 const queues = {
     index: Object.assign(index, index),
     clearAll: Object.assign(clearAll, clearAll),
+    pauseAll: Object.assign(pauseAll, pauseAll),
     show: Object.assign(show, show),
     pause: Object.assign(pause, pause),
     clear: Object.assign(clear, clear),

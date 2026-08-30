@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Support;
+namespace DevactionLabs\HorizonNewDawn\Support;
 
 use Illuminate\Redis\Connections\Connection;
 use Illuminate\Redis\Connections\PhpRedisConnection;

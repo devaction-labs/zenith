@@ -2,21 +2,21 @@
 
 declare(strict_types=1);
 
+use DevactionLabs\HorizonNewDawn\Batches\BatchesData;
+use DevactionLabs\HorizonNewDawn\Batches\BatchJobsData;
+use DevactionLabs\HorizonNewDawn\Batches\DatabaseBatchCapability;
+use DevactionLabs\HorizonNewDawn\Dashboard\DashboardBatchSummary;
+use DevactionLabs\HorizonNewDawn\Dashboard\DashboardData;
+use DevactionLabs\HorizonNewDawn\Jobs\JobsData;
+use DevactionLabs\HorizonNewDawn\Support\NavigationCounts;
 use Illuminate\Bus\BatchFactory;
 use Illuminate\Bus\BatchRepository;
 use Illuminate\Bus\DatabaseBatchRepository;
 use Illuminate\Support\Facades\Schema;
 use Laravel\Horizon\Contracts\JobRepository;
-use NckRtl\HorizonNewDawn\Batches\BatchesData;
-use NckRtl\HorizonNewDawn\Batches\BatchJobsData;
-use NckRtl\HorizonNewDawn\Batches\DatabaseBatchCapability;
-use NckRtl\HorizonNewDawn\Dashboard\DashboardBatchSummary;
-use NckRtl\HorizonNewDawn\Dashboard\DashboardData;
-use NckRtl\HorizonNewDawn\Jobs\JobsData;
-use NckRtl\HorizonNewDawn\Support\NavigationCounts;
 
-use function NckRtl\HorizonNewDawn\Tests\Support\bindBrowserPageFixtures;
-use function NckRtl\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\bindBrowserPageFixtures;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
 
 it('guides operators to create the batch table and keeps batches navigation visible', function (): void {
     bindBrowserPageFixtures();

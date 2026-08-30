@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Http\Controllers;
+namespace DevactionLabs\HorizonNewDawn\Http\Controllers;
 
+use DevactionLabs\HorizonNewDawn\Http\Requests\JobIndexRequest;
+use DevactionLabs\HorizonNewDawn\Jobs\JobListType;
+use DevactionLabs\HorizonNewDawn\Jobs\JobsData;
+use DevactionLabs\HorizonNewDawn\Queues\QueuesData;
+use DevactionLabs\HorizonNewDawn\Support\Data\PageMetaData;
+use DevactionLabs\HorizonNewDawn\Support\Scrolling\HorizonScrollMetadata;
 use Inertia\Inertia;
 use Inertia\Response;
-use NckRtl\HorizonNewDawn\Http\Requests\JobIndexRequest;
-use NckRtl\HorizonNewDawn\Jobs\JobListType;
-use NckRtl\HorizonNewDawn\Jobs\JobsData;
-use NckRtl\HorizonNewDawn\Queues\QueuesData;
-use NckRtl\HorizonNewDawn\Support\Data\PageMetaData;
-use NckRtl\HorizonNewDawn\Support\Scrolling\HorizonScrollMetadata;
 
 final class JobController
 {

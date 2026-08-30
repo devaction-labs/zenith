@@ -4,22 +4,22 @@ declare(strict_types=1);
 
 require_once __DIR__.'/../Support/RetainedJobBrowserFixtures.php';
 
+use DevactionLabs\HorizonNewDawn\Jobs\JobsData;
+use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobFilterCatalog;
+use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobIndex;
+use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobQuery;
+use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobType;
+use DevactionLabs\HorizonNewDawn\Tests\Support\HorizonJob;
+use DevactionLabs\HorizonNewDawn\Tests\Support\RetainedJobBrowserRedisConnection;
 use Illuminate\Contracts\Redis\Factory as RedisFactory;
 use Illuminate\Support\Collection;
 use Laravel\Horizon\Contracts\JobRepository;
-use NckRtl\HorizonNewDawn\Jobs\JobsData;
-use NckRtl\HorizonNewDawn\Jobs\RetainedJobFilterCatalog;
-use NckRtl\HorizonNewDawn\Jobs\RetainedJobIndex;
-use NckRtl\HorizonNewDawn\Jobs\RetainedJobQuery;
-use NckRtl\HorizonNewDawn\Jobs\RetainedJobType;
-use NckRtl\HorizonNewDawn\Tests\Support\HorizonJob;
-use NckRtl\HorizonNewDawn\Tests\Support\RetainedJobBrowserRedisConnection;
 
-use function NckRtl\HorizonNewDawn\Tests\Support\bindBrowserPageFixtures;
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardReturns;
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardReturnsUsing;
-use function NckRtl\HorizonNewDawn\Tests\Support\horizonJob;
-use function NckRtl\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\bindBrowserPageFixtures;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturns;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturnsUsing;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\horizonJob;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
 
 it('renders scheduled jobs as delayed, released, and reserved through the retained query path', function (): void {
     $now = (float) time();

@@ -2,6 +2,24 @@
 
 declare(strict_types=1);
 
+use DevactionLabs\HorizonNewDawn\Assets\AssetManifest;
+use DevactionLabs\HorizonNewDawn\Batches\BatchRepositoryOverview;
+use DevactionLabs\HorizonNewDawn\Batches\DatabaseBatchCapability;
+use DevactionLabs\HorizonNewDawn\BulkOperations\Jobs\RetryBatchJob;
+use DevactionLabs\HorizonNewDawn\Dashboard\DashboardBatchSummary;
+use DevactionLabs\HorizonNewDawn\Dashboard\DashboardData;
+use DevactionLabs\HorizonNewDawn\Dashboard\DashboardPendingState;
+use DevactionLabs\HorizonNewDawn\Http\Controllers\BatchesApiController;
+use DevactionLabs\HorizonNewDawn\Http\Controllers\HomeController;
+use DevactionLabs\HorizonNewDawn\Http\Controllers\MonitoringApiController;
+use DevactionLabs\HorizonNewDawn\Http\Middleware\HandleInertiaRequests;
+use DevactionLabs\HorizonNewDawn\Metrics\SnapshotJobsPerMinute;
+use DevactionLabs\HorizonNewDawn\Queues\QueuePauseMetadata;
+use DevactionLabs\HorizonNewDawn\Queues\QueuePauseStatus;
+use DevactionLabs\HorizonNewDawn\Queues\QueueWaitThreshold;
+use DevactionLabs\HorizonNewDawn\Support\FrameworkCapabilities;
+use DevactionLabs\HorizonNewDawn\Support\HorizonRuntime;
+use DevactionLabs\HorizonNewDawn\Tests\TestCase;
 use Illuminate\Bus\BatchRepository;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Illuminate\Contracts\Queue\Factory as QueueFactory;
@@ -31,29 +49,11 @@ use Laravel\Horizon\Jobs\MonitorTag as HorizonMonitorTag;
 use Laravel\Horizon\Jobs\RetryFailedJob as HorizonRetryFailedJob;
 use Laravel\Horizon\Jobs\StopMonitoringTag as HorizonStopMonitoringTag;
 use Laravel\Horizon\WaitTimeCalculator;
-use NckRtl\HorizonNewDawn\Assets\AssetManifest;
-use NckRtl\HorizonNewDawn\Batches\BatchRepositoryOverview;
-use NckRtl\HorizonNewDawn\Batches\DatabaseBatchCapability;
-use NckRtl\HorizonNewDawn\BulkOperations\Jobs\RetryBatchJob;
-use NckRtl\HorizonNewDawn\Dashboard\DashboardBatchSummary;
-use NckRtl\HorizonNewDawn\Dashboard\DashboardData;
-use NckRtl\HorizonNewDawn\Dashboard\DashboardPendingState;
-use NckRtl\HorizonNewDawn\Http\Controllers\BatchesApiController;
-use NckRtl\HorizonNewDawn\Http\Controllers\HomeController;
-use NckRtl\HorizonNewDawn\Http\Controllers\MonitoringApiController;
-use NckRtl\HorizonNewDawn\Http\Middleware\HandleInertiaRequests;
-use NckRtl\HorizonNewDawn\Metrics\SnapshotJobsPerMinute;
-use NckRtl\HorizonNewDawn\Queues\QueuePauseMetadata;
-use NckRtl\HorizonNewDawn\Queues\QueuePauseStatus;
-use NckRtl\HorizonNewDawn\Queues\QueueWaitThreshold;
-use NckRtl\HorizonNewDawn\Support\FrameworkCapabilities;
-use NckRtl\HorizonNewDawn\Support\HorizonRuntime;
-use NckRtl\HorizonNewDawn\Tests\TestCase;
 
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardExpects;
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardReturns;
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardReturnsFor;
-use function NckRtl\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardExpects;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturns;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturnsFor;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
 use function Pest\Laravel\deleteJson;
 use function Pest\Laravel\get;
 use function Pest\Laravel\postJson;
@@ -282,7 +282,8 @@ describe('Horizon controller replacement', function (): void {
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
                 ->where('horizon.capabilities.queuePausing', false)
-                ->where('horizon.capabilities.timedQueuePausing', false));
+                ->where('horizon.capabilities.timedQueuePausing', false)
+                ->where('horizon.capabilities.queuePausingAll', false));
     });
 
     it('shares timed queue pausing separately from basic queue pausing', function (): void {
@@ -295,7 +296,19 @@ describe('Horizon controller replacement', function (): void {
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
                 ->where('horizon.capabilities.queuePausing', true)
-                ->where('horizon.capabilities.timedQueuePausing', false));
+                ->where('horizon.capabilities.timedQueuePausing', false)
+                ->where('horizon.capabilities.queuePausingAll', false));
+    });
+
+    it('shares Laravel global queue pause state with the interface', function (): void {
+        requireQueuePausingAll();
+
+        app(QueueManager::class)->pauseAll();
+
+        get('/horizon')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
+                ->where('horizon.allQueuesPaused', true));
     });
 
     it('shares the enabled job navigation breakdown with the interface', function (): void {

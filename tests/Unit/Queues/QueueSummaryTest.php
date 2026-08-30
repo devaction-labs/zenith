@@ -3,6 +3,23 @@
 declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
+use DevactionLabs\HorizonNewDawn\Batches\BatchesData;
+use DevactionLabs\HorizonNewDawn\Batches\BatchJobsData;
+use DevactionLabs\HorizonNewDawn\FailedJobs\FailedJobRetryEligibility;
+use DevactionLabs\HorizonNewDawn\FailedJobs\FailedJobsData;
+use DevactionLabs\HorizonNewDawn\Jobs\JobsData;
+use DevactionLabs\HorizonNewDawn\Metrics\SnapshotJobsPerMinute;
+use DevactionLabs\HorizonNewDawn\Queues\Data\QueuePauseTargetData;
+use DevactionLabs\HorizonNewDawn\Queues\Data\QueueRetainedJobsData;
+use DevactionLabs\HorizonNewDawn\Queues\Data\QueueRowData;
+use DevactionLabs\HorizonNewDawn\Queues\Data\QueueWaitThresholdData;
+use DevactionLabs\HorizonNewDawn\Queues\Data\QueueWaitThresholdTargetData;
+use DevactionLabs\HorizonNewDawn\Queues\QueueBatchesData;
+use DevactionLabs\HorizonNewDawn\Queues\QueueJobsData;
+use DevactionLabs\HorizonNewDawn\Queues\QueuePauseMetadata;
+use DevactionLabs\HorizonNewDawn\Queues\QueuePauseStatus;
+use DevactionLabs\HorizonNewDawn\Queues\QueueSummary;
+use DevactionLabs\HorizonNewDawn\Queues\QueueWaitThresholdStatus;
 use Illuminate\Bus\BatchRepository;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Illuminate\Contracts\Redis\Factory as RedisFactory;
@@ -11,31 +28,14 @@ use Illuminate\Redis\Connections\Connection;
 use Laravel\Horizon\Contracts\JobRepository;
 use Laravel\Horizon\Contracts\MetricsRepository;
 use Laravel\Horizon\Contracts\TagRepository;
-use NckRtl\HorizonNewDawn\Batches\BatchesData;
-use NckRtl\HorizonNewDawn\Batches\BatchJobsData;
-use NckRtl\HorizonNewDawn\FailedJobs\FailedJobRetryEligibility;
-use NckRtl\HorizonNewDawn\FailedJobs\FailedJobsData;
-use NckRtl\HorizonNewDawn\Jobs\JobsData;
-use NckRtl\HorizonNewDawn\Metrics\SnapshotJobsPerMinute;
-use NckRtl\HorizonNewDawn\Queues\Data\QueuePauseTargetData;
-use NckRtl\HorizonNewDawn\Queues\Data\QueueRetainedJobsData;
-use NckRtl\HorizonNewDawn\Queues\Data\QueueRowData;
-use NckRtl\HorizonNewDawn\Queues\Data\QueueWaitThresholdData;
-use NckRtl\HorizonNewDawn\Queues\Data\QueueWaitThresholdTargetData;
-use NckRtl\HorizonNewDawn\Queues\QueueBatchesData;
-use NckRtl\HorizonNewDawn\Queues\QueueJobsData;
-use NckRtl\HorizonNewDawn\Queues\QueuePauseMetadata;
-use NckRtl\HorizonNewDawn\Queues\QueuePauseStatus;
-use NckRtl\HorizonNewDawn\Queues\QueueSummary;
-use NckRtl\HorizonNewDawn\Queues\QueueWaitThresholdStatus;
 
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardExpects;
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardReturns;
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardReturnsFor;
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardThrows;
-use function NckRtl\HorizonNewDawn\Tests\Support\horizonBatch;
-use function NckRtl\HorizonNewDawn\Tests\Support\horizonJob;
-use function NckRtl\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardExpects;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturns;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturnsFor;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardThrows;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\horizonBatch;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\horizonJob;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
 
 function queueSummaryCoordinator(
     JobRepository $jobRepository,
@@ -318,6 +318,12 @@ it('combines live queue retained history batches and snapshot metrics', function
         'throughput' => 4,
         'averageRuntime' => 2.5,
         'message' => null,
+        'routing' => [
+            'available' => app()->bound('queue.routes'),
+            'classRoutes' => [],
+            'forwardedQueue' => null,
+            'forwardedConnection' => null,
+        ],
     ]);
 });
 

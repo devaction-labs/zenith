@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Batches\Data;
+namespace DevactionLabs\HorizonNewDawn\Batches\Data;
 
-use NckRtl\HorizonNewDawn\Jobs\Data\JobRowData;
+use DevactionLabs\HorizonNewDawn\Jobs\Data\JobRowData;
 use Spatie\LaravelData\Data;
 
 final class BatchJobListData extends Data

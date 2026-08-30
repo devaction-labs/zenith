@@ -2,23 +2,23 @@
 
 declare(strict_types=1);
 
+use DevactionLabs\HorizonNewDawn\Batches\BatchCreatedRange;
+use DevactionLabs\HorizonNewDawn\Batches\BatchesData;
+use DevactionLabs\HorizonNewDawn\Batches\BatchJobsData;
+use DevactionLabs\HorizonNewDawn\Jobs\JobsData;
+use DevactionLabs\HorizonNewDawn\Tests\Support\HorizonJob;
 use Illuminate\Bus\BatchRepository;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Date;
 use Laravel\Horizon\Contracts\JobRepository;
 use Mockery\MockInterface;
-use NckRtl\HorizonNewDawn\Batches\BatchCreatedRange;
-use NckRtl\HorizonNewDawn\Batches\BatchesData;
-use NckRtl\HorizonNewDawn\Batches\BatchJobsData;
-use NckRtl\HorizonNewDawn\Jobs\JobsData;
-use NckRtl\HorizonNewDawn\Tests\Support\HorizonJob;
 
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardReturns;
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardReturnsFor;
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardThrows;
-use function NckRtl\HorizonNewDawn\Tests\Support\horizonBatch;
-use function NckRtl\HorizonNewDawn\Tests\Support\horizonJob;
-use function NckRtl\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturns;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturnsFor;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardThrows;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\horizonBatch;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\horizonJob;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
 
 describe('BatchesData', function (): void {
     it('exposes normalized batch rows and explicit queue attribution', function (): void {

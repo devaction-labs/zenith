@@ -1,6 +1,6 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../../../wayfinder'
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\QueueFailedJobRetryController::store
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\QueueFailedJobRetryController::store
 * @see src/Http/Controllers/QueueFailedJobRetryController.php:15
 * @route '/horizon/queues/{connection}/{queue}/retry-failed'
 */
@@ -15,7 +15,7 @@ store.definition = {
 } satisfies RouteDefinition<["post"]>
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\QueueFailedJobRetryController::store
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\QueueFailedJobRetryController::store
 * @see src/Http/Controllers/QueueFailedJobRetryController.php:15
 * @route '/horizon/queues/{connection}/{queue}/retry-failed'
 */
@@ -41,7 +41,7 @@ store.url = (args: { connection: string | number, queue: string | number } | [co
 }
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\QueueFailedJobRetryController::store
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\QueueFailedJobRetryController::store
 * @see src/Http/Controllers/QueueFailedJobRetryController.php:15
 * @route '/horizon/queues/{connection}/{queue}/retry-failed'
 */

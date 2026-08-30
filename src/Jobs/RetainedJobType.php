@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Jobs;
+namespace DevactionLabs\HorizonNewDawn\Jobs;
 
 enum RetainedJobType: string
 {

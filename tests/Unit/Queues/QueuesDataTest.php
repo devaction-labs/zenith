@@ -3,22 +3,22 @@
 declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
+use DevactionLabs\HorizonNewDawn\Queues\QueuePauseStatus;
+use DevactionLabs\HorizonNewDawn\Queues\QueuesData;
+use DevactionLabs\HorizonNewDawn\Queues\QueueWaitThreshold;
+use DevactionLabs\HorizonNewDawn\Queues\QueueWaitThresholdStatus;
 use Illuminate\Contracts\Queue\Factory as QueueFactory;
 use Illuminate\Contracts\Queue\Queue;
 use Illuminate\Queue\QueueManager;
 use Laravel\Horizon\Contracts\MetricsRepository;
 use Laravel\Horizon\Contracts\SupervisorRepository;
 use Laravel\Horizon\WaitTimeCalculator;
-use NckRtl\HorizonNewDawn\Queues\QueuePauseStatus;
-use NckRtl\HorizonNewDawn\Queues\QueuesData;
-use NckRtl\HorizonNewDawn\Queues\QueueWaitThreshold;
-use NckRtl\HorizonNewDawn\Queues\QueueWaitThresholdStatus;
 
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardReturns;
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardReturnsFor;
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardThrows;
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardThrowsFor;
-use function NckRtl\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturns;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturnsFor;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardThrows;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardThrowsFor;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
 
 beforeEach(function (): void {
     CarbonImmutable::setTestNow(CarbonImmutable::createFromTimestampUTC(1800));
@@ -220,6 +220,7 @@ it('discovers supervised queues and aggregates duplicate names across connection
             ],
         ],
         'message' => null,
+        'allPaused' => false,
     ])->and($catalog->find('reports')?->name)->toBe('reports')
         ->and($catalog->find('missing'))->toBeNull()
         ->and($catalog->pendingCounts()->toArray())->toBe([
@@ -246,6 +247,7 @@ it('returns a safe unavailable queue catalog when Horizon storage fails', functi
         'available' => false,
         'queues' => [],
         'message' => 'Horizon queues are currently unavailable.',
+        'allPaused' => false,
     ])->and($catalog->pendingCounts()->toArray())->toBe([
         'available' => false,
         'ready' => null,

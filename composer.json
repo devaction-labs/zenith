@@ -1,5 +1,5 @@
 {
-    "name": "nckrtl/horizon-new-dawn",
+    "name": "devaction-labs/horizon-new-dawn",
     "description": "A React and Inertia interface for Laravel Horizon.",
     "keywords": [
         "dashboard",
@@ -9,14 +9,14 @@
         "queues",
         "react"
     ],
-    "homepage": "https://github.com/nckrtl/horizon-new-dawn",
+    "homepage": "https://github.com/devaction-labs/horizon-new-dawn",
     "type": "library",
     "license": "MIT",
     "authors": [
         {
-            "name": "Nick Retel",
-            "email": "nick.retel@gmail.com",
-            "homepage": "https://github.com/nckrtl",
+            "name": "DevAction Labs",
+            "email": "agencia@devaction.com.br",
+            "homepage": "https://github.com/devaction-labs",
             "role": "Developer"
         }
     ],
@@ -41,12 +41,12 @@
     },
     "autoload": {
         "psr-4": {
-            "NckRtl\\HorizonNewDawn\\": "src/"
+            "DevactionLabs\\HorizonNewDawn\\": "src/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "NckRtl\\HorizonNewDawn\\Tests\\": "tests/",
+            "DevactionLabs\\HorizonNewDawn\\Tests\\": "tests/",
             "Workbench\\App\\": "workbench/app/",
             "Workbench\\Database\\Seeders\\": "workbench/database/seeders/"
         }
@@ -54,13 +54,13 @@
     "extra": {
         "laravel": {
             "providers": [
-                "NckRtl\\HorizonNewDawn\\HorizonNewDawnServiceProvider"
+                "DevactionLabs\\HorizonNewDawn\\HorizonNewDawnServiceProvider"
             ]
         }
     },
     "support": {
-        "issues": "https://github.com/nckrtl/horizon-new-dawn/issues",
-        "source": "https://github.com/nckrtl/horizon-new-dawn"
+        "issues": "https://github.com/devaction-labs/horizon-new-dawn/issues",
+        "source": "https://github.com/devaction-labs/horizon-new-dawn"
     },
     "scripts": {
         "analyse": "@php -d memory_limit=1G vendor/bin/phpstan analyse",

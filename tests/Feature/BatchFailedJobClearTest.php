@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use DevactionLabs\HorizonNewDawn\BulkOperations\Jobs\ClearBatchFailedJobsJob;
 use Illuminate\Bus\BatchRepository;
 use Illuminate\Contracts\Queue\Queue;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
@@ -11,12 +12,11 @@ use Illuminate\Queue\SyncQueue;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Exceptions;
 use Laravel\Horizon\Horizon;
-use NckRtl\HorizonNewDawn\BulkOperations\Jobs\ClearBatchFailedJobsJob;
 
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardExpects;
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardReturns;
-use function NckRtl\HorizonNewDawn\Tests\Support\horizonBatch;
-use function NckRtl\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardExpects;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturns;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\horizonBatch;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
 use function Pest\Laravel\delete;
 use function Pest\Laravel\withoutMiddleware;
 

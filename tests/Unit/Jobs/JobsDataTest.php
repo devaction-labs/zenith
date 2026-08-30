@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
+use DevactionLabs\HorizonNewDawn\Jobs\JobListType;
+use DevactionLabs\HorizonNewDawn\Jobs\JobsData;
 use Illuminate\Contracts\Redis\Factory as RedisFactory;
 use Illuminate\Redis\Connections\Connection;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Date;
 use Laravel\Horizon\Contracts\JobRepository;
-use NckRtl\HorizonNewDawn\Jobs\JobListType;
-use NckRtl\HorizonNewDawn\Jobs\JobsData;
 
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardReturns;
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardReturnsFor;
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardReturnsUsing;
-use function NckRtl\HorizonNewDawn\Tests\Support\horizonJob;
-use function NckRtl\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturns;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturnsFor;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturnsUsing;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\horizonJob;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
 
 describe('JobsData', function (): void {
     afterEach(function (): void {

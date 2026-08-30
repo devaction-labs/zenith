@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
+use DevactionLabs\HorizonNewDawn\Support\FrameworkCapabilities;
+use DevactionLabs\HorizonNewDawn\Tests\BrowserTestCase;
+use DevactionLabs\HorizonNewDawn\Tests\TestCase;
 use Illuminate\Cache\CacheManager;
-use NckRtl\HorizonNewDawn\Support\FrameworkCapabilities;
-use NckRtl\HorizonNewDawn\Tests\BrowserTestCase;
-use NckRtl\HorizonNewDawn\Tests\TestCase;
 use PHPUnit\Framework\SkippedWithMessageException;
 
 require_once __DIR__.'/Support/DashboardMocks.php';
@@ -38,6 +38,18 @@ function requireTimedQueuePausing(): void
 {
     if (! timedQueuePausingIsSupported()) {
         throw new SkippedWithMessageException('Timed queue pausing is unavailable on this Laravel version.');
+    }
+}
+
+function queuePausingAllIsSupported(): bool
+{
+    return FrameworkCapabilities::detect()->queuePausingAll;
+}
+
+function requireQueuePausingAll(): void
+{
+    if (! queuePausingAllIsSupported()) {
+        throw new SkippedWithMessageException('Pausing all queues is unavailable on this Laravel version.');
     }
 }
 

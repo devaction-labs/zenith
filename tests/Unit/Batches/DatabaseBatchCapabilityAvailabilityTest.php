@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use DevactionLabs\HorizonNewDawn\Batches\DatabaseBatchCapability;
 use Illuminate\Bus\BatchFactory;
 use Illuminate\Bus\BatchRepository;
 use Illuminate\Bus\DatabaseBatchRepository;
@@ -9,10 +10,9 @@ use Illuminate\Database\Connection;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Schema\Builder;
 use Illuminate\Support\Facades\Schema;
-use NckRtl\HorizonNewDawn\Batches\DatabaseBatchCapability;
 
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardExpects;
-use function NckRtl\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardExpects;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
 
 beforeEach(function (): void {
     config()->set('queue.batching.database', null);

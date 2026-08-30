@@ -1,6 +1,6 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../../../wayfinder'
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\BatchRetryController::store
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\BatchRetryController::store
 * @see src/Http/Controllers/BatchRetryController.php:15
 * @route '/horizon/batches/{batch}/retry'
 */
@@ -15,7 +15,7 @@ store.definition = {
 } satisfies RouteDefinition<["post"]>
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\BatchRetryController::store
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\BatchRetryController::store
 * @see src/Http/Controllers/BatchRetryController.php:15
 * @route '/horizon/batches/{batch}/retry'
 */
@@ -42,7 +42,7 @@ store.url = (args: { batch: string | number } | [batch: string | number ] | stri
 }
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\BatchRetryController::store
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\BatchRetryController::store
 * @see src/Http/Controllers/BatchRetryController.php:15
 * @route '/horizon/batches/{batch}/retry'
 */

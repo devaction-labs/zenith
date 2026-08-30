@@ -63,6 +63,8 @@ function QueuesIndex({ horizon, queues }: QueuesPageProps) {
               horizonBaseUrl={horizon.baseUrl}
               queueCount={queues.queues.length}
               pendingJobs={pendingJobs}
+              allPaused={queues.allPaused === true || horizon.allQueuesPaused === true}
+              queuePausingAll={horizon.capabilities?.queuePausingAll ?? false}
             />
           }
         />

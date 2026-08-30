@@ -1,6 +1,6 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../../../wayfinder'
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\BatchCancelController::store
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\BatchCancelController::store
 * @see src/Http/Controllers/BatchCancelController.php:13
 * @route '/horizon/batches/{batch}/cancel'
 */
@@ -15,7 +15,7 @@ store.definition = {
 } satisfies RouteDefinition<["post"]>
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\BatchCancelController::store
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\BatchCancelController::store
 * @see src/Http/Controllers/BatchCancelController.php:13
 * @route '/horizon/batches/{batch}/cancel'
 */
@@ -42,7 +42,7 @@ store.url = (args: { batch: string | number } | [batch: string | number ] | stri
 }
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\BatchCancelController::store
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\BatchCancelController::store
 * @see src/Http/Controllers/BatchCancelController.php:13
 * @route '/horizon/batches/{batch}/cancel'
 */

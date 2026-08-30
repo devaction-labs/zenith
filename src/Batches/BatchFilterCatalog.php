@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Batches;
+namespace DevactionLabs\HorizonNewDawn\Batches;
 
+use DevactionLabs\HorizonNewDawn\Batches\Data\BatchFilterCatalogData;
+use DevactionLabs\HorizonNewDawn\Support\PollInterval;
 use Illuminate\Bus\BatchRepository;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
-use NckRtl\HorizonNewDawn\Batches\Data\BatchFilterCatalogData;
-use NckRtl\HorizonNewDawn\Support\PollInterval;
 use Throwable;
 
 final readonly class BatchFilterCatalog

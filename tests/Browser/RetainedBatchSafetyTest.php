@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
+use DevactionLabs\HorizonNewDawn\Batches\BatchesData;
+use DevactionLabs\HorizonNewDawn\Batches\BatchJobsData;
+use DevactionLabs\HorizonNewDawn\Jobs\JobsData;
 use Illuminate\Bus\BatchRepository;
 use Laravel\Horizon\Contracts\JobRepository;
-use NckRtl\HorizonNewDawn\Batches\BatchesData;
-use NckRtl\HorizonNewDawn\Batches\BatchJobsData;
-use NckRtl\HorizonNewDawn\Jobs\JobsData;
 
-use function NckRtl\HorizonNewDawn\Tests\Support\bindBrowserPageFixtures;
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardReturnsUsing;
-use function NckRtl\HorizonNewDawn\Tests\Support\horizonBatch;
-use function NckRtl\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\bindBrowserPageFixtures;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturnsUsing;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\horizonBatch;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
 
 it('shows the repository capability and allows verified clear controls after a complete multipage scan', function (): void {
     bindBrowserPageFixtures();

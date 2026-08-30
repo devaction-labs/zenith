@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
+use DevactionLabs\HorizonNewDawn\Dashboard\DashboardPendingState;
 use Illuminate\Contracts\Queue\Factory as QueueFactory;
 use Illuminate\Contracts\Queue\Queue;
-use NckRtl\HorizonNewDawn\Dashboard\DashboardPendingState;
 
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardReturnsFor;
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardThrows;
-use function NckRtl\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturnsFor;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardThrows;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
 
 it('deduplicates supervised queues and totals their redis states', function (): void {
     $connection = mockDashboardContract(Queue::class);

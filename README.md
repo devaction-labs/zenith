@@ -1,5 +1,7 @@
 # Horizon New Dawn
 
+This is the DevAction Labs fork of [nckrtl/horizon-new-dawn](https://github.com/nckrtl/horizon-new-dawn). The original authors retain copyright in the MIT license.
+
 > [!IMPORTANT]
 > Horizon New Dawn is pre-1.0 software. Production use is supported only within
 > the operating envelope documented below, and minor releases may contain
@@ -23,7 +25,7 @@ Compared with Horizon's bundled interface, New Dawn adds:
 - exact database-backed batch search, status tabs, queue and connection filters, creation ranges, counts, and server-side sorting;
 - Horizon instance management, with controls to pause or continue individual local instances and terminate local instances;
 - supervisor controls and detailed configuration views covering scaling, balancing, process limits, memory, timeouts, retries, backoff, and configuration warnings;
-- queue management, including timed or indefinite pauses, resuming, clearing one or all queues, and retrying failures for a specific queue;
+- queue management, including timed or indefinite pauses, Laravel 13.25 global pause/resume of every queue on every connection, clearing one or all queues, and retrying failures for a specific queue;
 - individual and bulk cancellation of eligible pending jobs, while protecting batched jobs so they are cancelled through their batch;
 - bulk and scoped failure recovery, with controls to retry or remove one failed job, retry or clear all failures, and retry failures by queue, monitored tag, or batch;
 - batch management, including cancelling active batches, retrying failed batch jobs, clearing retained failures, and clearing finished batches.
@@ -40,12 +42,12 @@ These floors are deliberate:
 - Laravel 12.38 contains the framework fix needed to register console commands correctly with current Symfony Console releases. Earlier Laravel 12 releases can fail while booting Artisan. Laravel 11 is excluded because it is end-of-life.
 - Horizon 5.46.0 is the oldest Horizon release exercised by New Dawn's full package suite, real Redis worker smoke test, and consuming-application browser checks. Older Horizon releases are not part of the supported contract.
 
-Queue pausing is available when the installed Laravel version provides its complete queue-pause API (Laravel 12.40.2 or newer). On Laravel 12.38 through 12.40.1, New Dawn hides only the unsupported pause and resume controls; retrying failures and clearing queues remain available.
+Queue pausing is available when the installed Laravel version provides its complete queue-pause API (Laravel 12.40.2 or newer). On Laravel 12.38 through 12.40.1, New Dawn hides only the unsupported pause and resume controls; retrying failures and clearing queues remain available. Pausing or resuming every queue at once (`Queue::pauseAll()` / `Queue::resumeAll()`) additionally requires Laravel 13.25 or newer; earlier versions hide only those global controls.
 
 Standalone Redis 6.2 or newer and standalone Valkey 8 are supported with
-Predis and PhpRedis. Redis Cluster is not currently supported. Queue metadata
-cleanup and retained-job index reconciliation use commands such as
-`ZDIFFSTORE` that have not yet been made cluster-slot aware.
+Predis and PhpRedis. Redis Cluster is supported by copying Horizon source
+sets into hash-tagged package keys before multi-key writes, so `ZDIFFSTORE`
+does not cross slots. Leave extra memory headroom for those snapshots.
 
 Use `maxmemory-policy noeviction` for the Redis or Valkey instance that stores
 Horizon queues and New Dawn's retained-job indexes, and provision enough memory
@@ -85,7 +87,7 @@ bounded snapshot chunks with safe continuations.
 Install and configure Laravel Horizon in the host application first. Then install New Dawn and publish its compiled assets:
 
 ```bash
-composer require nckrtl/horizon-new-dawn:^0.1.0
+composer require devaction-labs/horizon-new-dawn:^0.1.0
 php artisan horizon-new-dawn:install
 php artisan migrate
 ```
@@ -128,11 +130,22 @@ state. Validate a release against a production-like environment and backup or
 retention policy before exposing those actions to operators.
 
 New Dawn uses Horizon's existing `Horizon::auth` callback, normally backed by
-the `viewHorizon` Gate, as the single authorization boundary for the whole
-dashboard, including every read and mutation. Anyone Horizon admits can use
-every action New Dawn exposes. Before exposing the dashboard outside a local
-environment, verify that the application's Horizon authorization admits only
-trusted operators.
+the `viewHorizon` Gate, as the admission boundary. After that, optional Gates
+can restrict mutations:
+
+```php
+Gate::define('horizon-new-dawn.pauseQueues', fn ($user) => $user->isAdmin());
+Gate::define('horizon-new-dawn.clearQueues', fn ($user) => $user->isAdmin());
+Gate::define('horizon-new-dawn.retryJobs', fn ($user) => $user->isOperator());
+Gate::define('horizon-new-dawn.cancelJobs', fn ($user) => $user->isAdmin());
+Gate::define('horizon-new-dawn.manageInstances', fn ($user) => $user->isAdmin());
+Gate::define('horizon-new-dawn.manageMonitoring', fn ($user) => $user->isOperator());
+Gate::define('horizon-new-dawn.manageBatches', fn ($user) => $user->isAdmin());
+```
+
+Undefined Gates remain allowed for anyone Horizon already admitted. Successful
+mutations are written to the application log and, after migrate, to
+`horizon_new_dawn_audit_events` (visible at `/horizon/audit`).
 
 Choose a durable, asynchronous connection and a queue that is consumed by
 Horizon for bulk operations:
@@ -287,7 +300,7 @@ production envelope.
 Remove Horizon New Dawn, reinstall Horizon's resources, and clear the application's cached configuration and routes:
 
 ```bash
-composer remove nckrtl/horizon-new-dawn
+composer remove devaction-labs/horizon-new-dawn
 php artisan horizon:install
 php artisan optimize:clear
 ```

@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
+use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobIndex;
 use Illuminate\Contracts\Redis\Factory as RedisFactory;
 use Illuminate\Redis\Connections\PredisConnection;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Testing\PendingCommand;
 use Laravel\Horizon\Contracts\JobRepository;
-use NckRtl\HorizonNewDawn\Jobs\RetainedJobIndex;
 use Predis\Client;
 
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardExpects;
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardNeverReceives;
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardReturnsFor;
-use function NckRtl\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardExpects;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardNeverReceives;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturnsFor;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
 use function Pest\Laravel\artisan;
 
 it('warms every retained job type explicitly', function (): void {

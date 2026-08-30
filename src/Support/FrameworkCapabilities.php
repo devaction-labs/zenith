@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Support;
+namespace DevactionLabs\HorizonNewDawn\Support;
 
 use Illuminate\Queue\QueueManager;
 use Illuminate\Queue\Worker;
@@ -15,6 +15,7 @@ final class FrameworkCapabilities extends Data
     public function __construct(
         public bool $queuePausing,
         public bool $timedQueuePausing = false,
+        public bool $queuePausingAll = false,
     ) {}
 
     public static function detect(): self
@@ -29,6 +30,9 @@ final class FrameworkCapabilities extends Data
         return new self(
             queuePausing: $queuePausing,
             timedQueuePausing: $queuePausing && $queueManager->hasMethod('pauseFor'),
+            queuePausingAll: $queuePausing
+                && $queueManager->hasMethod('pauseAll')
+                && $queueManager->hasMethod('resumeAll'),
         );
     }
 
@@ -36,6 +40,13 @@ final class FrameworkCapabilities extends Data
     {
         if (! $this->queuePausing) {
             throw new LogicException('Queue pausing is not supported by the installed Laravel version.');
+        }
+    }
+
+    public function ensureQueuePausingAll(): void
+    {
+        if (! $this->queuePausingAll) {
+            throw new LogicException('Pausing all queues is not supported by the installed Laravel version.');
         }
     }
 

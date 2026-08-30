@@ -2,22 +2,22 @@
 
 declare(strict_types=1);
 
+use DevactionLabs\HorizonNewDawn\FailedJobs\Actions\RetryFailedJob;
+use DevactionLabs\HorizonNewDawn\FailedJobs\FailedJobRetryEligibility;
+use DevactionLabs\HorizonNewDawn\FailedJobs\FailedJobRetryLock;
 use Illuminate\Contracts\Bus\Dispatcher;
 use Illuminate\Contracts\Redis\Factory as RedisFactory;
 use Illuminate\Redis\Connections\Connection;
 use Illuminate\Support\Facades\Bus;
 use Laravel\Horizon\Contracts\JobRepository;
 use Laravel\Horizon\Jobs\RetryFailedJob as HorizonRetryFailedJob;
-use NckRtl\HorizonNewDawn\FailedJobs\Actions\RetryFailedJob;
-use NckRtl\HorizonNewDawn\FailedJobs\FailedJobRetryEligibility;
-use NckRtl\HorizonNewDawn\FailedJobs\FailedJobRetryLock;
 
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardExpects;
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardNeverReceives;
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardReturns;
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardReturnsFor;
-use function NckRtl\HorizonNewDawn\Tests\Support\horizonJob;
-use function NckRtl\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardExpects;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardNeverReceives;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturns;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturnsFor;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\horizonJob;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
 
 function failedJobRetryLock(
     FailedJobRetryLockRedisConnection $connection,

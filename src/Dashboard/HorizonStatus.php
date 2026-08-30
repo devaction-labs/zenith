@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Dashboard;
+namespace DevactionLabs\HorizonNewDawn\Dashboard;
 
 enum HorizonStatus: string
 {

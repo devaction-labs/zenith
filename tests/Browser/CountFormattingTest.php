@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use function NckRtl\HorizonNewDawn\Tests\Support\bindBrowserPageFixtures;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\bindBrowserPageFixtures;
 
 it('formats navigation and status tab counts for compact display', function (): void {
     bindBrowserPageFixtures(

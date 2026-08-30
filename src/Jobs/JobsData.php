@@ -2,21 +2,21 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Jobs;
+namespace DevactionLabs\HorizonNewDawn\Jobs;
 
 use DateTimeImmutable;
 use DateTimeZone;
+use DevactionLabs\HorizonNewDawn\Jobs\Data\JobDetailData;
+use DevactionLabs\HorizonNewDawn\Jobs\Data\JobFilterCatalogData;
+use DevactionLabs\HorizonNewDawn\Jobs\Data\JobIndexFiltersData;
+use DevactionLabs\HorizonNewDawn\Jobs\Data\JobPageData;
+use DevactionLabs\HorizonNewDawn\Jobs\Data\JobRowData;
 use Illuminate\Contracts\Redis\Factory as RedisFactory;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Str;
 use JsonException;
 use Laravel\Horizon\Contracts\JobRepository;
-use NckRtl\HorizonNewDawn\Jobs\Data\JobDetailData;
-use NckRtl\HorizonNewDawn\Jobs\Data\JobFilterCatalogData;
-use NckRtl\HorizonNewDawn\Jobs\Data\JobIndexFiltersData;
-use NckRtl\HorizonNewDawn\Jobs\Data\JobPageData;
-use NckRtl\HorizonNewDawn\Jobs\Data\JobRowData;
 use Throwable;
 
 final readonly class JobsData

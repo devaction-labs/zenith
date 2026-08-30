@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Batches\Actions;
+namespace DevactionLabs\HorizonNewDawn\Batches\Actions;
 
+use DevactionLabs\HorizonNewDawn\FailedJobs\Actions\RemoveFailedJob;
 use Illuminate\Bus\BatchRepository;
-use NckRtl\HorizonNewDawn\FailedJobs\Actions\RemoveFailedJob;
 
 /**
  * Clears failed jobs already materialised on a single batch record — the

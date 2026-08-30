@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\FailedJobs\Data;
+namespace DevactionLabs\HorizonNewDawn\FailedJobs\Data;
 
 use Spatie\LaravelData\Data;
 

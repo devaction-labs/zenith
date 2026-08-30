@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Http\Controllers;
+namespace DevactionLabs\HorizonNewDawn\Http\Controllers;
 
+use DevactionLabs\HorizonNewDawn\Batches\BatchesData;
+use DevactionLabs\HorizonNewDawn\Batches\BatchFilterCatalog;
+use DevactionLabs\HorizonNewDawn\Batches\ClearableBatches;
+use DevactionLabs\HorizonNewDawn\Batches\Data\BatchIndexFiltersData;
+use DevactionLabs\HorizonNewDawn\Batches\DatabaseBatchCapability;
+use DevactionLabs\HorizonNewDawn\Http\Requests\BatchIndexRequest;
+use DevactionLabs\HorizonNewDawn\Support\Data\PageMetaData;
+use DevactionLabs\HorizonNewDawn\Support\NavigationItem;
+use DevactionLabs\HorizonNewDawn\Support\Scrolling\HorizonScrollMetadata;
 use Inertia\Inertia;
 use Inertia\Response;
-use NckRtl\HorizonNewDawn\Batches\BatchesData;
-use NckRtl\HorizonNewDawn\Batches\BatchFilterCatalog;
-use NckRtl\HorizonNewDawn\Batches\ClearableBatches;
-use NckRtl\HorizonNewDawn\Batches\Data\BatchIndexFiltersData;
-use NckRtl\HorizonNewDawn\Batches\DatabaseBatchCapability;
-use NckRtl\HorizonNewDawn\Http\Requests\BatchIndexRequest;
-use NckRtl\HorizonNewDawn\Support\Data\PageMetaData;
-use NckRtl\HorizonNewDawn\Support\NavigationItem;
-use NckRtl\HorizonNewDawn\Support\Scrolling\HorizonScrollMetadata;
 
 final class BatchController
 {

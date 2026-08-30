@@ -209,6 +209,17 @@ export function HorizonLayout({ children }: { children: ReactNode }) {
                   </AlertDescription>
                 </Alert>
               ) : null}
+              {horizon.allQueuesPaused ? (
+                <Alert variant="warning" className="mb-4">
+                  <TriangleAlertIcon aria-hidden="true" />
+                  <AlertTitle>All queues are paused</AlertTitle>
+                  <AlertDescription>
+                    Laravel&apos;s global queue pause is active. Workers will not reserve new jobs
+                    until it is cleared. Individually paused queues stay paused after a global
+                    resume.
+                  </AlertDescription>
+                </Alert>
+              ) : null}
               {children}
             </div>
           </SidebarInset>

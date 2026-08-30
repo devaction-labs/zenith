@@ -2,6 +2,13 @@
 
 declare(strict_types=1);
 
+use DevactionLabs\HorizonNewDawn\BulkOperations\BulkOperationSnapshot;
+use DevactionLabs\HorizonNewDawn\Jobs\Actions\CancelPendingJob;
+use DevactionLabs\HorizonNewDawn\Jobs\Actions\CancelPendingJobs;
+use DevactionLabs\HorizonNewDawn\Jobs\Actions\ReleaseCancelledJobLocks;
+use DevactionLabs\HorizonNewDawn\Jobs\ForgetsPendingJob;
+use DevactionLabs\HorizonNewDawn\Jobs\PendingJobCancellationResult;
+use DevactionLabs\HorizonNewDawn\Jobs\PendingJobCancellationScope;
 use Illuminate\Bus\UniqueLock;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Illuminate\Contracts\Encryption\Encrypter;
@@ -12,20 +19,13 @@ use Illuminate\Queue\RedisQueue;
 use Illuminate\Redis\Connections\Connection;
 use Illuminate\Support\Collection;
 use Laravel\Horizon\Contracts\JobRepository;
-use NckRtl\HorizonNewDawn\BulkOperations\BulkOperationSnapshot;
-use NckRtl\HorizonNewDawn\Jobs\Actions\CancelPendingJob;
-use NckRtl\HorizonNewDawn\Jobs\Actions\CancelPendingJobs;
-use NckRtl\HorizonNewDawn\Jobs\Actions\ReleaseCancelledJobLocks;
-use NckRtl\HorizonNewDawn\Jobs\ForgetsPendingJob;
-use NckRtl\HorizonNewDawn\Jobs\PendingJobCancellationResult;
-use NckRtl\HorizonNewDawn\Jobs\PendingJobCancellationScope;
 
-use function NckRtl\HorizonNewDawn\Tests\Support\bulkSnapshotRedis;
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardNeverReceives;
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardReturnsFor;
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardReturnsUsing;
-use function NckRtl\HorizonNewDawn\Tests\Support\horizonJob;
-use function NckRtl\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\bulkSnapshotRedis;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardNeverReceives;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturnsFor;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturnsUsing;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\horizonJob;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
 
 describe('CancelPendingJob', function (): void {
     it('atomically removes a normal pending job from either ready or delayed storage', function (): void {

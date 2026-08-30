@@ -8,8 +8,9 @@ import batches from './batches'
 import queues from './queues'
 import jobs from './jobs'
 import failedJobs from './failed-jobs'
+import audit from './audit'
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\DashboardController::dashboard
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\DashboardController::dashboard
 * @see src/Http/Controllers/DashboardController.php:18
 * @route '/horizon'
 */
@@ -24,7 +25,7 @@ dashboard.definition = {
 } satisfies RouteDefinition<["get","head"]>
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\DashboardController::dashboard
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\DashboardController::dashboard
 * @see src/Http/Controllers/DashboardController.php:18
 * @route '/horizon'
 */
@@ -33,7 +34,7 @@ dashboard.url = (options?: RouteQueryOptions) => {
 }
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\DashboardController::dashboard
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\DashboardController::dashboard
 * @see src/Http/Controllers/DashboardController.php:18
 * @route '/horizon'
 */
@@ -43,7 +44,7 @@ dashboard.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\DashboardController::dashboard
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\DashboardController::dashboard
 * @see src/Http/Controllers/DashboardController.php:18
 * @route '/horizon'
 */
@@ -62,6 +63,7 @@ const horizonNewDawn = {
     queues: Object.assign(queues, queues),
     jobs: Object.assign(jobs, jobs),
     failedJobs: Object.assign(failedJobs, failedJobs),
+    audit: Object.assign(audit, audit),
 }
 
 export default horizonNewDawn

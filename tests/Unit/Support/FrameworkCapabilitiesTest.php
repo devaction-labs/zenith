@@ -2,17 +2,18 @@
 
 declare(strict_types=1);
 
+use DevactionLabs\HorizonNewDawn\Support\FrameworkCapabilities;
 use Illuminate\Queue\Worker;
-use NckRtl\HorizonNewDawn\Support\FrameworkCapabilities;
 
 describe('FrameworkCapabilities', function (): void {
     it('detects basic and timed queue pausing independently of package metadata', function (): void {
         $capabilities = FrameworkCapabilities::detect();
 
         expect($capabilities->queuePausing)->toBe(queuePausingIsSupported())
-            ->and($capabilities->timedQueuePausing)->toBe(timedQueuePausingIsSupported());
+            ->and($capabilities->timedQueuePausing)->toBe(timedQueuePausingIsSupported())
+            ->and($capabilities->queuePausingAll)->toBe(queuePausingAllIsSupported());
 
-        if ($capabilities->timedQueuePausing) {
+        if ($capabilities->timedQueuePausing || $capabilities->queuePausingAll) {
             expect($capabilities->queuePausing)->toBeTrue();
         }
     });
@@ -38,7 +39,8 @@ describe('FrameworkCapabilities', function (): void {
             $capabilities = FrameworkCapabilities::detect();
 
             expect($capabilities->queuePausing)->toBeFalse()
-                ->and($capabilities->timedQueuePausing)->toBeFalse();
+                ->and($capabilities->timedQueuePausing)->toBeFalse()
+                ->and($capabilities->queuePausingAll)->toBeFalse();
         } finally {
             $property->setValue(null, $original);
         }
@@ -50,6 +52,7 @@ describe('FrameworkCapabilities', function (): void {
         expect($capabilities->toArray())->toBe([
             'queuePausing' => true,
             'timedQueuePausing' => false,
+            'queuePausingAll' => false,
         ]);
     });
 });

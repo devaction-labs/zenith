@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Http\Controllers;
+namespace DevactionLabs\HorizonNewDawn\Http\Controllers;
 
+use DevactionLabs\HorizonNewDawn\Monitoring\Actions\MonitorTag;
+use DevactionLabs\HorizonNewDawn\Monitoring\Actions\StopMonitoringTag;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
 use Laravel\Horizon\Contracts\JobRepository;
 use Laravel\Horizon\Contracts\TagRepository;
 use Laravel\Horizon\Http\Controllers\MonitoringController as HorizonMonitoringController;
-use NckRtl\HorizonNewDawn\Monitoring\Actions\MonitorTag;
-use NckRtl\HorizonNewDawn\Monitoring\Actions\StopMonitoringTag;
 
 final class MonitoringApiController extends HorizonMonitoringController
 {

@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Batches;
+namespace DevactionLabs\HorizonNewDawn\Batches;
 
+use DevactionLabs\HorizonNewDawn\Batches\Data\BatchFilterCatalogData;
+use DevactionLabs\HorizonNewDawn\Batches\Data\BatchIndexFiltersData;
+use DevactionLabs\HorizonNewDawn\Batches\Data\BatchPageData;
+use DevactionLabs\HorizonNewDawn\Batches\Data\BatchRowData;
+use DevactionLabs\HorizonNewDawn\Batches\Data\BatchStatusCountsData;
+use DevactionLabs\HorizonNewDawn\Dashboard\Data\DashboardBatchPreviewData;
+use DevactionLabs\HorizonNewDawn\Queues\Data\QueueRetainedBatchesData;
 use Illuminate\Database\Query\Builder;
 use JsonException;
-use NckRtl\HorizonNewDawn\Batches\Data\BatchFilterCatalogData;
-use NckRtl\HorizonNewDawn\Batches\Data\BatchIndexFiltersData;
-use NckRtl\HorizonNewDawn\Batches\Data\BatchPageData;
-use NckRtl\HorizonNewDawn\Batches\Data\BatchRowData;
-use NckRtl\HorizonNewDawn\Batches\Data\BatchStatusCountsData;
-use NckRtl\HorizonNewDawn\Dashboard\Data\DashboardBatchPreviewData;
-use NckRtl\HorizonNewDawn\Queues\Data\QueueRetainedBatchesData;
 use RuntimeException;
 
 final readonly class DatabaseBatchQuery

@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Jobs;
+namespace DevactionLabs\HorizonNewDawn\Jobs;
 
+use DevactionLabs\HorizonNewDawn\Jobs\Data\JobIndexFiltersData;
 use Illuminate\Support\Collection;
 use InvalidArgumentException;
 use Laravel\Horizon\Contracts\JobRepository;
-use NckRtl\HorizonNewDawn\Jobs\Data\JobIndexFiltersData;
 use RuntimeException;
 
 final readonly class RetainedJobQuery
@@ -852,12 +852,6 @@ final readonly class RetainedJobQuery
         $failedTag = trim($failedTag ?? '');
 
         if ($failedTag !== '') {
-            if ($type !== RetainedJobType::Failed) {
-                throw new InvalidArgumentException(
-                    'Exact failed tags can only filter failed jobs.',
-                );
-            }
-
             $facets['tag'] = $failedTag;
         }
 

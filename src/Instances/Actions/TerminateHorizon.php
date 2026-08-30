@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Instances\Actions;
+namespace DevactionLabs\HorizonNewDawn\Instances\Actions;
 
+use DevactionLabs\HorizonNewDawn\Instances\LocalInstanceName;
 use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Illuminate\Support\InteractsWithTime;
 use Laravel\Horizon\Contracts\HorizonCommandQueue;
 use Laravel\Horizon\Contracts\MasterSupervisorRepository;
 use Laravel\Horizon\MasterSupervisor;
 use Laravel\Horizon\SupervisorCommands\Terminate;
-use NckRtl\HorizonNewDawn\Instances\LocalInstanceName;
 
 final readonly class TerminateHorizon
 {

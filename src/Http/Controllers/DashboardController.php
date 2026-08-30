@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Http\Controllers;
+namespace DevactionLabs\HorizonNewDawn\Http\Controllers;
 
+use DevactionLabs\HorizonNewDawn\Dashboard\DashboardData;
+use DevactionLabs\HorizonNewDawn\Dashboard\Data\DashboardSummaryData;
+use DevactionLabs\HorizonNewDawn\Dashboard\Data\DashboardSupervisorsData;
+use DevactionLabs\HorizonNewDawn\Dashboard\Data\DashboardWorkloadData;
+use DevactionLabs\HorizonNewDawn\Support\Data\PageMetaData;
+use DevactionLabs\HorizonNewDawn\Support\NavigationItem;
 use Inertia\Inertia;
 use Inertia\Response;
-use NckRtl\HorizonNewDawn\Dashboard\DashboardData;
-use NckRtl\HorizonNewDawn\Dashboard\Data\DashboardSummaryData;
-use NckRtl\HorizonNewDawn\Dashboard\Data\DashboardSupervisorsData;
-use NckRtl\HorizonNewDawn\Dashboard\Data\DashboardWorkloadData;
-use NckRtl\HorizonNewDawn\Support\Data\PageMetaData;
-use NckRtl\HorizonNewDawn\Support\NavigationItem;
 
 final class DashboardController
 {

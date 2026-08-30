@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Dashboard\Data;
+namespace DevactionLabs\HorizonNewDawn\Dashboard\Data;
 
-use NckRtl\HorizonNewDawn\Dashboard\HorizonStatus;
+use DevactionLabs\HorizonNewDawn\Dashboard\HorizonStatus;
 use Spatie\LaravelData\Data;
 
 final class DashboardSummaryData extends Data
@@ -42,5 +42,6 @@ final class DashboardSummaryData extends Data
         public readonly ?string $queueWithMaxRuntime,
         public readonly ?string $queueWithMaxThroughput,
         public readonly ?string $message,
+        public readonly bool $allPaused = false,
     ) {}
 }

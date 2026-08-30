@@ -1,6 +1,6 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../../../../wayfinder'
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\DelayedJobReleaseController::store
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\DelayedJobReleaseController::store
 * @see src/Http/Controllers/DelayedJobReleaseController.php:14
 * @route '/horizon/jobs/pending/{job}/release'
 */
@@ -15,7 +15,7 @@ store.definition = {
 } satisfies RouteDefinition<["post"]>
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\DelayedJobReleaseController::store
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\DelayedJobReleaseController::store
 * @see src/Http/Controllers/DelayedJobReleaseController.php:14
 * @route '/horizon/jobs/pending/{job}/release'
 */
@@ -42,7 +42,7 @@ store.url = (args: { job: string | number } | [job: string | number ] | string |
 }
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\DelayedJobReleaseController::store
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\DelayedJobReleaseController::store
 * @see src/Http/Controllers/DelayedJobReleaseController.php:14
 * @route '/horizon/jobs/pending/{job}/release'
 */

@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
+use DevactionLabs\HorizonNewDawn\Supervisors\SupervisorDetails;
 use Illuminate\Contracts\Config\Repository as ConfigRepository;
 use Laravel\Horizon\Contracts\SupervisorRepository;
-use NckRtl\HorizonNewDawn\Supervisors\SupervisorDetails;
 
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardReturnsFor;
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardThrowsFor;
-use function NckRtl\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturnsFor;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardThrowsFor;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
 
 describe('SupervisorDetails', function (): void {
     it('normalizes the effective runtime supervisor policy', function (): void {

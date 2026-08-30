@@ -2,7 +2,7 @@ import { queryParams, type RouteQueryOptions, type RouteDefinition } from './../
 import terminate from './terminate'
 import pause from './pause'
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\RunningInstanceController::index
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\RunningInstanceController::index
 * @see src/Http/Controllers/RunningInstanceController.php:16
 * @route '/horizon/instances'
 */
@@ -17,7 +17,7 @@ index.definition = {
 } satisfies RouteDefinition<["get","head"]>
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\RunningInstanceController::index
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\RunningInstanceController::index
 * @see src/Http/Controllers/RunningInstanceController.php:16
 * @route '/horizon/instances'
 */
@@ -26,7 +26,7 @@ index.url = (options?: RouteQueryOptions) => {
 }
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\RunningInstanceController::index
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\RunningInstanceController::index
 * @see src/Http/Controllers/RunningInstanceController.php:16
 * @route '/horizon/instances'
 */
@@ -36,7 +36,7 @@ index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\RunningInstanceController::index
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\RunningInstanceController::index
 * @see src/Http/Controllers/RunningInstanceController.php:16
 * @route '/horizon/instances'
 */

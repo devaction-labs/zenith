@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
+use DevactionLabs\HorizonNewDawn\Support\ComposerAssetHook;
+use DevactionLabs\HorizonNewDawn\Support\ComposerAssetHookResult;
 use Illuminate\Filesystem\Filesystem;
-use NckRtl\HorizonNewDawn\Support\ComposerAssetHook;
-use NckRtl\HorizonNewDawn\Support\ComposerAssetHookResult;
 
 it('appends the asset refresh hook after existing post-autoload-dump entries', function (): void {
     [$filesystem, $composerJson, $hook, $directory] = composerAssetHookFixture();

@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Supervisors;
+namespace DevactionLabs\HorizonNewDawn\Supervisors;
 
+use DevactionLabs\HorizonNewDawn\Supervisors\Data\SupervisorDetailsData;
+use DevactionLabs\HorizonNewDawn\Supervisors\Data\SupervisorDetailsResultData;
+use DevactionLabs\HorizonNewDawn\Supervisors\Data\SupervisorWarningData;
 use Illuminate\Contracts\Config\Repository as ConfigRepository;
 use Illuminate\Support\Str;
 use Laravel\Horizon\Contracts\SupervisorRepository;
-use NckRtl\HorizonNewDawn\Supervisors\Data\SupervisorDetailsData;
-use NckRtl\HorizonNewDawn\Supervisors\Data\SupervisorDetailsResultData;
-use NckRtl\HorizonNewDawn\Supervisors\Data\SupervisorWarningData;
 use Throwable;
 
 final readonly class SupervisorDetails

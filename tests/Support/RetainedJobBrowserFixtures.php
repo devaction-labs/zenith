@@ -2,9 +2,22 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Tests\Support;
+namespace DevactionLabs\HorizonNewDawn\Tests\Support;
 
 use Closure;
+use DevactionLabs\HorizonNewDawn\FailedJobs\FailedJobRetryEligibility;
+use DevactionLabs\HorizonNewDawn\FailedJobs\FailedJobsData;
+use DevactionLabs\HorizonNewDawn\Jobs\JobsData;
+use DevactionLabs\HorizonNewDawn\Jobs\PendingJobStateIndex;
+use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobFilterCatalog;
+use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobIndex;
+use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobQuery;
+use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobType;
+use DevactionLabs\HorizonNewDawn\Metrics\SnapshotJobsPerMinute;
+use DevactionLabs\HorizonNewDawn\Queues\QueueActivityData;
+use DevactionLabs\HorizonNewDawn\Queues\QueueBatchesData;
+use DevactionLabs\HorizonNewDawn\Queues\QueueJobsData;
+use DevactionLabs\HorizonNewDawn\Queues\QueueSummary;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Illuminate\Contracts\Queue\Factory as QueueFactory;
 use Illuminate\Contracts\Redis\Factory as RedisFactory;
@@ -14,19 +27,6 @@ use Illuminate\Support\Collection;
 use Laravel\Horizon\Contracts\JobRepository;
 use Laravel\Horizon\Contracts\MetricsRepository;
 use Laravel\Horizon\Contracts\TagRepository;
-use NckRtl\HorizonNewDawn\FailedJobs\FailedJobRetryEligibility;
-use NckRtl\HorizonNewDawn\FailedJobs\FailedJobsData;
-use NckRtl\HorizonNewDawn\Jobs\JobsData;
-use NckRtl\HorizonNewDawn\Jobs\PendingJobStateIndex;
-use NckRtl\HorizonNewDawn\Jobs\RetainedJobFilterCatalog;
-use NckRtl\HorizonNewDawn\Jobs\RetainedJobIndex;
-use NckRtl\HorizonNewDawn\Jobs\RetainedJobQuery;
-use NckRtl\HorizonNewDawn\Jobs\RetainedJobType;
-use NckRtl\HorizonNewDawn\Metrics\SnapshotJobsPerMinute;
-use NckRtl\HorizonNewDawn\Queues\QueueActivityData;
-use NckRtl\HorizonNewDawn\Queues\QueueBatchesData;
-use NckRtl\HorizonNewDawn\Queues\QueueJobsData;
-use NckRtl\HorizonNewDawn\Queues\QueueSummary;
 
 final class RetainedJobBrowserRedisConnection extends Connection
 {

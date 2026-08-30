@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Http\Controllers;
+namespace DevactionLabs\HorizonNewDawn\Http\Controllers;
 
+use DevactionLabs\HorizonNewDawn\Batches\Actions\CancelBatch;
 use Illuminate\Http\RedirectResponse;
-use NckRtl\HorizonNewDawn\Batches\Actions\CancelBatch;
 use Throwable;
 
 final class BatchCancelController

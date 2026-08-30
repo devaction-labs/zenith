@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Queues;
+namespace DevactionLabs\HorizonNewDawn\Queues;
 
+use DevactionLabs\HorizonNewDawn\Queues\Data\QueueListData;
+use DevactionLabs\HorizonNewDawn\Queues\Data\QueuePauseTargetData;
+use DevactionLabs\HorizonNewDawn\Queues\Data\QueueRowData;
+use DevactionLabs\HorizonNewDawn\Queues\Data\QueueTargetData;
 use Illuminate\Contracts\Queue\Factory as QueueFactory;
 use Illuminate\Contracts\Queue\Queue;
 use Laravel\Horizon\Contracts\MetricsRepository;
 use Laravel\Horizon\Contracts\SupervisorRepository;
 use Laravel\Horizon\WaitTimeCalculator;
-use NckRtl\HorizonNewDawn\Queues\Data\QueueListData;
-use NckRtl\HorizonNewDawn\Queues\Data\QueuePauseTargetData;
-use NckRtl\HorizonNewDawn\Queues\Data\QueueRowData;
-use NckRtl\HorizonNewDawn\Queues\Data\QueueTargetData;
 use Throwable;
 
 final readonly class QueuesData
@@ -106,7 +106,7 @@ final readonly class QueuesData
                 static fn (QueueRowData $left, QueueRowData $right): int => strnatcasecmp($left->name, $right->name),
             );
 
-            return new QueueListData(true, $rows, null);
+            return new QueueListData(true, $rows, null, $this->pauseStatus->allPaused());
         } catch (Throwable $exception) {
             report($exception);
 

@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use DevactionLabs\HorizonNewDawn\Queues\ClearsQueueMetadata;
 use Illuminate\Contracts\Queue\Queue;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
@@ -10,7 +11,6 @@ use Illuminate\Queue\RedisQueue;
 use Laravel\Horizon\Contracts\JobRepository;
 use Laravel\Horizon\Horizon;
 use Laravel\Horizon\Repositories\RedisJobRepository;
-use NckRtl\HorizonNewDawn\Queues\ClearsQueueMetadata;
 
 use function Pest\Laravel\delete;
 use function Pest\Laravel\withoutMiddleware;

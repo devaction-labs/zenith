@@ -1,6 +1,6 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../../../wayfinder'
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\SupervisorPauseController::store
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\SupervisorPauseController::store
 * @see src/Http/Controllers/SupervisorPauseController.php:18
 * @route '/horizon/supervisors/{supervisor}/pause'
 */
@@ -15,7 +15,7 @@ store.definition = {
 } satisfies RouteDefinition<["post"]>
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\SupervisorPauseController::store
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\SupervisorPauseController::store
 * @see src/Http/Controllers/SupervisorPauseController.php:18
 * @route '/horizon/supervisors/{supervisor}/pause'
 */
@@ -42,7 +42,7 @@ store.url = (args: { supervisor: string | number } | [supervisor: string | numbe
 }
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\SupervisorPauseController::store
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\SupervisorPauseController::store
 * @see src/Http/Controllers/SupervisorPauseController.php:18
 * @route '/horizon/supervisors/{supervisor}/pause'
 */
@@ -52,7 +52,7 @@ store.post = (args: { supervisor: string | number } | [supervisor: string | numb
 })
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\SupervisorPauseController::destroy
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\SupervisorPauseController::destroy
 * @see src/Http/Controllers/SupervisorPauseController.php:33
 * @route '/horizon/supervisors/{supervisor}/pause'
 */
@@ -67,7 +67,7 @@ destroy.definition = {
 } satisfies RouteDefinition<["delete"]>
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\SupervisorPauseController::destroy
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\SupervisorPauseController::destroy
 * @see src/Http/Controllers/SupervisorPauseController.php:33
 * @route '/horizon/supervisors/{supervisor}/pause'
 */
@@ -94,7 +94,7 @@ destroy.url = (args: { supervisor: string | number } | [supervisor: string | num
 }
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\SupervisorPauseController::destroy
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\SupervisorPauseController::destroy
 * @see src/Http/Controllers/SupervisorPauseController.php:33
 * @route '/horizon/supervisors/{supervisor}/pause'
 */

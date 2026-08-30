@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Dashboard\Data;
+namespace DevactionLabs\HorizonNewDawn\Dashboard\Data;
 
-use NckRtl\HorizonNewDawn\Dashboard\SupervisorScalingState;
+use DevactionLabs\HorizonNewDawn\Dashboard\SupervisorScalingState;
 use Spatie\LaravelData\Data;
 
 final class SupervisorScalingData extends Data

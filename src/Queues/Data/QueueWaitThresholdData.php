@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Queues\Data;
+namespace DevactionLabs\HorizonNewDawn\Queues\Data;
 
-use NckRtl\HorizonNewDawn\Queues\QueueWaitThresholdStatus;
+use DevactionLabs\HorizonNewDawn\Queues\QueueWaitThresholdStatus;
 use Spatie\LaravelData\Data;
 
 final class QueueWaitThresholdData extends Data

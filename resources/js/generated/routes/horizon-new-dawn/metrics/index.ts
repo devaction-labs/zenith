@@ -1,6 +1,6 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../../wayfinder'
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\MetricsController::redirect
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\MetricsController::redirect
 * @see src/Http/Controllers/MetricsController.php:17
 * @route '/horizon/metrics'
 */
@@ -15,7 +15,7 @@ redirect.definition = {
 } satisfies RouteDefinition<["get","head"]>
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\MetricsController::redirect
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\MetricsController::redirect
 * @see src/Http/Controllers/MetricsController.php:17
 * @route '/horizon/metrics'
 */
@@ -24,7 +24,7 @@ redirect.url = (options?: RouteQueryOptions) => {
 }
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\MetricsController::redirect
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\MetricsController::redirect
 * @see src/Http/Controllers/MetricsController.php:17
 * @route '/horizon/metrics'
 */
@@ -34,7 +34,7 @@ redirect.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\MetricsController::redirect
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\MetricsController::redirect
 * @see src/Http/Controllers/MetricsController.php:17
 * @route '/horizon/metrics'
 */
@@ -44,7 +44,7 @@ redirect.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 })
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\MetricsController::index
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\MetricsController::index
 * @see src/Http/Controllers/MetricsController.php:24
 * @route '/horizon/metrics/{type}'
 */
@@ -59,7 +59,7 @@ index.definition = {
 } satisfies RouteDefinition<["get","head"]>
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\MetricsController::index
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\MetricsController::index
 * @see src/Http/Controllers/MetricsController.php:24
 * @route '/horizon/metrics/{type}'
 */
@@ -86,7 +86,7 @@ index.url = (args: { type: string | number } | [type: string | number ] | string
 }
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\MetricsController::index
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\MetricsController::index
 * @see src/Http/Controllers/MetricsController.php:24
 * @route '/horizon/metrics/{type}'
 */
@@ -96,7 +96,7 @@ index.get = (args: { type: string | number } | [type: string | number ] | string
 })
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\MetricsController::index
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\MetricsController::index
 * @see src/Http/Controllers/MetricsController.php:24
 * @route '/horizon/metrics/{type}'
 */
@@ -106,7 +106,7 @@ index.head = (args: { type: string | number } | [type: string | number ] | strin
 })
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\MetricController::show
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\MetricController::show
 * @see src/Http/Controllers/MetricController.php:16
 * @route '/horizon/metrics/{type}/{slug}'
 */
@@ -121,7 +121,7 @@ show.definition = {
 } satisfies RouteDefinition<["get","head"]>
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\MetricController::show
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\MetricController::show
 * @see src/Http/Controllers/MetricController.php:16
 * @route '/horizon/metrics/{type}/{slug}'
 */
@@ -147,7 +147,7 @@ show.url = (args: { type: string | number, slug: string | number } | [type: stri
 }
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\MetricController::show
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\MetricController::show
 * @see src/Http/Controllers/MetricController.php:16
 * @route '/horizon/metrics/{type}/{slug}'
 */
@@ -157,7 +157,7 @@ show.get = (args: { type: string | number, slug: string | number } | [type: stri
 })
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\MetricController::show
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\MetricController::show
 * @see src/Http/Controllers/MetricController.php:16
 * @route '/horizon/metrics/{type}/{slug}'
 */

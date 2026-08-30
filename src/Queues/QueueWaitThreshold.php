@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Queues;
+namespace DevactionLabs\HorizonNewDawn\Queues;
 
 use Carbon\CarbonImmutable;
+use DevactionLabs\HorizonNewDawn\Queues\Data\QueueWaitThresholdData;
+use DevactionLabs\HorizonNewDawn\Queues\Data\QueueWaitThresholdTargetData;
 use Illuminate\Contracts\Config\Repository;
 use InvalidArgumentException;
-use NckRtl\HorizonNewDawn\Queues\Data\QueueWaitThresholdData;
-use NckRtl\HorizonNewDawn\Queues\Data\QueueWaitThresholdTargetData;
 
 final readonly class QueueWaitThreshold
 {

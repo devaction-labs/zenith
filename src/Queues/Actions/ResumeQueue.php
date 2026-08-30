@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Queues\Actions;
+namespace DevactionLabs\HorizonNewDawn\Queues\Actions;
 
+use DevactionLabs\HorizonNewDawn\Queues\QueuePauseMetadata;
+use DevactionLabs\HorizonNewDawn\Support\FrameworkCapabilities;
 use Illuminate\Queue\QueueManager;
-use NckRtl\HorizonNewDawn\Queues\QueuePauseMetadata;
-use NckRtl\HorizonNewDawn\Support\FrameworkCapabilities;
 
 final readonly class ResumeQueue
 {

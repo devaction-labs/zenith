@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
+use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobFilterCatalog;
+use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobIndex;
+use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobType;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Illuminate\Contracts\Redis\Factory as RedisFactory;
 use Laravel\Horizon\Contracts\JobRepository;
-use NckRtl\HorizonNewDawn\Jobs\RetainedJobFilterCatalog;
-use NckRtl\HorizonNewDawn\Jobs\RetainedJobIndex;
-use NckRtl\HorizonNewDawn\Jobs\RetainedJobType;
 
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardExpects;
-use function NckRtl\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardExpects;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
 
 it('shares each retained job filter catalog for one configured poll interval', function (
     RetainedJobType $type,

@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Http\Requests;
+namespace DevactionLabs\HorizonNewDawn\Http\Requests;
 
+use DevactionLabs\HorizonNewDawn\Queues\Data\PauseQueueData;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
-use NckRtl\HorizonNewDawn\Queues\Data\PauseQueueData;
 
 final class ResumeQueueRequest extends FormRequest
 {

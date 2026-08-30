@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
+use DevactionLabs\HorizonNewDawn\Assets\AssetPath;
+use DevactionLabs\HorizonNewDawn\HorizonNewDawnServiceProvider;
 use Illuminate\Database\Migrations\Migrator;
-use NckRtl\HorizonNewDawn\Assets\AssetPath;
-use NckRtl\HorizonNewDawn\HorizonNewDawnServiceProvider;
 
 describe('package boot', function (): void {
     it('boots the package configuration', function (): void {

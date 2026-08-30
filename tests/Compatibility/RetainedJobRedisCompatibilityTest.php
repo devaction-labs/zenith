@@ -2,6 +2,15 @@
 
 declare(strict_types=1);
 
+use DevactionLabs\HorizonNewDawn\FailedJobs\FailedJobRetryLock;
+use DevactionLabs\HorizonNewDawn\Jobs\Data\JobIndexFiltersData;
+use DevactionLabs\HorizonNewDawn\Jobs\PendingJobStateIndex;
+use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobCursor;
+use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobFilterCatalog;
+use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobIndex;
+use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobQuery;
+use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobType;
+use DevactionLabs\HorizonNewDawn\Support\RedisScript;
 use Illuminate\Contracts\Queue\Factory as QueueFactory;
 use Illuminate\Contracts\Redis\Factory as RedisFactory;
 use Illuminate\Queue\RedisQueue;
@@ -11,19 +20,10 @@ use Illuminate\Redis\Connections\PredisConnection;
 use Illuminate\Support\Collection;
 use Laravel\Horizon\Contracts\JobRepository;
 use Laravel\Horizon\Horizon;
-use NckRtl\HorizonNewDawn\FailedJobs\FailedJobRetryLock;
-use NckRtl\HorizonNewDawn\Jobs\Data\JobIndexFiltersData;
-use NckRtl\HorizonNewDawn\Jobs\PendingJobStateIndex;
-use NckRtl\HorizonNewDawn\Jobs\RetainedJobCursor;
-use NckRtl\HorizonNewDawn\Jobs\RetainedJobFilterCatalog;
-use NckRtl\HorizonNewDawn\Jobs\RetainedJobIndex;
-use NckRtl\HorizonNewDawn\Jobs\RetainedJobQuery;
-use NckRtl\HorizonNewDawn\Jobs\RetainedJobType;
-use NckRtl\HorizonNewDawn\Support\RedisScript;
 
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardReturns;
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardReturnsUsing;
-use function NckRtl\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturns;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturnsUsing;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
 
 final class PendingSnapshotObservingConnection extends Connection
 {

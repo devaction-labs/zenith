@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use DevactionLabs\HorizonNewDawn\BulkOperations\Jobs\RetryQueueBatchesJob;
 use Illuminate\Bus\BatchFactory;
 use Illuminate\Bus\BatchRepository;
 use Illuminate\Bus\DatabaseBatchRepository;
@@ -16,9 +17,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Exceptions;
 use Illuminate\Support\Facades\Schema;
 use Laravel\Horizon\Horizon;
-use NckRtl\HorizonNewDawn\BulkOperations\Jobs\RetryQueueBatchesJob;
 
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardExpects;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardExpects;
 use function Pest\Laravel\post;
 use function Pest\Laravel\withoutMiddleware;
 

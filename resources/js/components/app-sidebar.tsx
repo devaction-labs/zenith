@@ -1,6 +1,7 @@
 import { Link } from "@inertiajs/react";
 
 import {
+  AuditNavigationIcon,
   BatchesNavigationIcon,
   DashboardNavigationIcon,
   JobsNavigationIcon,
@@ -29,6 +30,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { dashboard } from "@/generated/routes/horizon-new-dawn";
+import { index as auditIndex } from "@/generated/routes/horizon-new-dawn/audit";
 import { index as batchesIndex } from "@/generated/routes/horizon-new-dawn/batches";
 import { index as failedJobsIndex } from "@/generated/routes/horizon-new-dawn/failed-jobs";
 import { index as jobsIndex } from "@/generated/routes/horizon-new-dawn/jobs";
@@ -99,6 +101,13 @@ const navigation: NavigationEntry[] = [
     icon: BatchesNavigationIcon,
     count: "batches",
     route: () => batchesIndex(),
+  },
+  {
+    label: "Audit",
+    active: ["audit"],
+    icon: AuditNavigationIcon,
+    count: null,
+    route: () => auditIndex(),
   },
   {
     label: "Jobs",

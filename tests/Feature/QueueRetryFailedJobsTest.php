@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use DevactionLabs\HorizonNewDawn\BulkOperations\Jobs\RetryAllFailedJobsJob;
 use Illuminate\Contracts\Queue\Queue;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
@@ -13,12 +14,11 @@ use Illuminate\Support\Facades\Exceptions;
 use Laravel\Horizon\Contracts\JobRepository;
 use Laravel\Horizon\Horizon;
 use Laravel\Horizon\Jobs\RetryFailedJob as HorizonRetryFailedJob;
-use NckRtl\HorizonNewDawn\BulkOperations\Jobs\RetryAllFailedJobsJob;
 
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardExpects;
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardReturns;
-use function NckRtl\HorizonNewDawn\Tests\Support\horizonJob;
-use function NckRtl\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardExpects;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturns;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\horizonJob;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
 use function Pest\Laravel\post;
 use function Pest\Laravel\withoutMiddleware;
 

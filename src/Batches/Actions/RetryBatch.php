@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Batches\Actions;
+namespace DevactionLabs\HorizonNewDawn\Batches\Actions;
 
+use DevactionLabs\HorizonNewDawn\FailedJobs\Actions\RetryFailedJob;
 use Illuminate\Bus\BatchRepository;
 use Laravel\Horizon\Contracts\JobRepository;
-use NckRtl\HorizonNewDawn\FailedJobs\Actions\RetryFailedJob;
 
 /**
  * Retries failed jobs already materialised on a single batch record — the

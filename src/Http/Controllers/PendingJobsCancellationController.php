@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Http\Controllers;
+namespace DevactionLabs\HorizonNewDawn\Http\Controllers;
 
+use DevactionLabs\HorizonNewDawn\BulkOperations\BulkOperationDispatcher;
+use DevactionLabs\HorizonNewDawn\BulkOperations\Jobs\CancelPendingJobsJob;
+use DevactionLabs\HorizonNewDawn\Jobs\PendingJobCancellationScope;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use NckRtl\HorizonNewDawn\BulkOperations\BulkOperationDispatcher;
-use NckRtl\HorizonNewDawn\BulkOperations\Jobs\CancelPendingJobsJob;
-use NckRtl\HorizonNewDawn\Jobs\PendingJobCancellationScope;
 use Throwable;
 
 final class PendingJobsCancellationController

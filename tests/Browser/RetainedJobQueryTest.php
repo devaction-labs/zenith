@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 require_once __DIR__.'/../Support/RetainedJobBrowserFixtures.php';
 
-use NckRtl\HorizonNewDawn\Jobs\JobListType;
-use NckRtl\HorizonNewDawn\Jobs\JobsData;
-use NckRtl\HorizonNewDawn\Jobs\RetainedJobType;
+use DevactionLabs\HorizonNewDawn\Jobs\JobListType;
+use DevactionLabs\HorizonNewDawn\Jobs\JobsData;
+use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobType;
 
-use function NckRtl\HorizonNewDawn\Tests\Support\bindBrowserPageFixtures;
-use function NckRtl\HorizonNewDawn\Tests\Support\bindRetainedJobBrowserFixtures;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\bindBrowserPageFixtures;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\bindRetainedJobBrowserFixtures;
 
 it('filters the complete retained pending job set and resets its cursor', function (): void {
     $matchingId = bindRetainedJobBrowserFixtures();

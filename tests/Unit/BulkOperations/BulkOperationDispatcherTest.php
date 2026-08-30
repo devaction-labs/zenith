@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
+use DevactionLabs\HorizonNewDawn\BulkOperations\BulkOperationDispatcher;
+use DevactionLabs\HorizonNewDawn\BulkOperations\Jobs\ClearFailedJobsJob;
 use Illuminate\Contracts\Queue\Queue;
 use Illuminate\Queue\NullQueue;
 use Illuminate\Queue\QueueManager;
 use Illuminate\Queue\SyncQueue;
 use Illuminate\Support\Facades\Bus;
-use NckRtl\HorizonNewDawn\BulkOperations\BulkOperationDispatcher;
-use NckRtl\HorizonNewDawn\BulkOperations\Jobs\ClearFailedJobsJob;
 
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardExpects;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardExpects;
 
 it('dispatches bulk operations onto the configured asynchronous queue', function (): void {
     Bus::fake();

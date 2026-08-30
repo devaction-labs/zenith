@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Supervisors\Actions;
+namespace DevactionLabs\HorizonNewDawn\Supervisors\Actions;
 
+use DevactionLabs\HorizonNewDawn\Supervisors\LocalSupervisor;
 use Laravel\Horizon\Contracts\HorizonCommandQueue;
 use Laravel\Horizon\Contracts\SupervisorRepository;
 use Laravel\Horizon\SupervisorCommands\Pause;
-use NckRtl\HorizonNewDawn\Supervisors\LocalSupervisor;
 use RuntimeException;
 
 final readonly class PauseSupervisor

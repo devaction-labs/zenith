@@ -11,6 +11,7 @@ const inertia = vi.hoisted(() => ({ post: vi.fn() }));
 
 vi.mock("@inertiajs/react", () => ({
   router: inertia,
+  usePage: () => ({ props: { horizon: {} } }),
 }));
 
 describe("failed job actions", () => {

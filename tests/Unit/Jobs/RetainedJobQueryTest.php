@@ -2,6 +2,19 @@
 
 declare(strict_types=1);
 
+use DevactionLabs\HorizonNewDawn\FailedJobs\FailedJobRetryEligibility;
+use DevactionLabs\HorizonNewDawn\FailedJobs\FailedJobsData;
+use DevactionLabs\HorizonNewDawn\Jobs\Data\JobIndexFiltersData;
+use DevactionLabs\HorizonNewDawn\Jobs\JobListType;
+use DevactionLabs\HorizonNewDawn\Jobs\JobsData;
+use DevactionLabs\HorizonNewDawn\Jobs\PendingJobStateIndex;
+use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobFilterCatalog;
+use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobIndex;
+use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobIndexWarming;
+use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobQuery;
+use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobType;
+use DevactionLabs\HorizonNewDawn\Queues\QueueActivityTab;
+use DevactionLabs\HorizonNewDawn\Queues\QueueJobsData;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Illuminate\Contracts\Queue\Factory as QueueFactory;
 use Illuminate\Contracts\Redis\Factory as RedisFactory;
@@ -13,27 +26,14 @@ use Illuminate\Support\Facades\Date;
 use Laravel\Horizon\Contracts\JobRepository;
 use Laravel\Horizon\Contracts\TagRepository;
 use Mockery\MockInterface;
-use NckRtl\HorizonNewDawn\FailedJobs\FailedJobRetryEligibility;
-use NckRtl\HorizonNewDawn\FailedJobs\FailedJobsData;
-use NckRtl\HorizonNewDawn\Jobs\Data\JobIndexFiltersData;
-use NckRtl\HorizonNewDawn\Jobs\JobListType;
-use NckRtl\HorizonNewDawn\Jobs\JobsData;
-use NckRtl\HorizonNewDawn\Jobs\PendingJobStateIndex;
-use NckRtl\HorizonNewDawn\Jobs\RetainedJobFilterCatalog;
-use NckRtl\HorizonNewDawn\Jobs\RetainedJobIndex;
-use NckRtl\HorizonNewDawn\Jobs\RetainedJobIndexWarming;
-use NckRtl\HorizonNewDawn\Jobs\RetainedJobQuery;
-use NckRtl\HorizonNewDawn\Jobs\RetainedJobType;
-use NckRtl\HorizonNewDawn\Queues\QueueActivityTab;
-use NckRtl\HorizonNewDawn\Queues\QueueJobsData;
 use Predis\Client;
 
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardNeverReceives;
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardReturns;
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardReturnsFor;
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardReturnsUsing;
-use function NckRtl\HorizonNewDawn\Tests\Support\horizonJob;
-use function NckRtl\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardNeverReceives;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturns;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturnsFor;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturnsUsing;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\horizonJob;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
 
 final class RetainedJobQueryRedisClient extends Client
 {

@@ -2,6 +2,16 @@
 
 declare(strict_types=1);
 
+use DevactionLabs\HorizonNewDawn\Batches\Actions\RetryQueueBatches;
+use DevactionLabs\HorizonNewDawn\Batches\BatchesData;
+use DevactionLabs\HorizonNewDawn\Batches\BatchJobsData;
+use DevactionLabs\HorizonNewDawn\Batches\DatabaseBatchCapability;
+use DevactionLabs\HorizonNewDawn\Batches\DatabaseBatchMetadataSynchronizer;
+use DevactionLabs\HorizonNewDawn\Batches\DatabaseBatchQuery;
+use DevactionLabs\HorizonNewDawn\BulkOperations\BulkOperationSnapshot;
+use DevactionLabs\HorizonNewDawn\FailedJobs\Actions\RetryFailedJob;
+use DevactionLabs\HorizonNewDawn\FailedJobs\FailedJobRetryEligibility;
+use DevactionLabs\HorizonNewDawn\Jobs\JobsData;
 use Illuminate\Bus\BatchFactory;
 use Illuminate\Bus\BatchRepository;
 use Illuminate\Bus\DatabaseBatchRepository;
@@ -12,24 +22,14 @@ use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Schema;
 use Laravel\Horizon\Contracts\JobRepository;
 use Laravel\Horizon\Jobs\RetryFailedJob as HorizonRetryFailedJob;
-use NckRtl\HorizonNewDawn\Batches\Actions\RetryQueueBatches;
-use NckRtl\HorizonNewDawn\Batches\BatchesData;
-use NckRtl\HorizonNewDawn\Batches\BatchJobsData;
-use NckRtl\HorizonNewDawn\Batches\DatabaseBatchCapability;
-use NckRtl\HorizonNewDawn\Batches\DatabaseBatchMetadataSynchronizer;
-use NckRtl\HorizonNewDawn\Batches\DatabaseBatchQuery;
-use NckRtl\HorizonNewDawn\BulkOperations\BulkOperationSnapshot;
-use NckRtl\HorizonNewDawn\FailedJobs\Actions\RetryFailedJob;
-use NckRtl\HorizonNewDawn\FailedJobs\FailedJobRetryEligibility;
-use NckRtl\HorizonNewDawn\Jobs\JobsData;
 
-use function NckRtl\HorizonNewDawn\Tests\Support\bulkSnapshotRedis;
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardNeverReceives;
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardReturnsFor;
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardReturnsUsing;
-use function NckRtl\HorizonNewDawn\Tests\Support\horizonBatch;
-use function NckRtl\HorizonNewDawn\Tests\Support\horizonJob;
-use function NckRtl\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\bulkSnapshotRedis;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardNeverReceives;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturnsFor;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturnsUsing;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\horizonBatch;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\horizonJob;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
 
 function queueBatchRetryAction(
     BatchRepository $batches,

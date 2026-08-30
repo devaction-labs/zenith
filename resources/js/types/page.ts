@@ -10,7 +10,8 @@ export type HorizonNavigation =
   | "pending"
   | "completed"
   | "silenced"
-  | "failed";
+  | "failed"
+  | "audit";
 
 export type NavigationCounts = {
   instances: number | null;
@@ -33,9 +34,20 @@ export type HorizonPageProps = {
     processing: boolean;
     maintenanceMode: boolean;
     jobNavigationBreakdown?: boolean;
+    allQueuesPaused?: boolean;
     capabilities?: {
       queuePausing: boolean;
       timedQueuePausing: boolean;
+      queuePausingAll?: boolean;
+    };
+    abilities?: {
+      pauseQueues: boolean;
+      clearQueues: boolean;
+      retryJobs: boolean;
+      cancelJobs: boolean;
+      manageInstances: boolean;
+      manageMonitoring: boolean;
+      manageBatches: boolean;
     };
   };
   flash?: {

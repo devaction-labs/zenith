@@ -2,22 +2,22 @@
 
 declare(strict_types=1);
 
+use DevactionLabs\HorizonNewDawn\BulkOperations\BulkOperationSnapshot;
+use DevactionLabs\HorizonNewDawn\FailedJobs\Actions\RetryAllFailedJobs;
+use DevactionLabs\HorizonNewDawn\FailedJobs\Actions\RetryFailedJob;
+use DevactionLabs\HorizonNewDawn\FailedJobs\FailedJobRetryLock;
+use DevactionLabs\HorizonNewDawn\Jobs\Actions\CancelPendingJobs;
+use DevactionLabs\HorizonNewDawn\Jobs\Actions\ClearPendingJobs;
+use DevactionLabs\HorizonNewDawn\Queues\ClearsQueueMetadata;
 use Illuminate\Contracts\Queue\ClearableQueue;
 use Illuminate\Queue\QueueManager;
 use Laravel\Horizon\Contracts\JobRepository;
 use Laravel\Horizon\Contracts\SupervisorRepository;
-use NckRtl\HorizonNewDawn\BulkOperations\BulkOperationSnapshot;
-use NckRtl\HorizonNewDawn\FailedJobs\Actions\RetryAllFailedJobs;
-use NckRtl\HorizonNewDawn\FailedJobs\Actions\RetryFailedJob;
-use NckRtl\HorizonNewDawn\FailedJobs\FailedJobRetryLock;
-use NckRtl\HorizonNewDawn\Jobs\Actions\CancelPendingJobs;
-use NckRtl\HorizonNewDawn\Jobs\Actions\ClearPendingJobs;
-use NckRtl\HorizonNewDawn\Queues\ClearsQueueMetadata;
 
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardExpects;
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardReturns;
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardThrowsFor;
-use function NckRtl\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardExpects;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturns;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardThrowsFor;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
 
 it('resolves bulk actions with their production snapshot dependencies', function (): void {
     $cancel = app(CancelPendingJobs::class);

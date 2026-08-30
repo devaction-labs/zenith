@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
+use DevactionLabs\HorizonNewDawn\Metrics\MetricsData;
+use DevactionLabs\HorizonNewDawn\Metrics\MetricType;
 use Laravel\Horizon\Contracts\MetricsRepository;
-use NckRtl\HorizonNewDawn\Metrics\MetricsData;
-use NckRtl\HorizonNewDawn\Metrics\MetricType;
 
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardReturns;
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardReturnsFor;
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardThrows;
-use function NckRtl\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturns;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturnsFor;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardThrows;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
 
 describe('MetricsData', function (): void {
     it('sorts job metrics and normalizes throughput and runtime', function (): void {

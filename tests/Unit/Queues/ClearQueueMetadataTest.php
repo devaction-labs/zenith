@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
+use DevactionLabs\HorizonNewDawn\Queues\ClearQueueMetadata;
 use Illuminate\Contracts\Redis\Factory as RedisFactory;
 use Illuminate\Redis\Connections\Connection;
 use Illuminate\Redis\Connections\PhpRedisConnection;
 use Illuminate\Redis\Connections\PredisConnection;
 use Illuminate\Support\Str;
-use NckRtl\HorizonNewDawn\Queues\ClearQueueMetadata;
 use Predis\Client;
 
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardReturns;
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardReturnsFor;
-use function NckRtl\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturns;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturnsFor;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
 
 $createRedisClient = static fn (string $prefix = ''): Client => new Client([
     'scheme' => 'tcp',

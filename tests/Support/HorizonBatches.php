@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Tests\Support;
+namespace DevactionLabs\HorizonNewDawn\Tests\Support;
 
 use Carbon\CarbonImmutable;
 use Illuminate\Bus\Batch;

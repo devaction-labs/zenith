@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Jobs;
+namespace DevactionLabs\HorizonNewDawn\Jobs;
 
+use DevactionLabs\HorizonNewDawn\Jobs\Data\JobFilterCatalogData;
+use DevactionLabs\HorizonNewDawn\Support\PollInterval;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Illuminate\Support\Str;
-use NckRtl\HorizonNewDawn\Jobs\Data\JobFilterCatalogData;
-use NckRtl\HorizonNewDawn\Support\PollInterval;
 use Throwable;
 
 final readonly class RetainedJobFilterCatalog

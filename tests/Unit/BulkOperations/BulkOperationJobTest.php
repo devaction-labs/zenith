@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
+use DevactionLabs\HorizonNewDawn\BulkOperations\Jobs\ClearFailedJobsJob;
 use Illuminate\Support\Facades\Log;
-use NckRtl\HorizonNewDawn\BulkOperations\Jobs\ClearFailedJobsJob;
 
 it('inherits the Horizon worker timeout', function (): void {
     config()->set('horizon-new-dawn.bulk_operations.timeout', 180);

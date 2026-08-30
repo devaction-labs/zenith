@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\BulkOperations\Jobs;
+namespace DevactionLabs\HorizonNewDawn\BulkOperations\Jobs;
 
-use NckRtl\HorizonNewDawn\Batches\Actions\ClearBatches;
-use NckRtl\HorizonNewDawn\Batches\BatchClearScope;
-use NckRtl\HorizonNewDawn\BulkOperations\BulkOperationJob;
+use DevactionLabs\HorizonNewDawn\Batches\Actions\ClearBatches;
+use DevactionLabs\HorizonNewDawn\Batches\BatchClearScope;
+use DevactionLabs\HorizonNewDawn\BulkOperations\BulkOperationJob;
 
 final class ClearBatchesJob extends BulkOperationJob
 {

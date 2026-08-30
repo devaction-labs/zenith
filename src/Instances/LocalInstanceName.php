@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Instances;
+namespace DevactionLabs\HorizonNewDawn\Instances;
 
 use Laravel\Horizon\MasterSupervisor;
 

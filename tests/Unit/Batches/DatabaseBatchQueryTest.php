@@ -2,6 +2,18 @@
 
 declare(strict_types=1);
 
+use DevactionLabs\HorizonNewDawn\Batches\BatchCreatedRange;
+use DevactionLabs\HorizonNewDawn\Batches\BatchesData;
+use DevactionLabs\HorizonNewDawn\Batches\BatchJobsData;
+use DevactionLabs\HorizonNewDawn\Batches\BatchSort;
+use DevactionLabs\HorizonNewDawn\Batches\BatchSortDirection;
+use DevactionLabs\HorizonNewDawn\Batches\BatchStatus;
+use DevactionLabs\HorizonNewDawn\Batches\Data\BatchIndexFiltersData;
+use DevactionLabs\HorizonNewDawn\Batches\DatabaseBatchCapability;
+use DevactionLabs\HorizonNewDawn\Batches\DatabaseBatchMetadataSynchronizer;
+use DevactionLabs\HorizonNewDawn\Batches\DatabaseBatchQuery;
+use DevactionLabs\HorizonNewDawn\Jobs\JobsData;
+use DevactionLabs\HorizonNewDawn\Queues\QueueBatchesData;
 use Illuminate\Bus\BatchFactory;
 use Illuminate\Bus\DatabaseBatchRepository;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
@@ -10,20 +22,8 @@ use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Laravel\Horizon\Contracts\JobRepository;
-use NckRtl\HorizonNewDawn\Batches\BatchCreatedRange;
-use NckRtl\HorizonNewDawn\Batches\BatchesData;
-use NckRtl\HorizonNewDawn\Batches\BatchJobsData;
-use NckRtl\HorizonNewDawn\Batches\BatchSort;
-use NckRtl\HorizonNewDawn\Batches\BatchSortDirection;
-use NckRtl\HorizonNewDawn\Batches\BatchStatus;
-use NckRtl\HorizonNewDawn\Batches\Data\BatchIndexFiltersData;
-use NckRtl\HorizonNewDawn\Batches\DatabaseBatchCapability;
-use NckRtl\HorizonNewDawn\Batches\DatabaseBatchMetadataSynchronizer;
-use NckRtl\HorizonNewDawn\Batches\DatabaseBatchQuery;
-use NckRtl\HorizonNewDawn\Jobs\JobsData;
-use NckRtl\HorizonNewDawn\Queues\QueueBatchesData;
 
-use function NckRtl\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
 
 beforeEach(function (): void {
     Date::setTestNow('2026-07-26 12:00:00');

@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
+use DevactionLabs\HorizonNewDawn\BulkOperations\Jobs\ClearFailedJobsJob;
+use DevactionLabs\HorizonNewDawn\Jobs\Data\JobIndexFiltersData;
+use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobQuery;
+use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobType;
 use Illuminate\Contracts\Redis\Factory as RedisFactory;
 use Laravel\Horizon\Contracts\JobRepository;
 use Laravel\Horizon\Horizon;
-use NckRtl\HorizonNewDawn\BulkOperations\Jobs\ClearFailedJobsJob;
-use NckRtl\HorizonNewDawn\Jobs\Data\JobIndexFiltersData;
-use NckRtl\HorizonNewDawn\Jobs\RetainedJobQuery;
-use NckRtl\HorizonNewDawn\Jobs\RetainedJobType;
 use Symfony\Component\Process\Process;
 use Workbench\App\Jobs\FailingJob;
 use Workbench\App\Jobs\SucceedingJob;

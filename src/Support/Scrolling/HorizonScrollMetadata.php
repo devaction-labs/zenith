@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Support\Scrolling;
+namespace DevactionLabs\HorizonNewDawn\Support\Scrolling;
 
 use Inertia\ProvidesScrollMetadata;
 

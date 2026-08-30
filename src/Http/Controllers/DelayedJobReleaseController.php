@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Http\Controllers;
+namespace DevactionLabs\HorizonNewDawn\Http\Controllers;
 
+use DevactionLabs\HorizonNewDawn\Jobs\Actions\ReleaseDelayedJobNow;
+use DevactionLabs\HorizonNewDawn\Jobs\ReleaseDelayedJobNowResult;
 use Illuminate\Http\RedirectResponse;
-use NckRtl\HorizonNewDawn\Jobs\Actions\ReleaseDelayedJobNow;
-use NckRtl\HorizonNewDawn\Jobs\ReleaseDelayedJobNowResult;
 use Throwable;
 
 final class DelayedJobReleaseController

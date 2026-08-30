@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../../wayfinder'
 import pending from './pending'
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\JobController::index
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\JobController::index
 * @see src/Http/Controllers/JobController.php:18
 * @route '/horizon/jobs/{type}'
 */
@@ -16,7 +16,7 @@ index.definition = {
 } satisfies RouteDefinition<["get","head"]>
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\JobController::index
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\JobController::index
 * @see src/Http/Controllers/JobController.php:18
 * @route '/horizon/jobs/{type}'
 */
@@ -43,7 +43,7 @@ index.url = (args: { type: string | number } | [type: string | number ] | string
 }
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\JobController::index
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\JobController::index
 * @see src/Http/Controllers/JobController.php:18
 * @route '/horizon/jobs/{type}'
 */
@@ -53,7 +53,7 @@ index.get = (args: { type: string | number } | [type: string | number ] | string
 })
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\JobController::index
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\JobController::index
 * @see src/Http/Controllers/JobController.php:18
 * @route '/horizon/jobs/{type}'
 */
@@ -63,7 +63,7 @@ index.head = (args: { type: string | number } | [type: string | number ] | strin
 })
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\JobController::show
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\JobController::show
 * @see src/Http/Controllers/JobController.php:85
 * @route '/horizon/jobs/{type}/{job}'
 */
@@ -78,7 +78,7 @@ show.definition = {
 } satisfies RouteDefinition<["get","head"]>
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\JobController::show
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\JobController::show
 * @see src/Http/Controllers/JobController.php:85
 * @route '/horizon/jobs/{type}/{job}'
 */
@@ -104,7 +104,7 @@ show.url = (args: { type: string | number, job: string | number } | [type: strin
 }
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\JobController::show
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\JobController::show
 * @see src/Http/Controllers/JobController.php:85
 * @route '/horizon/jobs/{type}/{job}'
 */
@@ -114,7 +114,7 @@ show.get = (args: { type: string | number, job: string | number } | [type: strin
 })
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\JobController::show
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\JobController::show
 * @see src/Http/Controllers/JobController.php:85
 * @route '/horizon/jobs/{type}/{job}'
 */

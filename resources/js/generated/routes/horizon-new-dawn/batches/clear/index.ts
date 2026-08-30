@@ -1,6 +1,6 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../../../wayfinder'
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\BatchClearController::destroy
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\BatchClearController::destroy
 * @see src/Http/Controllers/BatchClearController.php:16
 * @route '/horizon/batches/{scope}'
 */
@@ -15,7 +15,7 @@ destroy.definition = {
 } satisfies RouteDefinition<["delete"]>
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\BatchClearController::destroy
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\BatchClearController::destroy
 * @see src/Http/Controllers/BatchClearController.php:16
 * @route '/horizon/batches/{scope}'
 */
@@ -42,7 +42,7 @@ destroy.url = (args: { scope: string | number } | [scope: string | number ] | st
 }
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\BatchClearController::destroy
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\BatchClearController::destroy
 * @see src/Http/Controllers/BatchClearController.php:16
 * @route '/horizon/batches/{scope}'
 */

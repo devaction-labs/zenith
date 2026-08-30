@@ -1,6 +1,6 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition } from './../../../wayfinder'
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\DashboardController::index
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\DashboardController::index
 * @see src/Http/Controllers/DashboardController.php:18
 * @route '/horizon/dashboard'
 */
@@ -15,7 +15,7 @@ index.definition = {
 } satisfies RouteDefinition<["get","head"]>
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\DashboardController::index
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\DashboardController::index
 * @see src/Http/Controllers/DashboardController.php:18
 * @route '/horizon/dashboard'
 */
@@ -24,7 +24,7 @@ index.url = (options?: RouteQueryOptions) => {
 }
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\DashboardController::index
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\DashboardController::index
 * @see src/Http/Controllers/DashboardController.php:18
 * @route '/horizon/dashboard'
 */
@@ -34,7 +34,7 @@ index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\DashboardController::index
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\DashboardController::index
 * @see src/Http/Controllers/DashboardController.php:18
 * @route '/horizon/dashboard'
 */

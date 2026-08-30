@@ -204,6 +204,26 @@ export function QueueOverview({
           </CardAction>
         ) : null}
       </CardHeader>
+      {summary.routing?.available &&
+      (summary.routing.classRoutes.length > 0 || summary.routing.forwardedQueue !== null) ? (
+        <div className="border-b border-separator px-6 py-3 text-sm">
+          {summary.routing.forwardedQueue ? (
+            <p className="text-muted-foreground">
+              Forwarded to{" "}
+              <span className="text-foreground">{summary.routing.forwardedQueue}</span>
+              {summary.routing.forwardedConnection
+                ? ` on ${summary.routing.forwardedConnection}`
+                : null}
+            </p>
+          ) : null}
+          {summary.routing.classRoutes.length > 0 ? (
+            <p className="text-muted-foreground">
+              Class routes:{" "}
+              {summary.routing.classRoutes.map((route) => route.class.split("\\").pop()).join(", ")}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
       <CardContent className="p-0">
         <Tabs value={view} className="gap-0">
           <ResponsiveTabsHeader

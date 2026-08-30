@@ -1,6 +1,6 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../../../wayfinder'
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\MonitoringRecentJobController::destroy
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\MonitoringRecentJobController::destroy
 * @see src/Http/Controllers/MonitoringRecentJobController.php:14
 * @route '/horizon/monitoring/actions/clear-jobs/{tag}'
 */
@@ -15,7 +15,7 @@ destroy.definition = {
 } satisfies RouteDefinition<["delete"]>
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\MonitoringRecentJobController::destroy
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\MonitoringRecentJobController::destroy
 * @see src/Http/Controllers/MonitoringRecentJobController.php:14
 * @route '/horizon/monitoring/actions/clear-jobs/{tag}'
 */
@@ -42,7 +42,7 @@ destroy.url = (args: { tag: string | number } | [tag: string | number ] | string
 }
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\MonitoringRecentJobController::destroy
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\MonitoringRecentJobController::destroy
 * @see src/Http/Controllers/MonitoringRecentJobController.php:14
 * @route '/horizon/monitoring/actions/clear-jobs/{tag}'
 */

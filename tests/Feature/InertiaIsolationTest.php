@@ -2,6 +2,9 @@
 
 declare(strict_types=1);
 
+use DevactionLabs\HorizonNewDawn\Assets\AssetPath;
+use DevactionLabs\HorizonNewDawn\HorizonNewDawnServiceProvider;
+use DevactionLabs\HorizonNewDawn\Http\Middleware\HandleInertiaRequests;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
@@ -10,9 +13,6 @@ use Illuminate\Support\Facades\Vite;
 use Inertia\Inertia;
 use Inertia\Ssr\Gateway;
 use Inertia\Ssr\Response as SsrResponse;
-use NckRtl\HorizonNewDawn\Assets\AssetPath;
-use NckRtl\HorizonNewDawn\HorizonNewDawnServiceProvider;
-use NckRtl\HorizonNewDawn\Http\Middleware\HandleInertiaRequests;
 
 use function Pest\Laravel\get;
 

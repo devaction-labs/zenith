@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Http\Controllers;
+namespace DevactionLabs\HorizonNewDawn\Http\Controllers;
 
+use DevactionLabs\HorizonNewDawn\Metrics\MetricsData;
+use DevactionLabs\HorizonNewDawn\Metrics\MetricType;
+use DevactionLabs\HorizonNewDawn\Support\Data\PageMetaData;
+use DevactionLabs\HorizonNewDawn\Support\NavigationItem;
 use Inertia\Inertia;
 use Inertia\Response;
-use NckRtl\HorizonNewDawn\Metrics\MetricsData;
-use NckRtl\HorizonNewDawn\Metrics\MetricType;
-use NckRtl\HorizonNewDawn\Support\Data\PageMetaData;
-use NckRtl\HorizonNewDawn\Support\NavigationItem;
 
 final class MetricController
 {

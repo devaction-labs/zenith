@@ -1,6 +1,6 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition } from './../../../../../wayfinder'
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\PendingJobClearAllController::destroy
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\PendingJobClearAllController::destroy
 * @see src/Http/Controllers/PendingJobClearAllController.php:14
 * @route '/horizon/jobs/pending'
 */
@@ -15,7 +15,7 @@ destroy.definition = {
 } satisfies RouteDefinition<["delete"]>
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\PendingJobClearAllController::destroy
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\PendingJobClearAllController::destroy
 * @see src/Http/Controllers/PendingJobClearAllController.php:14
 * @route '/horizon/jobs/pending'
 */
@@ -24,7 +24,7 @@ destroy.url = (options?: RouteQueryOptions) => {
 }
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\PendingJobClearAllController::destroy
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\PendingJobClearAllController::destroy
 * @see src/Http/Controllers/PendingJobClearAllController.php:14
 * @route '/horizon/jobs/pending'
 */

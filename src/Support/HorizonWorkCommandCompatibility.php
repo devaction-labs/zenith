@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Support;
+namespace DevactionLabs\HorizonNewDawn\Support;
 
 use Illuminate\Queue\Console\WorkCommand as LaravelWorkCommand;
 use ReflectionClass;

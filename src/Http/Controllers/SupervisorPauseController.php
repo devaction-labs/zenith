@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Http\Controllers;
+namespace DevactionLabs\HorizonNewDawn\Http\Controllers;
 
 use Closure;
+use DevactionLabs\HorizonNewDawn\Supervisors\Actions\ContinueSupervisor;
+use DevactionLabs\HorizonNewDawn\Supervisors\Actions\PauseSupervisor;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use NckRtl\HorizonNewDawn\Supervisors\Actions\ContinueSupervisor;
-use NckRtl\HorizonNewDawn\Supervisors\Actions\PauseSupervisor;
 use Symfony\Component\HttpFoundation\Response;
 use Throwable;
 

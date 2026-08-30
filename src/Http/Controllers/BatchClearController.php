@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Http\Controllers;
+namespace DevactionLabs\HorizonNewDawn\Http\Controllers;
 
+use DevactionLabs\HorizonNewDawn\Batches\BatchClearScope;
+use DevactionLabs\HorizonNewDawn\Batches\ClearableBatches;
+use DevactionLabs\HorizonNewDawn\BulkOperations\BulkOperationDispatcher;
+use DevactionLabs\HorizonNewDawn\BulkOperations\Jobs\ClearBatchesJob;
 use Illuminate\Http\RedirectResponse;
-use NckRtl\HorizonNewDawn\Batches\BatchClearScope;
-use NckRtl\HorizonNewDawn\Batches\ClearableBatches;
-use NckRtl\HorizonNewDawn\BulkOperations\BulkOperationDispatcher;
-use NckRtl\HorizonNewDawn\BulkOperations\Jobs\ClearBatchesJob;
 use Throwable;
 
 final class BatchClearController

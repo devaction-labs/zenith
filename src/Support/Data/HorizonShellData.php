@@ -2,10 +2,11 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Support\Data;
+namespace DevactionLabs\HorizonNewDawn\Support\Data;
 
-use NckRtl\HorizonNewDawn\Dashboard\HorizonStatus;
-use NckRtl\HorizonNewDawn\Support\FrameworkCapabilities;
+use DevactionLabs\HorizonNewDawn\Authorization\HorizonAbilitiesData;
+use DevactionLabs\HorizonNewDawn\Dashboard\HorizonStatus;
+use DevactionLabs\HorizonNewDawn\Support\FrameworkCapabilities;
 use Spatie\LaravelData\Data;
 
 final class HorizonShellData extends Data
@@ -18,5 +19,7 @@ final class HorizonShellData extends Data
         public readonly bool $maintenanceMode,
         public readonly FrameworkCapabilities $capabilities,
         public readonly bool $jobNavigationBreakdown = false,
+        public readonly bool $allQueuesPaused = false,
+        public readonly ?HorizonAbilitiesData $abilities = null,
     ) {}
 }

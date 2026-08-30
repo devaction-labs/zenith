@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Batches;
+namespace DevactionLabs\HorizonNewDawn\Batches;
 
 use DateTimeInterface;
+use DevactionLabs\HorizonNewDawn\Batches\Data\BatchDetailData;
+use DevactionLabs\HorizonNewDawn\Batches\Data\BatchIndexFiltersData;
+use DevactionLabs\HorizonNewDawn\Batches\Data\BatchPageData;
+use DevactionLabs\HorizonNewDawn\Batches\Data\BatchRowData;
+use DevactionLabs\HorizonNewDawn\Batches\Data\BatchStatusCountsData;
 use Illuminate\Bus\Batch;
 use Illuminate\Bus\BatchRepository;
-use NckRtl\HorizonNewDawn\Batches\Data\BatchDetailData;
-use NckRtl\HorizonNewDawn\Batches\Data\BatchIndexFiltersData;
-use NckRtl\HorizonNewDawn\Batches\Data\BatchPageData;
-use NckRtl\HorizonNewDawn\Batches\Data\BatchRowData;
-use NckRtl\HorizonNewDawn\Batches\Data\BatchStatusCountsData;
 use RuntimeException;
 use Throwable;
 

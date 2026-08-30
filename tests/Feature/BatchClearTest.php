@@ -2,6 +2,11 @@
 
 declare(strict_types=1);
 
+use DevactionLabs\HorizonNewDawn\Batches\Actions\ClearBatches;
+use DevactionLabs\HorizonNewDawn\Batches\BatchClearScope;
+use DevactionLabs\HorizonNewDawn\Batches\ClearableBatches;
+use DevactionLabs\HorizonNewDawn\Batches\DatabaseBatchCapability;
+use DevactionLabs\HorizonNewDawn\BulkOperations\Jobs\ClearBatchesJob;
 use Illuminate\Bus\BatchFactory;
 use Illuminate\Bus\BatchRepository;
 use Illuminate\Bus\DatabaseBatchRepository;
@@ -21,17 +26,12 @@ use Illuminate\Support\Facades\Exceptions;
 use Illuminate\Support\Facades\Schema;
 use Laravel\Horizon\Contracts\JobRepository;
 use Laravel\Horizon\Horizon;
-use NckRtl\HorizonNewDawn\Batches\Actions\ClearBatches;
-use NckRtl\HorizonNewDawn\Batches\BatchClearScope;
-use NckRtl\HorizonNewDawn\Batches\ClearableBatches;
-use NckRtl\HorizonNewDawn\Batches\DatabaseBatchCapability;
-use NckRtl\HorizonNewDawn\BulkOperations\Jobs\ClearBatchesJob;
 
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardExpects;
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardNeverReceives;
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardReturnsUsing;
-use function NckRtl\HorizonNewDawn\Tests\Support\horizonJob;
-use function NckRtl\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardExpects;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardNeverReceives;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturnsUsing;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\horizonJob;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
 use function Pest\Laravel\delete;
 use function Pest\Laravel\withoutMiddleware;
 

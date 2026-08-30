@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Jobs\Actions;
+namespace DevactionLabs\HorizonNewDawn\Jobs\Actions;
 
+use DevactionLabs\HorizonNewDawn\Jobs\Data\ClearPendingJobsResultData;
+use DevactionLabs\HorizonNewDawn\Queues\Actions\ClearQueue;
+use DevactionLabs\HorizonNewDawn\Queues\Data\QueueTargetData;
+use DevactionLabs\HorizonNewDawn\Queues\QueuesData;
 use Laravel\Horizon\Contracts\JobRepository;
-use NckRtl\HorizonNewDawn\Jobs\Data\ClearPendingJobsResultData;
-use NckRtl\HorizonNewDawn\Queues\Actions\ClearQueue;
-use NckRtl\HorizonNewDawn\Queues\Data\QueueTargetData;
-use NckRtl\HorizonNewDawn\Queues\QueuesData;
 use RuntimeException;
 use Throwable;
 

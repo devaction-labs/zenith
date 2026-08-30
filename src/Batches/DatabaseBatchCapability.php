@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Batches;
+namespace DevactionLabs\HorizonNewDawn\Batches;
 
+use DevactionLabs\HorizonNewDawn\Batches\Data\BatchQueryCapabilityData;
 use Illuminate\Bus\BatchRepository;
 use Illuminate\Bus\DatabaseBatchRepository;
 use Illuminate\Database\Connection;
-use NckRtl\HorizonNewDawn\Batches\Data\BatchQueryCapabilityData;
 use RuntimeException;
 use Throwable;
 

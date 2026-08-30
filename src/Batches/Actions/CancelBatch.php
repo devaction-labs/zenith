@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Batches\Actions;
+namespace DevactionLabs\HorizonNewDawn\Batches\Actions;
 
 use Illuminate\Bus\BatchRepository;
 

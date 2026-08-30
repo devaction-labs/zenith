@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Monitoring\Actions;
+namespace DevactionLabs\HorizonNewDawn\Monitoring\Actions;
 
+use DevactionLabs\HorizonNewDawn\BulkOperations\BulkOperationChunkResult;
+use DevactionLabs\HorizonNewDawn\BulkOperations\BulkOperationSnapshot;
+use DevactionLabs\HorizonNewDawn\Monitoring\MonitoringTagGuard;
 use Illuminate\Contracts\Redis\Factory as RedisFactory;
 use Laravel\Horizon\Contracts\TagRepository;
-use NckRtl\HorizonNewDawn\BulkOperations\BulkOperationChunkResult;
-use NckRtl\HorizonNewDawn\BulkOperations\BulkOperationSnapshot;
-use NckRtl\HorizonNewDawn\Monitoring\MonitoringTagGuard;
 use Throwable;
 
 final readonly class ClearRecentJobs

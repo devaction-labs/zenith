@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\BulkOperations\Jobs;
+namespace DevactionLabs\HorizonNewDawn\BulkOperations\Jobs;
 
-use NckRtl\HorizonNewDawn\BulkOperations\BulkOperationJob;
-use NckRtl\HorizonNewDawn\FailedJobs\Actions\RetryAllFailedJobs;
+use DevactionLabs\HorizonNewDawn\BulkOperations\BulkOperationJob;
+use DevactionLabs\HorizonNewDawn\FailedJobs\Actions\RetryAllFailedJobs;
 
 final class RetryAllFailedJobsJob extends BulkOperationJob
 {

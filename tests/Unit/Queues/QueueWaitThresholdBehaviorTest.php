@@ -3,9 +3,9 @@
 declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
+use DevactionLabs\HorizonNewDawn\Queues\QueueWaitThreshold;
+use DevactionLabs\HorizonNewDawn\Queues\QueueWaitThresholdStatus;
 use Illuminate\Contracts\Config\Repository;
-use NckRtl\HorizonNewDawn\Queues\QueueWaitThreshold;
-use NckRtl\HorizonNewDawn\Queues\QueueWaitThresholdStatus;
 
 beforeEach(function (): void {
     CarbonImmutable::setTestNow(CarbonImmutable::createFromTimestampUTC(1800));

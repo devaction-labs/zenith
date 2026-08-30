@@ -3,7 +3,7 @@ import clear from './clear'
 import cancel from './cancel'
 import release from './release'
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\PendingJobController::destroy
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\PendingJobController::destroy
 * @see src/Http/Controllers/PendingJobController.php:14
 * @route '/horizon/jobs/pending/{job}'
 */
@@ -18,7 +18,7 @@ destroy.definition = {
 } satisfies RouteDefinition<["delete"]>
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\PendingJobController::destroy
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\PendingJobController::destroy
 * @see src/Http/Controllers/PendingJobController.php:14
 * @route '/horizon/jobs/pending/{job}'
 */
@@ -45,7 +45,7 @@ destroy.url = (args: { job: string | number } | [job: string | number ] | string
 }
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\PendingJobController::destroy
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\PendingJobController::destroy
 * @see src/Http/Controllers/PendingJobController.php:14
 * @route '/horizon/jobs/pending/{job}'
 */

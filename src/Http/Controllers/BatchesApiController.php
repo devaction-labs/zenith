@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Http\Controllers;
+namespace DevactionLabs\HorizonNewDawn\Http\Controllers;
 
+use DevactionLabs\HorizonNewDawn\BulkOperations\BulkOperationDispatcher;
+use DevactionLabs\HorizonNewDawn\BulkOperations\Jobs\RetryBatchJob;
 use Illuminate\Bus\BatchRepository;
 use Laravel\Horizon\Http\Controllers\BatchesController as HorizonBatchesController;
-use NckRtl\HorizonNewDawn\BulkOperations\BulkOperationDispatcher;
-use NckRtl\HorizonNewDawn\BulkOperations\Jobs\RetryBatchJob;
 
 final class BatchesApiController extends HorizonBatchesController
 {

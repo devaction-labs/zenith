@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Jobs\Actions;
+namespace DevactionLabs\HorizonNewDawn\Jobs\Actions;
 
+use DevactionLabs\HorizonNewDawn\BulkOperations\BulkOperationSnapshot;
+use DevactionLabs\HorizonNewDawn\Jobs\Data\CancelPendingJobsChunkResultData;
+use DevactionLabs\HorizonNewDawn\Jobs\PendingJobCancellationResult;
+use DevactionLabs\HorizonNewDawn\Jobs\PendingJobCancellationScope;
 use Laravel\Horizon\Contracts\JobRepository;
-use NckRtl\HorizonNewDawn\BulkOperations\BulkOperationSnapshot;
-use NckRtl\HorizonNewDawn\Jobs\Data\CancelPendingJobsChunkResultData;
-use NckRtl\HorizonNewDawn\Jobs\PendingJobCancellationResult;
-use NckRtl\HorizonNewDawn\Jobs\PendingJobCancellationScope;
 use Throwable;
 
 final readonly class CancelPendingJobs

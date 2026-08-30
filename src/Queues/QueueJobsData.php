@@ -2,23 +2,23 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Queues;
+namespace DevactionLabs\HorizonNewDawn\Queues;
 
 use Carbon\CarbonImmutable;
 use Closure;
+use DevactionLabs\HorizonNewDawn\FailedJobs\FailedJobsData;
+use DevactionLabs\HorizonNewDawn\Jobs\Data\JobIndexFiltersData;
+use DevactionLabs\HorizonNewDawn\Jobs\Data\JobRowData;
+use DevactionLabs\HorizonNewDawn\Jobs\JobsData;
+use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobIndexWarming;
+use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobQuery;
+use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobType;
+use DevactionLabs\HorizonNewDawn\Queues\Data\QueueActivityPageData;
+use DevactionLabs\HorizonNewDawn\Queues\Data\QueueRetainedJobsData;
+use DevactionLabs\HorizonNewDawn\Support\PollInterval;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Illuminate\Support\Collection;
 use Laravel\Horizon\Contracts\JobRepository;
-use NckRtl\HorizonNewDawn\FailedJobs\FailedJobsData;
-use NckRtl\HorizonNewDawn\Jobs\Data\JobIndexFiltersData;
-use NckRtl\HorizonNewDawn\Jobs\Data\JobRowData;
-use NckRtl\HorizonNewDawn\Jobs\JobsData;
-use NckRtl\HorizonNewDawn\Jobs\RetainedJobIndexWarming;
-use NckRtl\HorizonNewDawn\Jobs\RetainedJobQuery;
-use NckRtl\HorizonNewDawn\Jobs\RetainedJobType;
-use NckRtl\HorizonNewDawn\Queues\Data\QueueActivityPageData;
-use NckRtl\HorizonNewDawn\Queues\Data\QueueRetainedJobsData;
-use NckRtl\HorizonNewDawn\Support\PollInterval;
 use Throwable;
 
 use function Illuminate\Support\defer;

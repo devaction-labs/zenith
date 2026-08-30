@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Batches\Actions;
+namespace DevactionLabs\HorizonNewDawn\Batches\Actions;
 
+use DevactionLabs\HorizonNewDawn\Batches\BatchesData;
+use DevactionLabs\HorizonNewDawn\Batches\DatabaseBatchQuery;
+use DevactionLabs\HorizonNewDawn\Batches\RetainedBatchScanner;
+use DevactionLabs\HorizonNewDawn\BulkOperations\BulkOperationChunkResult;
+use DevactionLabs\HorizonNewDawn\BulkOperations\BulkOperationSnapshot;
+use DevactionLabs\HorizonNewDawn\FailedJobs\Actions\RetryFailedJob;
 use Illuminate\Bus\BatchRepository;
 use Laravel\Horizon\Contracts\JobRepository;
-use NckRtl\HorizonNewDawn\Batches\BatchesData;
-use NckRtl\HorizonNewDawn\Batches\DatabaseBatchQuery;
-use NckRtl\HorizonNewDawn\Batches\RetainedBatchScanner;
-use NckRtl\HorizonNewDawn\BulkOperations\BulkOperationChunkResult;
-use NckRtl\HorizonNewDawn\BulkOperations\BulkOperationSnapshot;
-use NckRtl\HorizonNewDawn\FailedJobs\Actions\RetryFailedJob;
 use Throwable;
 
 final readonly class RetryQueueBatches

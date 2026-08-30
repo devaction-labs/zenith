@@ -3,6 +3,16 @@
 declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
+use DevactionLabs\HorizonNewDawn\Batches\BatchRepositoryOverview;
+use DevactionLabs\HorizonNewDawn\Batches\DatabaseBatchCapability;
+use DevactionLabs\HorizonNewDawn\Dashboard\DashboardBatchSummary;
+use DevactionLabs\HorizonNewDawn\Dashboard\DashboardData;
+use DevactionLabs\HorizonNewDawn\Dashboard\DashboardPendingState;
+use DevactionLabs\HorizonNewDawn\Dashboard\HorizonStatus;
+use DevactionLabs\HorizonNewDawn\Metrics\SnapshotJobsPerMinute;
+use DevactionLabs\HorizonNewDawn\Queues\QueuePauseMetadata;
+use DevactionLabs\HorizonNewDawn\Queues\QueuePauseStatus;
+use DevactionLabs\HorizonNewDawn\Queues\QueueWaitThreshold;
 use Illuminate\Bus\BatchRepository;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Illuminate\Contracts\Queue\Factory as QueueFactory;
@@ -16,24 +26,14 @@ use Laravel\Horizon\Contracts\MetricsRepository;
 use Laravel\Horizon\Contracts\SupervisorRepository;
 use Laravel\Horizon\MasterSupervisor;
 use Laravel\Horizon\WaitTimeCalculator;
-use NckRtl\HorizonNewDawn\Batches\BatchRepositoryOverview;
-use NckRtl\HorizonNewDawn\Batches\DatabaseBatchCapability;
-use NckRtl\HorizonNewDawn\Dashboard\DashboardBatchSummary;
-use NckRtl\HorizonNewDawn\Dashboard\DashboardData;
-use NckRtl\HorizonNewDawn\Dashboard\DashboardPendingState;
-use NckRtl\HorizonNewDawn\Dashboard\HorizonStatus;
-use NckRtl\HorizonNewDawn\Metrics\SnapshotJobsPerMinute;
-use NckRtl\HorizonNewDawn\Queues\QueuePauseMetadata;
-use NckRtl\HorizonNewDawn\Queues\QueuePauseStatus;
-use NckRtl\HorizonNewDawn\Queues\QueueWaitThreshold;
 
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardReturns;
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardReturnsFor;
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardReturnsUsing;
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardThrows;
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardThrowsFor;
-use function NckRtl\HorizonNewDawn\Tests\Support\horizonBatch;
-use function NckRtl\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturns;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturnsFor;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturnsUsing;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardThrows;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardThrowsFor;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\horizonBatch;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
 
 afterEach(function (): void {
     CarbonImmutable::setTestNow();
@@ -203,6 +203,7 @@ describe('DashboardData', function (): void {
             'queueWithMaxRuntime' => 'exports',
             'queueWithMaxThroughput' => 'default',
             'message' => null,
+            'allPaused' => false,
         ]);
     });
 
@@ -441,6 +442,7 @@ describe('DashboardData', function (): void {
             'queueWithMaxRuntime' => null,
             'queueWithMaxThroughput' => null,
             'message' => 'Horizon data is currently unavailable.',
+            'allPaused' => false,
         ]);
     });
 

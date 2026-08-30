@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Http\Controllers;
+namespace DevactionLabs\HorizonNewDawn\Http\Controllers;
 
+use DevactionLabs\HorizonNewDawn\Batches\DatabaseBatchCapability;
+use DevactionLabs\HorizonNewDawn\BulkOperations\BulkOperationDispatcher;
+use DevactionLabs\HorizonNewDawn\BulkOperations\Jobs\RetryQueueBatchesJob;
+use DevactionLabs\HorizonNewDawn\Http\Requests\RetryFailedJobsRequest;
 use Illuminate\Http\RedirectResponse;
-use NckRtl\HorizonNewDawn\Batches\DatabaseBatchCapability;
-use NckRtl\HorizonNewDawn\BulkOperations\BulkOperationDispatcher;
-use NckRtl\HorizonNewDawn\BulkOperations\Jobs\RetryQueueBatchesJob;
-use NckRtl\HorizonNewDawn\Http\Requests\RetryFailedJobsRequest;
 use Throwable;
 
 final class QueueBatchRetryController

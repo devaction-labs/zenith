@@ -1,6 +1,6 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../../../../wayfinder'
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\BatchFailedJobClearController::destroy
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\BatchFailedJobClearController::destroy
 * @see src/Http/Controllers/BatchFailedJobClearController.php:14
 * @route '/horizon/batches/{batch}/failed'
 */
@@ -15,7 +15,7 @@ destroy.definition = {
 } satisfies RouteDefinition<["delete"]>
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\BatchFailedJobClearController::destroy
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\BatchFailedJobClearController::destroy
 * @see src/Http/Controllers/BatchFailedJobClearController.php:14
 * @route '/horizon/batches/{batch}/failed'
 */
@@ -42,7 +42,7 @@ destroy.url = (args: { batch: string | number } | [batch: string | number ] | st
 }
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\BatchFailedJobClearController::destroy
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\BatchFailedJobClearController::destroy
 * @see src/Http/Controllers/BatchFailedJobClearController.php:14
 * @route '/horizon/batches/{batch}/failed'
 */

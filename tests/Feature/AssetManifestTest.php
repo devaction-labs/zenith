@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
+use DevactionLabs\HorizonNewDawn\Assets\AssetManifest;
+use DevactionLabs\HorizonNewDawn\Assets\AssetPath;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Foundation\Vite;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
-use NckRtl\HorizonNewDawn\Assets\AssetManifest;
-use NckRtl\HorizonNewDawn\Assets\AssetPath;
 
 use function Pest\Laravel\get;
 

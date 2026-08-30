@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Console;
+namespace DevactionLabs\HorizonNewDawn\Console;
 
+use DevactionLabs\HorizonNewDawn\Batches\DatabaseBatchCapability;
+use DevactionLabs\HorizonNewDawn\Batches\DatabaseBatchMetadataSynchronizer;
 use Illuminate\Console\Command;
-use NckRtl\HorizonNewDawn\Batches\DatabaseBatchCapability;
-use NckRtl\HorizonNewDawn\Batches\DatabaseBatchMetadataSynchronizer;
 
 final class WarmBatchMetadataCommand extends Command
 {

@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
+use DevactionLabs\HorizonNewDawn\Support\FrameworkCapabilities;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Queue\QueueManager;
 use Laravel\Horizon\Horizon;
-use NckRtl\HorizonNewDawn\Support\FrameworkCapabilities;
 
 use function Pest\Laravel\delete;
 use function Pest\Laravel\post;
@@ -116,5 +116,57 @@ describe('queue pause mutations', function (): void {
 
         post('/horizon/queues/redis/reports/pause')->assertForbidden();
         delete('/horizon/queues/redis/reports/pause')->assertForbidden();
+    });
+});
+
+describe('global queue pause mutations', function (): void {
+    it('returns not found when the installed framework cannot pause all queues', function (): void {
+        app()->instance(
+            FrameworkCapabilities::class,
+            new FrameworkCapabilities(queuePausing: true, queuePausingAll: false),
+        );
+
+        post('/horizon/queues/pause-all')->assertNotFound();
+        delete('/horizon/queues/pause-all')->assertNotFound();
+    });
+
+    it('pauses every queue on every connection', function (): void {
+        requireQueuePausingAll();
+
+        $queues = app(QueueManager::class);
+
+        post('/horizon/queues/pause-all')
+            ->assertRedirect()
+            ->assertSessionHas('toast.success', 'Paused all queues on every connection.');
+
+        expect($queues->isPaused('redis', 'reports'))->toBeTrue()
+            ->and($queues->isPaused('redis', 'mail'))->toBeTrue();
+    });
+
+    it('clears the global pause without resuming individually paused queues', function (): void {
+        requireQueuePausingAll();
+
+        $queues = app(QueueManager::class);
+        $queues->pause('redis', 'reports');
+        $queues->pauseAll();
+
+        delete('/horizon/queues/pause-all')
+            ->assertRedirect()
+            ->assertSessionHas(
+                'toast.success',
+                'Cleared the global queue pause. Individually paused queues remain paused.',
+            );
+
+        expect($queues->isPaused('redis', 'reports'))->toBeTrue()
+            ->and($queues->isPaused('redis', 'mail'))->toBeFalse();
+    });
+
+    it('honors Horizon authorization for global pause', function (): void {
+        requireQueuePausingAll();
+
+        Horizon::auth(static fn (): bool => false);
+
+        post('/horizon/queues/pause-all')->assertForbidden();
+        delete('/horizon/queues/pause-all')->assertForbidden();
     });
 });

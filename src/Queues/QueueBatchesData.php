@@ -2,20 +2,20 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Queues;
+namespace DevactionLabs\HorizonNewDawn\Queues;
 
+use DevactionLabs\HorizonNewDawn\Batches\BatchesData;
+use DevactionLabs\HorizonNewDawn\Batches\BatchSort;
+use DevactionLabs\HorizonNewDawn\Batches\BatchSortDirection;
+use DevactionLabs\HorizonNewDawn\Batches\Data\BatchIndexFiltersData;
+use DevactionLabs\HorizonNewDawn\Batches\DatabaseBatchQuery;
+use DevactionLabs\HorizonNewDawn\Dashboard\Data\DashboardBatchPreviewData;
+use DevactionLabs\HorizonNewDawn\Queues\Data\QueueActivityPageData;
+use DevactionLabs\HorizonNewDawn\Queues\Data\QueueRetainedBatchesData;
+use DevactionLabs\HorizonNewDawn\Support\PollInterval;
 use Illuminate\Bus\Batch;
 use Illuminate\Bus\BatchRepository;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
-use NckRtl\HorizonNewDawn\Batches\BatchesData;
-use NckRtl\HorizonNewDawn\Batches\BatchSort;
-use NckRtl\HorizonNewDawn\Batches\BatchSortDirection;
-use NckRtl\HorizonNewDawn\Batches\Data\BatchIndexFiltersData;
-use NckRtl\HorizonNewDawn\Batches\DatabaseBatchQuery;
-use NckRtl\HorizonNewDawn\Dashboard\Data\DashboardBatchPreviewData;
-use NckRtl\HorizonNewDawn\Queues\Data\QueueActivityPageData;
-use NckRtl\HorizonNewDawn\Queues\Data\QueueRetainedBatchesData;
-use NckRtl\HorizonNewDawn\Support\PollInterval;
 use Throwable;
 
 final readonly class QueueBatchesData

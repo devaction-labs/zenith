@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Assets;
+namespace DevactionLabs\HorizonNewDawn\Assets;
 
 use Illuminate\Foundation\Vite;
 use Illuminate\Foundation\ViteException;

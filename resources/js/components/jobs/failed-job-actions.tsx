@@ -26,6 +26,7 @@ import { destroy as clearAllFailedJobs } from "@/generated/routes/horizon-new-da
 import { store as retryAllFailedJobs } from "@/generated/routes/horizon-new-dawn/failed-jobs/retry-all";
 import { store as retryFailedJob } from "@/generated/routes/horizon-new-dawn/failed-jobs/retry";
 import { cn } from "@/lib/utils";
+import { useHorizonAbilities } from "@/hooks/use-horizon-abilities";
 import { resolveHorizonRoute } from "@/lib/horizon-route";
 
 export function RetryFailedJobButton({
@@ -39,6 +40,7 @@ export function RetryFailedJobButton({
   disabled?: boolean;
   showLabel?: boolean;
 }) {
+  const abilities = useHorizonAbilities();
   const [working, setWorking] = useState(false);
 
   const retry = () => {
@@ -64,7 +66,7 @@ export function RetryFailedJobButton({
         !showLabel && "text-action-retry hover:bg-action-retry/15! hover:text-action-retry!",
       )}
       aria-label={working ? "Retrying failed job" : "Retry failed job"}
-      disabled={disabled || working}
+      disabled={disabled || working || !abilities.retryJobs}
       onClick={retry}
     >
       {working ? <LoaderCircleIcon className="animate-spin" /> : <RotateCcwIcon />}
@@ -80,6 +82,7 @@ export function RetryAllFailedJobsButton({
   horizonBaseUrl: string;
   disabled: boolean;
 }) {
+  const abilities = useHorizonAbilities();
   const [working, setWorking] = useState(false);
 
   const retry = () => {
@@ -102,7 +105,7 @@ export function RetryAllFailedJobsButton({
       size="icon"
       className="sm:h-[34px] sm:w-auto sm:gap-2 sm:px-2.5"
       aria-label={working ? "Retrying failed jobs" : "Retry all failed jobs"}
-      disabled={disabled || working}
+      disabled={disabled || working || !abilities.retryJobs}
       onClick={retry}
     >
       {working ? <LoaderCircleIcon className="animate-spin" /> : <RotateCcwIcon />}
@@ -126,6 +129,7 @@ export function FailedJobsActionsMenu({
   clearable: boolean;
   clearUnavailableReason: string | null;
 }) {
+  const abilities = useHorizonAbilities();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [working, setWorking] = useState(false);
 
@@ -158,7 +162,7 @@ export function FailedJobsActionsMenu({
     <>
       <DropdownMenu>
         <ActionMenuTrigger
-          available={hasFailedJobs}
+          available={hasFailedJobs && (abilities.retryJobs || abilities.clearQueues)}
           label="Failed jobs actions"
           working={working}
         />
@@ -172,7 +176,7 @@ export function FailedJobsActionsMenu({
           <DropdownMenuGroup>
             <DropdownMenuItem
               data-test="retry-all-failed-jobs"
-              disabled={!retryable}
+              disabled={!retryable || !abilities.retryJobs}
               onSelect={retryAll}
             >
               <RotateCcwIcon className="size-3.5" />
@@ -189,7 +193,7 @@ export function FailedJobsActionsMenu({
             <DropdownMenuItem
               data-test="clear-all-failed-jobs"
               variant="destructive"
-              disabled={!clearable}
+              disabled={!clearable || !abilities.clearQueues}
               onSelect={() => setDialogOpen(true)}
             >
               <Trash2Icon />

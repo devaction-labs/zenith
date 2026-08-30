@@ -1,6 +1,6 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../../../wayfinder'
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\MonitoringFailedJobRetryController::store
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\MonitoringFailedJobRetryController::store
 * @see src/Http/Controllers/MonitoringFailedJobRetryController.php:14
 * @route '/horizon/monitoring/actions/retry-failed/{tag}'
 */
@@ -15,7 +15,7 @@ store.definition = {
 } satisfies RouteDefinition<["post"]>
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\MonitoringFailedJobRetryController::store
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\MonitoringFailedJobRetryController::store
 * @see src/Http/Controllers/MonitoringFailedJobRetryController.php:14
 * @route '/horizon/monitoring/actions/retry-failed/{tag}'
 */
@@ -42,7 +42,7 @@ store.url = (args: { tag: string | number } | [tag: string | number ] | string |
 }
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\MonitoringFailedJobRetryController::store
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\MonitoringFailedJobRetryController::store
 * @see src/Http/Controllers/MonitoringFailedJobRetryController.php:14
 * @route '/horizon/monitoring/actions/retry-failed/{tag}'
 */

@@ -2,9 +2,10 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Jobs;
+namespace DevactionLabs\HorizonNewDawn\Jobs;
 
 use Closure;
+use DevactionLabs\HorizonNewDawn\Support\RedisScript;
 use Illuminate\Contracts\Redis\Factory as RedisFactory;
 use Illuminate\Redis\Connections\Connection;
 use Illuminate\Redis\Connections\PhpRedisClusterConnection;
@@ -13,7 +14,6 @@ use Illuminate\Redis\Connections\PredisClusterConnection;
 use Illuminate\Redis\Connections\PredisConnection;
 use Illuminate\Support\Str;
 use Laravel\Horizon\Contracts\JobRepository;
-use NckRtl\HorizonNewDawn\Support\RedisScript;
 use Predis\Command\CommandInterface;
 use Predis\Command\Processor\KeyPrefixProcessor;
 use Predis\Response\Status;
@@ -1681,25 +1681,34 @@ final class RetainedJobIndex
     private function materializeSourceSnapshot(
         RetainedJobType $type,
     ): string {
+        $this->connection();
         $sourceSnapshotKey = $this->temporaryKey(
             'retained-source-snapshot',
         );
 
-        $this->transaction(function (mixed $transaction) use (
-            $sourceSnapshotKey,
-            $type,
-        ): void {
-            $this->intersect(
-                $transaction,
-                $sourceSnapshotKey,
-                [$type->sourceKey()],
-                [1],
-            );
-            $transaction->expire(
+        if ($this->usesCluster()) {
+            $this->copySortedSet($type->sourceKey(), $sourceSnapshotKey);
+            $this->connection()->expire(
                 $sourceSnapshotKey,
                 self::SYNCHRONIZATION_LOCK_SECONDS,
             );
-        });
+        } else {
+            $this->transaction(function (mixed $transaction) use (
+                $sourceSnapshotKey,
+                $type,
+            ): void {
+                $this->intersect(
+                    $transaction,
+                    $sourceSnapshotKey,
+                    [$type->sourceKey()],
+                    [1],
+                );
+                $transaction->expire(
+                    $sourceSnapshotKey,
+                    self::SYNCHRONIZATION_LOCK_SECONDS,
+                );
+            });
+        }
         $this->sourceSnapshotCounts[$sourceSnapshotKey] = $this->sortedSetCount(
             $sourceSnapshotKey,
         );
@@ -1721,21 +1730,23 @@ final class RetainedJobIndex
         $removalsKey = $this->temporaryKey(
             'retained-source-removals',
         );
+        $clusterSourceKeys = [];
+        $sourceKey = $this->clusterSafeKey($type->sourceKey(), $clusterSourceKeys);
 
         try {
             $this->transaction(function (mixed $transaction) use (
                 $additionsKey,
                 $removalsKey,
                 $sourceSnapshotKey,
-                $type,
+                $sourceKey,
             ): void {
                 $transaction->zdiffstore($additionsKey, [
-                    $type->sourceKey(),
+                    $sourceKey,
                     $sourceSnapshotKey,
                 ]);
                 $transaction->zdiffstore($removalsKey, [
                     $sourceSnapshotKey,
-                    $type->sourceKey(),
+                    $sourceKey,
                 ]);
 
                 foreach ([$additionsKey, $removalsKey] as $key) {
@@ -1836,6 +1847,10 @@ final class RetainedJobIndex
         } finally {
             $this->deleteQuietly($additionsKey);
             $this->deleteQuietly($removalsKey);
+
+            foreach ($clusterSourceKeys as $key) {
+                $this->deleteQuietly($key);
+            }
         }
     }
 
@@ -1854,6 +1869,8 @@ final class RetainedJobIndex
         $coverageGapKey = $this->temporaryKey('coverage-gap');
         $temporaryKeys[] = $sourceSnapshotKey;
         $temporaryKeys[] = $coverageGapKey;
+
+        $retainedSourceKey = $this->clusterSafeKey($retainedSourceKey, $temporaryKeys);
 
         $this->transaction(function (mixed $transaction) use (
             $coverageGapKey,
@@ -3383,18 +3400,32 @@ final class RetainedJobIndex
         string $destination,
         string ...$keys,
     ): int {
-        $this->transaction(function (mixed $transaction) use (
-            $destination,
-            $keys,
-        ): void {
-            $transaction->zdiffstore($destination, $keys);
-            $transaction->expire(
-                $destination,
-                self::TEMPORARY_KEY_TTL_SECONDS,
-            );
-        });
+        $temporaryKeys = [];
 
-        return $this->sortedSetCount($destination);
+        try {
+            $resolved = [];
+
+            foreach ($keys as $key) {
+                $resolved[] = $this->clusterSafeKey($key, $temporaryKeys);
+            }
+
+            $this->transaction(function (mixed $transaction) use (
+                $destination,
+                $resolved,
+            ): void {
+                $transaction->zdiffstore($destination, $resolved);
+                $transaction->expire(
+                    $destination,
+                    self::TEMPORARY_KEY_TTL_SECONDS,
+                );
+            });
+
+            return $this->sortedSetCount($destination);
+        } finally {
+            foreach ($temporaryKeys as $key) {
+                $this->deleteQuietly($key);
+            }
+        }
     }
 
     /**
@@ -3436,7 +3467,7 @@ final class RetainedJobIndex
     ): array {
         $values = $metadata->facetValues();
 
-        if ($type !== RetainedJobType::Failed) {
+        if ($type !== RetainedJobType::Failed && $type !== RetainedJobType::Completed) {
             unset($values['tag']);
         }
 
@@ -4018,7 +4049,13 @@ final class RetainedJobIndex
 
     private function key(string $suffix): string
     {
-        return $this->namespace().':'.$suffix;
+        $key = $this->namespace().':'.$suffix;
+
+        if ($this->connection !== null && $this->usesCluster()) {
+            return '{hnd:'.substr(hash('sha256', $this->namespace()), 0, 16).'}'.$key;
+        }
+
+        return $key;
     }
 
     private function namespace(): string
@@ -4037,15 +4074,15 @@ final class RetainedJobIndex
         $horizonPrefix = config('horizon.prefix');
         $seed = is_string($horizonPrefix) ? $horizonPrefix : '';
 
-        return $this->namespace = "\x1fhorizon-new-dawn:v2:"
-            .substr(hash('sha256', $seed), 0, 32)
-            .':jobs';
+        $hash = substr(hash('sha256', $seed), 0, 32);
+
+        return $this->namespace = "\x1fhorizon-new-dawn:v2:{$hash}:jobs";
     }
 
     private function assertNamespaceOwnership(): void
     {
         $key = $this->key('owner');
-        $owner = 'nckrtl/horizon-new-dawn:retained-jobs:v2';
+        $owner = 'devaction-labs/horizon-new-dawn:retained-jobs:v2';
         $this->connection()->setnx($key, $owner);
 
         if ($this->connection()->get($key) !== $owner) {
@@ -4068,18 +4105,69 @@ final class RetainedJobIndex
 
         $connection = $this->redis->connection('horizon');
 
-        if (
-            $connection instanceof PhpRedisClusterConnection
-            || $connection instanceof PredisClusterConnection
-        ) {
-            throw new RuntimeException(
-                'Retained job queries do not support Redis Cluster.',
-            );
-        }
-
         $this->configurePredisKeyPrefixing($connection);
 
         return $this->connection = $connection;
+    }
+
+    private function usesCluster(): bool
+    {
+        if ($this->connection === null) {
+            return false;
+        }
+
+        return $this->connection instanceof PhpRedisClusterConnection
+            || $this->connection instanceof PredisClusterConnection;
+    }
+
+    private function isPackageKey(string $key): bool
+    {
+        return str_starts_with($key, $this->namespace());
+    }
+
+    private function copySortedSet(string $source, string $destination): void
+    {
+        $this->connection()->del($destination);
+        $offset = 0;
+
+        while (true) {
+            $scores = $this->sortedSetScores(
+                $source,
+                $offset,
+                $offset + self::SOURCE_CHUNK_SIZE - 1,
+            );
+
+            if ($scores === []) {
+                break;
+            }
+
+            foreach ($scores as $member => $score) {
+                $this->connection()->zadd($destination, $score, $member);
+            }
+
+            $copied = count($scores);
+            $offset += $copied;
+
+            if ($copied < self::SOURCE_CHUNK_SIZE) {
+                break;
+            }
+        }
+    }
+
+    /**
+     * @param  array<int, string>  $temporaryKeys
+     */
+    private function clusterSafeKey(string $key, array &$temporaryKeys): string
+    {
+        if (! $this->usesCluster() || $this->isPackageKey($key)) {
+            return $key;
+        }
+
+        $copy = $this->temporaryKey('cluster-source');
+        $temporaryKeys[] = $copy;
+        $this->copySortedSet($key, $copy);
+
+        return $copy;
     }
 
     private function configurePredisKeyPrefixing(Connection $connection): void

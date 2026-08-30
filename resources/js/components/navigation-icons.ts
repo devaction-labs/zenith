@@ -8,6 +8,7 @@ import {
   LayoutDashboardIcon,
   ListTodoIcon,
   ListTreeIcon,
+  ScrollTextIcon,
 } from "lucide-react";
 
 export const DashboardNavigationIcon = LayoutDashboardIcon;
@@ -48,3 +49,5 @@ export const SilencedJobsNavigationIcon = createLucideIcon("BellOff", [
 ]);
 
 export const FailedJobsNavigationIcon = CircleAlertIcon;
+
+export const AuditNavigationIcon = ScrollTextIcon;

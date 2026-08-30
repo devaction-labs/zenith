@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Queues;
+namespace DevactionLabs\HorizonNewDawn\Queues;
 
+use DevactionLabs\HorizonNewDawn\Jobs\ForgetsPendingJob;
+use DevactionLabs\HorizonNewDawn\Support\RedisScript;
 use Illuminate\Contracts\Redis\Factory as RedisFactory;
 use Illuminate\Redis\Connections\Connection;
-use NckRtl\HorizonNewDawn\Jobs\ForgetsPendingJob;
-use NckRtl\HorizonNewDawn\Support\RedisScript;
 
 /**
  * Removes pending/reserved Horizon job hashes for one connection+queue pair.

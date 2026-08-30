@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Batches\Data;
+namespace DevactionLabs\HorizonNewDawn\Batches\Data;
 
 use Spatie\LaravelData\Data;
 

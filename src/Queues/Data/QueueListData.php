@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Queues\Data;
+namespace DevactionLabs\HorizonNewDawn\Queues\Data;
 
 use Spatie\LaravelData\Data;
 
@@ -13,6 +13,7 @@ final class QueueListData extends Data
         public readonly bool $available,
         public readonly array $queues,
         public readonly ?string $message,
+        public readonly bool $allPaused = false,
     ) {}
 
     public function find(string $name): ?QueueRowData

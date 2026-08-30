@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
+use DevactionLabs\HorizonNewDawn\Supervisors\SupervisorDetails;
+use DevactionLabs\HorizonNewDawn\Support\HorizonRuntime;
 use Illuminate\Contracts\Config\Repository as ConfigRepository;
 use Inertia\Testing\AssertableInertia;
 use Laravel\Horizon\Contracts\MasterSupervisorRepository;
 use Laravel\Horizon\Contracts\SupervisorRepository;
 use Laravel\Horizon\Horizon;
-use NckRtl\HorizonNewDawn\Supervisors\SupervisorDetails;
-use NckRtl\HorizonNewDawn\Support\HorizonRuntime;
 
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardReturns;
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardReturnsFor;
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardThrowsFor;
-use function NckRtl\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturns;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturnsFor;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardThrowsFor;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
 use function Pest\Laravel\get;
 
 beforeEach(function (): void {

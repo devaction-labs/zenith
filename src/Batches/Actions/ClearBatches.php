@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Batches\Actions;
+namespace DevactionLabs\HorizonNewDawn\Batches\Actions;
 
+use DevactionLabs\HorizonNewDawn\Batches\BatchClearScope;
+use DevactionLabs\HorizonNewDawn\Batches\ClearableBatches;
 use Illuminate\Bus\BatchRepository;
-use NckRtl\HorizonNewDawn\Batches\BatchClearScope;
-use NckRtl\HorizonNewDawn\Batches\ClearableBatches;
 
 /**
  * Deletes clearable batches in bounded repository transactions streamed from

@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Console;
+namespace DevactionLabs\HorizonNewDawn\Console;
 
+use DevactionLabs\HorizonNewDawn\Assets\AssetPath;
+use DevactionLabs\HorizonNewDawn\Assets\AssetsPublisher;
 use Illuminate\Console\Command;
-use NckRtl\HorizonNewDawn\Assets\AssetPath;
-use NckRtl\HorizonNewDawn\Assets\AssetsPublisher;
 
 final class AssetsCommand extends Command
 {

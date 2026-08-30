@@ -2,25 +2,25 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Http\Controllers;
+namespace DevactionLabs\HorizonNewDawn\Http\Controllers;
 
 use Closure;
+use DevactionLabs\HorizonNewDawn\Batches\DatabaseBatchCapability;
+use DevactionLabs\HorizonNewDawn\Metrics\Data\MetricPreviewData;
+use DevactionLabs\HorizonNewDawn\Metrics\MetricsData;
+use DevactionLabs\HorizonNewDawn\Metrics\MetricType;
+use DevactionLabs\HorizonNewDawn\Queues\Data\QueueActivityPageData;
+use DevactionLabs\HorizonNewDawn\Queues\Data\QueueSummaryData;
+use DevactionLabs\HorizonNewDawn\Queues\QueueActivityData;
+use DevactionLabs\HorizonNewDawn\Queues\QueueActivityTab;
+use DevactionLabs\HorizonNewDawn\Queues\QueuesData;
+use DevactionLabs\HorizonNewDawn\Queues\QueueSummary;
+use DevactionLabs\HorizonNewDawn\Support\Data\PageMetaData;
+use DevactionLabs\HorizonNewDawn\Support\NavigationItem;
+use DevactionLabs\HorizonNewDawn\Support\Scrolling\HorizonScrollMetadata;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
-use NckRtl\HorizonNewDawn\Batches\DatabaseBatchCapability;
-use NckRtl\HorizonNewDawn\Metrics\Data\MetricPreviewData;
-use NckRtl\HorizonNewDawn\Metrics\MetricsData;
-use NckRtl\HorizonNewDawn\Metrics\MetricType;
-use NckRtl\HorizonNewDawn\Queues\Data\QueueActivityPageData;
-use NckRtl\HorizonNewDawn\Queues\Data\QueueSummaryData;
-use NckRtl\HorizonNewDawn\Queues\QueueActivityData;
-use NckRtl\HorizonNewDawn\Queues\QueueActivityTab;
-use NckRtl\HorizonNewDawn\Queues\QueuesData;
-use NckRtl\HorizonNewDawn\Queues\QueueSummary;
-use NckRtl\HorizonNewDawn\Support\Data\PageMetaData;
-use NckRtl\HorizonNewDawn\Support\NavigationItem;
-use NckRtl\HorizonNewDawn\Support\Scrolling\HorizonScrollMetadata;
 
 final class QueueController
 {

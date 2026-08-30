@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Monitoring\Actions;
+namespace DevactionLabs\HorizonNewDawn\Monitoring\Actions;
 
+use DevactionLabs\HorizonNewDawn\Monitoring\MonitoringTagGuard;
 use Illuminate\Contracts\Bus\Dispatcher;
 use Laravel\Horizon\Contracts\TagRepository;
 use Laravel\Horizon\Jobs\StopMonitoringTag as HorizonStopMonitoringTag;
-use NckRtl\HorizonNewDawn\Monitoring\MonitoringTagGuard;
 
 final readonly class StopMonitoringTag
 {

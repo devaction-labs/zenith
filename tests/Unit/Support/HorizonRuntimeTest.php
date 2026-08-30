@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
+use DevactionLabs\HorizonNewDawn\Dashboard\DashboardPendingState;
+use DevactionLabs\HorizonNewDawn\Dashboard\HorizonStatus;
+use DevactionLabs\HorizonNewDawn\Support\HorizonRuntime;
 use Illuminate\Contracts\Queue\Factory as QueueFactory;
 use Illuminate\Contracts\Queue\Queue;
 use Laravel\Horizon\Contracts\MasterSupervisorRepository;
 use Laravel\Horizon\Contracts\WorkloadRepository;
 use Laravel\Horizon\WaitTimeCalculator;
-use NckRtl\HorizonNewDawn\Dashboard\DashboardPendingState;
-use NckRtl\HorizonNewDawn\Dashboard\HorizonStatus;
-use NckRtl\HorizonNewDawn\Support\HorizonRuntime;
 
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardReturns;
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardThrows;
-use function NckRtl\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturns;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardThrows;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
 
 describe('HorizonRuntime', function (): void {
     it('reports inactive when no masters are registered', function (): void {

@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- Rebranded the fork to DevAction Labs (`devaction-labs/horizon-new-dawn`, `DevactionLabs\HorizonNewDawn`).
+- Added Laravel 13.25 global queue pause and resume (`Queue::pauseAll()` / `resumeAll()`), gated when the framework methods are missing, with a shell banner and Queues actions that leave individually paused queues paused after a global resume.
+- Warned at install time when Redis Cluster connections are configured.
+- Added optional per-action Gates (`horizon-new-dawn.pauseQueues`, `clearQueues`, `retryJobs`, `cancelJobs`, `manageInstances`, `manageMonitoring`, `manageBatches`) on top of Horizon auth. Undefined gates remain allowed for anyone Horizon already admitted.
+- Recorded successful mutations to the application log and `horizon_new_dawn_audit_events`, with an Audit page.
+- Surfaced Laravel `Queue::route()` class routes and `Queue::forward()` destinations on queue detail.
+- Added retained-source search on monitored-tag job lists (completed and failed).
+- Copied Horizon source sets into hash-tagged keys on Redis Cluster so retained-job indexes no longer issue CROSSSLOT `ZDIFFSTORE` commands.
+
 ## [0.1.5] - 2026-07-30
 
 ### Fixed
@@ -134,9 +145,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Backfill the worker option expected by newer Laravel releases when Horizon 5.46 does not register it, allowing real Horizon workers to boot normally.
 - Calculate dashboard queue runtime and throughput leaders from retained metric snapshots instead of relying on repository methods unavailable in Horizon 5.46.
 
-[Unreleased]: https://github.com/nckrtl/horizon-new-dawn/compare/0.1.5...HEAD
-[0.1.5]: https://github.com/nckrtl/horizon-new-dawn/compare/0.1.4...0.1.5
-[0.1.4]: https://github.com/nckrtl/horizon-new-dawn/compare/0.1.3...0.1.4
-[0.1.3]: https://github.com/nckrtl/horizon-new-dawn/compare/0.1.2...0.1.3
-[0.1.2]: https://github.com/nckrtl/horizon-new-dawn/compare/0.1.1...0.1.2
-[0.1.1]: https://github.com/nckrtl/horizon-new-dawn/compare/0.1.0...0.1.1
+[Unreleased]: https://github.com/devaction-labs/horizon-new-dawn/compare/0.1.5...HEAD
+[0.1.5]: https://github.com/devaction-labs/horizon-new-dawn/compare/0.1.4...0.1.5
+[0.1.4]: https://github.com/devaction-labs/horizon-new-dawn/compare/0.1.3...0.1.4
+[0.1.3]: https://github.com/devaction-labs/horizon-new-dawn/compare/0.1.2...0.1.3
+[0.1.2]: https://github.com/devaction-labs/horizon-new-dawn/compare/0.1.1...0.1.2
+[0.1.1]: https://github.com/devaction-labs/horizon-new-dawn/compare/0.1.0...0.1.1

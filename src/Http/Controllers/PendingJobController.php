@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Http\Controllers;
+namespace DevactionLabs\HorizonNewDawn\Http\Controllers;
 
+use DevactionLabs\HorizonNewDawn\Jobs\Actions\CancelPendingJob;
+use DevactionLabs\HorizonNewDawn\Jobs\PendingJobCancellationResult;
 use Illuminate\Http\RedirectResponse;
-use NckRtl\HorizonNewDawn\Jobs\Actions\CancelPendingJob;
-use NckRtl\HorizonNewDawn\Jobs\PendingJobCancellationResult;
 use Throwable;
 
 final class PendingJobController

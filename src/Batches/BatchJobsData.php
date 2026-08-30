@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Batches;
+namespace DevactionLabs\HorizonNewDawn\Batches;
 
+use DevactionLabs\HorizonNewDawn\Batches\Data\BatchJobListData;
+use DevactionLabs\HorizonNewDawn\Batches\Data\BatchJobListsData;
+use DevactionLabs\HorizonNewDawn\Jobs\Data\JobRowData;
+use DevactionLabs\HorizonNewDawn\Jobs\JobListType;
+use DevactionLabs\HorizonNewDawn\Jobs\JobsData;
+use DevactionLabs\HorizonNewDawn\Jobs\PendingJobEntryScanner;
 use Illuminate\Bus\Batch;
 use Illuminate\Support\Collection;
 use Laravel\Horizon\Contracts\JobRepository;
 use LogicException;
-use NckRtl\HorizonNewDawn\Batches\Data\BatchJobListData;
-use NckRtl\HorizonNewDawn\Batches\Data\BatchJobListsData;
-use NckRtl\HorizonNewDawn\Jobs\Data\JobRowData;
-use NckRtl\HorizonNewDawn\Jobs\JobListType;
-use NckRtl\HorizonNewDawn\Jobs\JobsData;
-use NckRtl\HorizonNewDawn\Jobs\PendingJobEntryScanner;
 use Throwable;
 
 final readonly class BatchJobsData

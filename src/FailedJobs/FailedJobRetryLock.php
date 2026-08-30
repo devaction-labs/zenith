@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\FailedJobs;
+namespace DevactionLabs\HorizonNewDawn\FailedJobs;
 
 use Closure;
+use DevactionLabs\HorizonNewDawn\Support\RedisScript;
 use Illuminate\Contracts\Redis\Factory as RedisFactory;
-use NckRtl\HorizonNewDawn\Support\RedisScript;
 use Throwable;
 
 final readonly class FailedJobRetryLock

@@ -42,6 +42,7 @@ export type DashboardSummary = {
   queueWithMaxRuntime: string | null;
   queueWithMaxThroughput: string | null;
   message: string | null;
+  allPaused?: boolean;
 };
 
 export type WorkloadSplitQueue = {
@@ -126,6 +127,7 @@ export type DashboardPageProps = {
     capabilities?: {
       queuePausing: boolean;
       timedQueuePausing: boolean;
+      queuePausingAll?: boolean;
     };
   };
   summary: DashboardSummary;
@@ -142,6 +144,7 @@ export type RunningInstancesPageProps = {
     capabilities?: {
       queuePausing: boolean;
       timedQueuePausing: boolean;
+      queuePausingAll?: boolean;
     };
   };
   supervisors: DashboardSupervisors;

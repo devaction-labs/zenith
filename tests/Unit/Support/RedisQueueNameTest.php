@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
+use DevactionLabs\HorizonNewDawn\Support\RedisQueueName;
 use Illuminate\Redis\Connections\Connection;
 use Illuminate\Redis\Connections\PhpRedisClusterConnection;
 use Illuminate\Redis\Connections\PredisClusterConnection;
-use NckRtl\HorizonNewDawn\Support\RedisQueueName;
 
 describe('RedisQueueName', function (): void {
     it('normalizes queue names for each supported Redis connection shape', function (

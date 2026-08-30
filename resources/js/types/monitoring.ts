@@ -41,6 +41,7 @@ export type MonitoringTagPageProps = {
   horizon: MonitoringHorizon;
   tag: string;
   status: MonitoringStatus;
+  query?: string;
   summary: MonitoringTagSummary;
   listRevision: string;
   jobs: JobCollection;

@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Queues;
+namespace DevactionLabs\HorizonNewDawn\Queues;
 
+use DevactionLabs\HorizonNewDawn\Queues\Data\QueuePauseStateData;
+use DevactionLabs\HorizonNewDawn\Support\FrameworkCapabilities;
 use Illuminate\Queue\QueueManager;
-use NckRtl\HorizonNewDawn\Queues\Data\QueuePauseStateData;
-use NckRtl\HorizonNewDawn\Support\FrameworkCapabilities;
 
 final readonly class QueuePauseStatus
 {
@@ -34,5 +34,14 @@ final readonly class QueuePauseStatus
             paused: true,
             pausedUntil: $this->metadata->pausedUntil($connection, $queue),
         );
+    }
+
+    public function allPaused(): bool
+    {
+        if (! ($this->capabilities ?? FrameworkCapabilities::detect())->queuePausingAll) {
+            return false;
+        }
+
+        return $this->metadata->laravelGlobalPauseActive();
     }
 }

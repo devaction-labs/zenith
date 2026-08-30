@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Http\Controllers;
+namespace DevactionLabs\HorizonNewDawn\Http\Controllers;
 
+use DevactionLabs\HorizonNewDawn\FailedJobs\Actions\RetryFailedJob;
+use DevactionLabs\HorizonNewDawn\Http\Requests\RetryFailedJobsRequest;
 use Illuminate\Http\RedirectResponse;
-use NckRtl\HorizonNewDawn\FailedJobs\Actions\RetryFailedJob;
-use NckRtl\HorizonNewDawn\Http\Requests\RetryFailedJobsRequest;
 use Throwable;
 
 final class FailedJobRetryController

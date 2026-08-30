@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Http\Controllers;
+namespace DevactionLabs\HorizonNewDawn\Http\Controllers;
 
+use DevactionLabs\HorizonNewDawn\FailedJobs\Actions\RemoveFailedJob;
+use DevactionLabs\HorizonNewDawn\FailedJobs\FailedJobsData;
+use DevactionLabs\HorizonNewDawn\Http\Requests\JobIndexRequest;
+use DevactionLabs\HorizonNewDawn\Support\Data\PageMetaData;
+use DevactionLabs\HorizonNewDawn\Support\NavigationItem;
+use DevactionLabs\HorizonNewDawn\Support\Scrolling\HorizonScrollMetadata;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
-use NckRtl\HorizonNewDawn\FailedJobs\Actions\RemoveFailedJob;
-use NckRtl\HorizonNewDawn\FailedJobs\FailedJobsData;
-use NckRtl\HorizonNewDawn\Http\Requests\JobIndexRequest;
-use NckRtl\HorizonNewDawn\Support\Data\PageMetaData;
-use NckRtl\HorizonNewDawn\Support\NavigationItem;
-use NckRtl\HorizonNewDawn\Support\Scrolling\HorizonScrollMetadata;
 use Throwable;
 
 final class FailedJobController

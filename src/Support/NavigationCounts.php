@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Support;
+namespace DevactionLabs\HorizonNewDawn\Support;
 
 use Closure;
+use DevactionLabs\HorizonNewDawn\Batches\BatchRepositoryOverview;
+use DevactionLabs\HorizonNewDawn\Batches\DatabaseBatchCapability;
+use DevactionLabs\HorizonNewDawn\Queues\QueuesData;
+use DevactionLabs\HorizonNewDawn\Support\Data\NavigationCountsData;
 use Illuminate\Contracts\Redis\Factory as RedisFactory;
 use Laravel\Horizon\Contracts\JobRepository;
 use Laravel\Horizon\Contracts\MasterSupervisorRepository;
-use NckRtl\HorizonNewDawn\Batches\BatchRepositoryOverview;
-use NckRtl\HorizonNewDawn\Batches\DatabaseBatchCapability;
-use NckRtl\HorizonNewDawn\Queues\QueuesData;
-use NckRtl\HorizonNewDawn\Support\Data\NavigationCountsData;
 use Throwable;
 
 final readonly class NavigationCounts

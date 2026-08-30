@@ -2,8 +2,19 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\FailedJobs;
+namespace DevactionLabs\HorizonNewDawn\FailedJobs;
 
+use DevactionLabs\HorizonNewDawn\FailedJobs\Data\FailedJobBulkActionsData;
+use DevactionLabs\HorizonNewDawn\FailedJobs\Data\FailedJobDetailData;
+use DevactionLabs\HorizonNewDawn\FailedJobs\Data\FailedJobRetryData;
+use DevactionLabs\HorizonNewDawn\Jobs\Data\JobFilterCatalogData;
+use DevactionLabs\HorizonNewDawn\Jobs\Data\JobIndexFiltersData;
+use DevactionLabs\HorizonNewDawn\Jobs\Data\JobPageData;
+use DevactionLabs\HorizonNewDawn\Jobs\Data\JobRowData;
+use DevactionLabs\HorizonNewDawn\Jobs\JobsData;
+use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobFilterCatalog;
+use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobQuery;
+use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobType;
 use Illuminate\Contracts\Redis\Factory as RedisFactory;
 use Illuminate\Redis\Connections\PhpRedisConnection;
 use Illuminate\Redis\Connections\PredisConnection;
@@ -11,17 +22,6 @@ use Illuminate\Support\Collection;
 use JsonException;
 use Laravel\Horizon\Contracts\JobRepository;
 use Laravel\Horizon\Contracts\TagRepository;
-use NckRtl\HorizonNewDawn\FailedJobs\Data\FailedJobBulkActionsData;
-use NckRtl\HorizonNewDawn\FailedJobs\Data\FailedJobDetailData;
-use NckRtl\HorizonNewDawn\FailedJobs\Data\FailedJobRetryData;
-use NckRtl\HorizonNewDawn\Jobs\Data\JobFilterCatalogData;
-use NckRtl\HorizonNewDawn\Jobs\Data\JobIndexFiltersData;
-use NckRtl\HorizonNewDawn\Jobs\Data\JobPageData;
-use NckRtl\HorizonNewDawn\Jobs\Data\JobRowData;
-use NckRtl\HorizonNewDawn\Jobs\JobsData;
-use NckRtl\HorizonNewDawn\Jobs\RetainedJobFilterCatalog;
-use NckRtl\HorizonNewDawn\Jobs\RetainedJobQuery;
-use NckRtl\HorizonNewDawn\Jobs\RetainedJobType;
 use Throwable;
 
 final readonly class FailedJobsData

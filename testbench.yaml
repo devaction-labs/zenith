@@ -12,7 +12,7 @@ providers:
   - Inertia\ServiceProvider
   - Spatie\LaravelData\LaravelDataServiceProvider
   - Laravel\Horizon\HorizonServiceProvider
-  - NckRtl\HorizonNewDawn\HorizonNewDawnServiceProvider
+  - DevactionLabs\HorizonNewDawn\HorizonNewDawnServiceProvider
   - Workbench\App\Providers\WorkbenchServiceProvider
 
 dont-discover:

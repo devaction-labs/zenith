@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Dashboard;
+namespace DevactionLabs\HorizonNewDawn\Dashboard;
 
+use DevactionLabs\HorizonNewDawn\Dashboard\Data\DashboardPendingStateData;
 use Illuminate\Contracts\Queue\Factory as QueueFactory;
 use LogicException;
-use NckRtl\HorizonNewDawn\Dashboard\Data\DashboardPendingStateData;
 use Throwable;
 
 final readonly class DashboardPendingState

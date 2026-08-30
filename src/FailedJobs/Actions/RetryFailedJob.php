@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\FailedJobs\Actions;
+namespace DevactionLabs\HorizonNewDawn\FailedJobs\Actions;
 
+use DevactionLabs\HorizonNewDawn\FailedJobs\FailedJobRetryEligibility;
+use DevactionLabs\HorizonNewDawn\FailedJobs\FailedJobRetryLock;
 use Illuminate\Contracts\Bus\Dispatcher;
 use Laravel\Horizon\Contracts\JobRepository;
 use Laravel\Horizon\Jobs\RetryFailedJob as HorizonRetryFailedJob;
-use NckRtl\HorizonNewDawn\FailedJobs\FailedJobRetryEligibility;
-use NckRtl\HorizonNewDawn\FailedJobs\FailedJobRetryLock;
 
 final readonly class RetryFailedJob
 {

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Queues;
+namespace DevactionLabs\HorizonNewDawn\Queues;
 
 use Closure;
-use NckRtl\HorizonNewDawn\Queues\Data\QueueActivityPageData;
+use DevactionLabs\HorizonNewDawn\Queues\Data\QueueActivityPageData;
 
 final readonly class QueueActivityData
 {

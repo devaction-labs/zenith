@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Http\Requests;
+namespace DevactionLabs\HorizonNewDawn\Http\Requests;
 
+use DevactionLabs\HorizonNewDawn\Jobs\Data\JobIndexFiltersData;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
-use NckRtl\HorizonNewDawn\Jobs\Data\JobIndexFiltersData;
 
 final class JobIndexRequest extends FormRequest
 {

@@ -13,6 +13,7 @@ const inertia = vi.hoisted(() => ({
       status: "running",
       processing: false,
       maintenanceMode: false,
+      allQueuesPaused: false,
     },
     navigationCounts: undefined as
       | {
@@ -345,5 +346,22 @@ describe("HorizonLayout", () => {
     expect(screen.getByText(/force flag/)).toBeVisible();
 
     inertia.props.horizon.maintenanceMode = false;
+  });
+
+  it("warns when Laravel's global queue pause is active", () => {
+    inertia.props.horizon.allQueuesPaused = true;
+
+    render(
+      <TooltipProvider>
+        <HorizonLayout>
+          <p>Dashboard content</p>
+        </HorizonLayout>
+      </TooltipProvider>,
+    );
+
+    expect(screen.getByText("All queues are paused")).toBeVisible();
+    expect(screen.getByText(/global queue pause is active/)).toBeVisible();
+
+    inertia.props.horizon.allQueuesPaused = false;
   });
 });

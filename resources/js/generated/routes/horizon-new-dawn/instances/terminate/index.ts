@@ -1,6 +1,6 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition } from './../../../../wayfinder'
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\HorizonTerminationController::store
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\HorizonTerminationController::store
 * @see src/Http/Controllers/HorizonTerminationController.php:16
 * @route '/horizon/instances/terminate'
 */
@@ -15,7 +15,7 @@ store.definition = {
 } satisfies RouteDefinition<["post"]>
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\HorizonTerminationController::store
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\HorizonTerminationController::store
 * @see src/Http/Controllers/HorizonTerminationController.php:16
 * @route '/horizon/instances/terminate'
 */
@@ -24,7 +24,7 @@ store.url = (options?: RouteQueryOptions) => {
 }
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\HorizonTerminationController::store
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\HorizonTerminationController::store
 * @see src/Http/Controllers/HorizonTerminationController.php:16
 * @route '/horizon/instances/terminate'
 */

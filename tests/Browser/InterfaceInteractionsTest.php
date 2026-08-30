@@ -4,16 +4,16 @@ declare(strict_types=1);
 
 require_once __DIR__.'/../Support/RetainedJobBrowserFixtures.php';
 
-use NckRtl\HorizonNewDawn\Jobs\RetainedJobType;
+use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobType;
 use Pest\Browser\Api\AwaitableWebpage;
 use Pest\Browser\Api\Webpage;
 
-use function NckRtl\HorizonNewDawn\Tests\Support\bindBrowserFailedJobBulkLimitFixtures;
-use function NckRtl\HorizonNewDawn\Tests\Support\bindBrowserFailedJobIdentifierOverflowFixtures;
-use function NckRtl\HorizonNewDawn\Tests\Support\bindBrowserPageFixtures;
-use function NckRtl\HorizonNewDawn\Tests\Support\bindBrowserProcessTransitionFixtures;
-use function NckRtl\HorizonNewDawn\Tests\Support\bindBrowserSupervisorScalingFixtures;
-use function NckRtl\HorizonNewDawn\Tests\Support\bindRetainedJobBrowserFixtures;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\bindBrowserFailedJobBulkLimitFixtures;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\bindBrowserFailedJobIdentifierOverflowFixtures;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\bindBrowserPageFixtures;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\bindBrowserProcessTransitionFixtures;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\bindBrowserSupervisorScalingFixtures;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\bindRetainedJobBrowserFixtures;
 
 describe('Horizon interface interactions', function (): void {
     beforeEach(function (): void {

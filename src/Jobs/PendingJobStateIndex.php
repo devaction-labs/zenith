@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Jobs;
+namespace DevactionLabs\HorizonNewDawn\Jobs;
 
+use DevactionLabs\HorizonNewDawn\Support\RedisQueueName;
+use DevactionLabs\HorizonNewDawn\Support\RedisScript;
 use Illuminate\Contracts\Queue\Factory as QueueFactory;
 use Illuminate\Queue\RedisQueue;
 use Illuminate\Redis\Connections\Connection;
 use JsonException;
-use NckRtl\HorizonNewDawn\Support\RedisQueueName;
-use NckRtl\HorizonNewDawn\Support\RedisScript;
 use RuntimeException;
 use Throwable;
 

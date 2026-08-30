@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Queues\Data;
+namespace DevactionLabs\HorizonNewDawn\Queues\Data;
 
-use NckRtl\HorizonNewDawn\Dashboard\Data\DashboardBatchPreviewData;
+use DevactionLabs\HorizonNewDawn\Dashboard\Data\DashboardBatchPreviewData;
 use Spatie\LaravelData\Data;
 
 final class QueueRetainedBatchesData extends Data

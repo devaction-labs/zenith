@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Http\Controllers;
+namespace DevactionLabs\HorizonNewDawn\Http\Controllers;
 
+use DevactionLabs\HorizonNewDawn\Http\Requests\MonitorTagRequest;
+use DevactionLabs\HorizonNewDawn\Monitoring\Actions\MonitorTag;
+use DevactionLabs\HorizonNewDawn\Monitoring\Actions\StopMonitoringTag;
+use DevactionLabs\HorizonNewDawn\Monitoring\MonitoringData;
+use DevactionLabs\HorizonNewDawn\Support\Data\PageMetaData;
+use DevactionLabs\HorizonNewDawn\Support\NavigationItem;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
-use NckRtl\HorizonNewDawn\Http\Requests\MonitorTagRequest;
-use NckRtl\HorizonNewDawn\Monitoring\Actions\MonitorTag;
-use NckRtl\HorizonNewDawn\Monitoring\Actions\StopMonitoringTag;
-use NckRtl\HorizonNewDawn\Monitoring\MonitoringData;
-use NckRtl\HorizonNewDawn\Support\Data\PageMetaData;
-use NckRtl\HorizonNewDawn\Support\NavigationItem;
 use Throwable;
 
 final class MonitoringController

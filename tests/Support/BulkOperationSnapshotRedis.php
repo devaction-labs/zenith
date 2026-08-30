@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Tests\Support;
+namespace DevactionLabs\HorizonNewDawn\Tests\Support;
 
+use DevactionLabs\HorizonNewDawn\BulkOperations\BulkOperationSnapshot;
 use Illuminate\Contracts\Redis\Factory as RedisFactory;
 use Illuminate\Redis\Connections\Connection;
-use NckRtl\HorizonNewDawn\BulkOperations\BulkOperationSnapshot;
 
 function bulkSnapshotRedis(): BulkOperationSnapshotRedisConnection
 {

@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Queues\Actions;
+namespace DevactionLabs\HorizonNewDawn\Queues\Actions;
 
+use DevactionLabs\HorizonNewDawn\Queues\ClearsQueueMetadata;
+use DevactionLabs\HorizonNewDawn\Queues\Data\QueueTargetData;
 use Illuminate\Contracts\Queue\ClearableQueue;
 use Illuminate\Queue\QueueManager;
-use NckRtl\HorizonNewDawn\Queues\ClearsQueueMetadata;
-use NckRtl\HorizonNewDawn\Queues\Data\QueueTargetData;
 use RuntimeException;
 
 final readonly class ClearQueue

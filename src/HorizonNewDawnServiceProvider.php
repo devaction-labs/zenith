@@ -2,10 +2,44 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn;
+namespace DevactionLabs\HorizonNewDawn;
 
+use DevactionLabs\HorizonNewDawn\Assets\AssetPath;
+use DevactionLabs\HorizonNewDawn\Batches\DatabaseBatchCapability;
+use DevactionLabs\HorizonNewDawn\Batches\DatabaseBatchMetadataSynchronizer;
+use DevactionLabs\HorizonNewDawn\Batches\DatabaseBatchQuery;
+use DevactionLabs\HorizonNewDawn\BulkOperations\BulkOperationSnapshot;
+use DevactionLabs\HorizonNewDawn\Console\AssetsCommand;
+use DevactionLabs\HorizonNewDawn\Console\InstallCommand;
+use DevactionLabs\HorizonNewDawn\Console\WarmBatchMetadataCommand;
+use DevactionLabs\HorizonNewDawn\Console\WarmRetainedJobsCommand;
+use DevactionLabs\HorizonNewDawn\Dashboard\DashboardPendingState;
+use DevactionLabs\HorizonNewDawn\FailedJobs\Actions\RetryAllFailedJobs;
+use DevactionLabs\HorizonNewDawn\FailedJobs\Actions\RetryFailedJob;
+use DevactionLabs\HorizonNewDawn\FailedJobs\FailedJobRetryEligibility;
+use DevactionLabs\HorizonNewDawn\FailedJobs\FailedJobRetryLock;
+use DevactionLabs\HorizonNewDawn\Http\Controllers\BatchesApiController;
+use DevactionLabs\HorizonNewDawn\Http\Controllers\HomeController;
+use DevactionLabs\HorizonNewDawn\Http\Controllers\MonitoringApiController;
+use DevactionLabs\HorizonNewDawn\Http\Middleware\HandleInertiaRequests;
+use DevactionLabs\HorizonNewDawn\Http\Middleware\RecordHorizonMutation;
+use DevactionLabs\HorizonNewDawn\Jobs\Actions\CancelPendingJob;
+use DevactionLabs\HorizonNewDawn\Jobs\Actions\CancelPendingJobs;
+use DevactionLabs\HorizonNewDawn\Jobs\ForgetsPendingJob;
+use DevactionLabs\HorizonNewDawn\Jobs\JobsData;
+use DevactionLabs\HorizonNewDawn\Jobs\PendingJobEntryScanner;
+use DevactionLabs\HorizonNewDawn\Jobs\PendingJobStateIndex;
+use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobFilterCatalog;
+use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobIndex;
+use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobQuery;
+use DevactionLabs\HorizonNewDawn\Queues\ClearQueueMetadata;
+use DevactionLabs\HorizonNewDawn\Queues\ClearsQueueMetadata;
+use DevactionLabs\HorizonNewDawn\Support\FrameworkCapabilities;
+use DevactionLabs\HorizonNewDawn\Support\HorizonRuntime;
+use DevactionLabs\HorizonNewDawn\Support\HorizonWorkCommandCompatibility;
 use Illuminate\Contracts\Bus\Dispatcher;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
+use Illuminate\Contracts\Container\BindingResolutionException;
 use Illuminate\Contracts\Foundation\CachesRoutes;
 use Illuminate\Contracts\Redis\Factory as RedisFactory;
 use Illuminate\Routing\Router;
@@ -22,38 +56,6 @@ use Laravel\Horizon\Http\Controllers\HomeController as HorizonHomeController;
 use Laravel\Horizon\Http\Controllers\MonitoringController as HorizonMonitoringController;
 use Laravel\Horizon\Http\Middleware\Authenticate;
 use Laravel\Horizon\WaitTimeCalculator;
-use NckRtl\HorizonNewDawn\Assets\AssetPath;
-use NckRtl\HorizonNewDawn\Batches\DatabaseBatchCapability;
-use NckRtl\HorizonNewDawn\Batches\DatabaseBatchMetadataSynchronizer;
-use NckRtl\HorizonNewDawn\Batches\DatabaseBatchQuery;
-use NckRtl\HorizonNewDawn\BulkOperations\BulkOperationSnapshot;
-use NckRtl\HorizonNewDawn\Console\AssetsCommand;
-use NckRtl\HorizonNewDawn\Console\InstallCommand;
-use NckRtl\HorizonNewDawn\Console\WarmBatchMetadataCommand;
-use NckRtl\HorizonNewDawn\Console\WarmRetainedJobsCommand;
-use NckRtl\HorizonNewDawn\Dashboard\DashboardPendingState;
-use NckRtl\HorizonNewDawn\FailedJobs\Actions\RetryAllFailedJobs;
-use NckRtl\HorizonNewDawn\FailedJobs\Actions\RetryFailedJob;
-use NckRtl\HorizonNewDawn\FailedJobs\FailedJobRetryEligibility;
-use NckRtl\HorizonNewDawn\FailedJobs\FailedJobRetryLock;
-use NckRtl\HorizonNewDawn\Http\Controllers\BatchesApiController;
-use NckRtl\HorizonNewDawn\Http\Controllers\HomeController;
-use NckRtl\HorizonNewDawn\Http\Controllers\MonitoringApiController;
-use NckRtl\HorizonNewDawn\Http\Middleware\HandleInertiaRequests;
-use NckRtl\HorizonNewDawn\Jobs\Actions\CancelPendingJob;
-use NckRtl\HorizonNewDawn\Jobs\Actions\CancelPendingJobs;
-use NckRtl\HorizonNewDawn\Jobs\ForgetsPendingJob;
-use NckRtl\HorizonNewDawn\Jobs\JobsData;
-use NckRtl\HorizonNewDawn\Jobs\PendingJobEntryScanner;
-use NckRtl\HorizonNewDawn\Jobs\PendingJobStateIndex;
-use NckRtl\HorizonNewDawn\Jobs\RetainedJobFilterCatalog;
-use NckRtl\HorizonNewDawn\Jobs\RetainedJobIndex;
-use NckRtl\HorizonNewDawn\Jobs\RetainedJobQuery;
-use NckRtl\HorizonNewDawn\Queues\ClearQueueMetadata;
-use NckRtl\HorizonNewDawn\Queues\ClearsQueueMetadata;
-use NckRtl\HorizonNewDawn\Support\FrameworkCapabilities;
-use NckRtl\HorizonNewDawn\Support\HorizonRuntime;
-use NckRtl\HorizonNewDawn\Support\HorizonWorkCommandCompatibility;
 
 final class HorizonNewDawnServiceProvider extends ServiceProvider
 {
@@ -82,6 +84,8 @@ final class HorizonNewDawnServiceProvider extends ServiceProvider
         'jobs/silenced/*',
         'failed',
         'failed/*',
+        'audit',
+        'audit/*',
     ];
 
     public function register(): void
@@ -171,6 +175,9 @@ final class HorizonNewDawnServiceProvider extends ServiceProvider
         $this->app->booting(fn () => $this->registerRoutes());
     }
 
+    /**
+     * @throws BindingResolutionException
+     */
     public function boot(AssetPath $assetPath): void
     {
         $this->excludeHorizonFromSsr($this->app->make(Gateway::class));
@@ -217,6 +224,9 @@ final class HorizonNewDawnServiceProvider extends ServiceProvider
         );
     }
 
+    /**
+     * @throws BindingResolutionException
+     */
     private function registerRoutes(): void
     {
         if ($this->app instanceof CachesRoutes && $this->app->routesAreCached()) {
@@ -226,7 +236,12 @@ final class HorizonNewDawnServiceProvider extends ServiceProvider
         $this->app->make(Router::class)->group([
             'domain' => config('horizon.domain'),
             'prefix' => config('horizon.path'),
-            'middleware' => ['horizon', Authenticate::class, HandleInertiaRequests::class],
+            'middleware' => [
+                'horizon',
+                Authenticate::class,
+                HandleInertiaRequests::class,
+                RecordHorizonMutation::class,
+            ],
             'as' => 'horizon-new-dawn.',
         ], function (): void {
             $this->loadRoutesFrom(__DIR__.'/../routes/horizon-new-dawn.php');

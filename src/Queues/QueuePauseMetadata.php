@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Queues;
+namespace DevactionLabs\HorizonNewDawn\Queues;
 
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
@@ -30,6 +30,15 @@ final readonly class QueuePauseMetadata
     public function forget(string $connection, string $queue): void
     {
         $this->cache->store()->forget($this->key($connection, $queue));
+    }
+
+    /**
+     * Laravel 13.25+ QueueManager::pauseAll() persists this cache flag.
+     * Reading it keeps the UI aligned with `queue:pause --all`.
+     */
+    public function laravelGlobalPauseActive(): bool
+    {
+        return (bool) $this->cache->store()->get('illuminate:queues:paused');
     }
 
     private function key(string $connection, string $queue): string

@@ -3,7 +3,7 @@ import clearAll from './clear-all'
 import retryAll from './retry-all'
 import retry from './retry'
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\FailedJobController::index
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\FailedJobController::index
 * @see src/Http/Controllers/FailedJobController.php:20
 * @route '/horizon/failed'
 */
@@ -18,7 +18,7 @@ index.definition = {
 } satisfies RouteDefinition<["get","head"]>
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\FailedJobController::index
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\FailedJobController::index
 * @see src/Http/Controllers/FailedJobController.php:20
 * @route '/horizon/failed'
 */
@@ -27,7 +27,7 @@ index.url = (options?: RouteQueryOptions) => {
 }
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\FailedJobController::index
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\FailedJobController::index
 * @see src/Http/Controllers/FailedJobController.php:20
 * @route '/horizon/failed'
 */
@@ -37,7 +37,7 @@ index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\FailedJobController::index
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\FailedJobController::index
 * @see src/Http/Controllers/FailedJobController.php:20
 * @route '/horizon/failed'
 */
@@ -47,7 +47,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 })
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\FailedJobController::show
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\FailedJobController::show
 * @see src/Http/Controllers/FailedJobController.php:77
 * @route '/horizon/failed/{job}'
 */
@@ -62,7 +62,7 @@ show.definition = {
 } satisfies RouteDefinition<["get","head"]>
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\FailedJobController::show
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\FailedJobController::show
 * @see src/Http/Controllers/FailedJobController.php:77
 * @route '/horizon/failed/{job}'
 */
@@ -89,7 +89,7 @@ show.url = (args: { job: string | number } | [job: string | number ] | string | 
 }
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\FailedJobController::show
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\FailedJobController::show
 * @see src/Http/Controllers/FailedJobController.php:77
 * @route '/horizon/failed/{job}'
 */
@@ -99,7 +99,7 @@ show.get = (args: { job: string | number } | [job: string | number ] | string | 
 })
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\FailedJobController::show
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\FailedJobController::show
 * @see src/Http/Controllers/FailedJobController.php:77
 * @route '/horizon/failed/{job}'
 */
@@ -109,7 +109,7 @@ show.head = (args: { job: string | number } | [job: string | number ] | string |
 })
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\FailedJobController::destroy
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\FailedJobController::destroy
 * @see src/Http/Controllers/FailedJobController.php:89
 * @route '/horizon/failed/{job}'
 */
@@ -124,7 +124,7 @@ destroy.definition = {
 } satisfies RouteDefinition<["delete"]>
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\FailedJobController::destroy
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\FailedJobController::destroy
 * @see src/Http/Controllers/FailedJobController.php:89
 * @route '/horizon/failed/{job}'
 */
@@ -151,7 +151,7 @@ destroy.url = (args: { job: string | number } | [job: string | number ] | string
 }
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\FailedJobController::destroy
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\FailedJobController::destroy
 * @see src/Http/Controllers/FailedJobController.php:89
 * @route '/horizon/failed/{job}'
 */

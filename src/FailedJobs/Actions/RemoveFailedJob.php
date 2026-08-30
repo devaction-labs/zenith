@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\FailedJobs\Actions;
+namespace DevactionLabs\HorizonNewDawn\FailedJobs\Actions;
 
 use Illuminate\Queue\Failed\FailedJobProviderInterface;
 use Laravel\Horizon\Contracts\JobRepository;

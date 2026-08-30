@@ -1,6 +1,6 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition } from './../../../../wayfinder'
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\FailedJobRetryAllController::store
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\FailedJobRetryAllController::store
 * @see src/Http/Controllers/FailedJobRetryAllController.php:15
 * @route '/horizon/failed/retry-all'
 */
@@ -15,7 +15,7 @@ store.definition = {
 } satisfies RouteDefinition<["post"]>
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\FailedJobRetryAllController::store
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\FailedJobRetryAllController::store
 * @see src/Http/Controllers/FailedJobRetryAllController.php:15
 * @route '/horizon/failed/retry-all'
 */
@@ -24,7 +24,7 @@ store.url = (options?: RouteQueryOptions) => {
 }
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\FailedJobRetryAllController::store
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\FailedJobRetryAllController::store
 * @see src/Http/Controllers/FailedJobRetryAllController.php:15
 * @route '/horizon/failed/retry-all'
 */

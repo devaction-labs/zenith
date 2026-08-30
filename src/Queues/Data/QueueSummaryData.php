@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Queues\Data;
+namespace DevactionLabs\HorizonNewDawn\Queues\Data;
 
-use NckRtl\HorizonNewDawn\Dashboard\Data\DashboardBatchPreviewData;
+use DevactionLabs\HorizonNewDawn\Dashboard\Data\DashboardBatchPreviewData;
 use Spatie\LaravelData\Data;
 
 final class QueueSummaryData extends Data
@@ -56,5 +56,6 @@ final class QueueSummaryData extends Data
         public readonly ?int $throughput,
         public readonly ?float $averageRuntime,
         public readonly ?string $message,
+        public readonly ?QueueRoutingData $routing = null,
     ) {}
 }

@@ -1,4 +1,4 @@
-import { Head, InfiniteScroll } from "@inertiajs/react";
+import { Head, InfiniteScroll, router } from "@inertiajs/react";
 import { useRef } from "react";
 import { toast } from "@/components/ui/toast";
 
@@ -8,10 +8,15 @@ import { MonitoringTabs } from "@/components/monitoring/monitoring-tabs";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Field, FieldLabel } from "@/components/ui/field";
+import { InputGroup, InputGroupInput } from "@/components/ui/input-group";
 import { useAutoLoad } from "@/hooks/use-auto-load";
 import { useAutoLoadPreference } from "@/layouts/horizon-layout";
 import { copyToClipboard } from "@/lib/clipboard";
 import { formatDuration } from "@/lib/format-duration";
+import { resolveHorizonRoute } from "@/lib/horizon-route";
+import { urlWithCurrentQuery } from "@/lib/url-query";
+import { show as monitoringShow } from "@/generated/routes/horizon-new-dawn/monitoring";
 import type { MonitoringTagPageProps } from "@/types/monitoring";
 
 const monitoringRefreshProps = ["summary"];
@@ -38,6 +43,7 @@ function MonitoringShow({
   horizon,
   tag,
   status,
+  query = "",
   summary,
   listRevision,
   jobs,
@@ -110,6 +116,33 @@ function MonitoringShow({
             trackedCount={summary.trackedCount}
             failedCount={summary.failedCount}
           />
+        </div>
+        <div className="border-b border-separator px-6 py-2">
+          <Field className="min-w-0">
+            <FieldLabel className="sr-only">Search tagged jobs</FieldLabel>
+            <InputGroup className="border-0 bg-transparent shadow-none">
+              <InputGroupInput
+                defaultValue={query}
+                role="searchbox"
+                aria-label="Search tagged jobs by class or ID"
+                placeholder="Search by job class or exact ID"
+                onKeyDown={(event) => {
+                  if (event.key !== "Enter") {
+                    return;
+                  }
+
+                  const value = event.currentTarget.value.trim();
+                  const url = urlWithCurrentQuery(
+                    resolveHorizonRoute(monitoringShow({ tag, status }), horizon.baseUrl).url,
+                    { query: value === "" ? null : value },
+                    ["starting_at"],
+                  );
+
+                  router.get(url, {}, { preserveScroll: true, replace: true, reset: ["jobs"] });
+                }}
+              />
+            </InputGroup>
+          </Field>
         </div>
         <CardContent className="p-0">
           <InfiniteScroll

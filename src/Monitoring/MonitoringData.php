@@ -2,15 +2,18 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Monitoring;
+namespace DevactionLabs\HorizonNewDawn\Monitoring;
 
+use DevactionLabs\HorizonNewDawn\Jobs\Data\JobIndexFiltersData;
+use DevactionLabs\HorizonNewDawn\Jobs\Data\JobPageData;
+use DevactionLabs\HorizonNewDawn\Jobs\JobsData;
+use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobQuery;
+use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobType;
+use DevactionLabs\HorizonNewDawn\Monitoring\Data\MonitoredTagData;
+use DevactionLabs\HorizonNewDawn\Monitoring\Data\MonitoringPageData;
+use DevactionLabs\HorizonNewDawn\Monitoring\Data\MonitoringTagSummaryData;
 use Laravel\Horizon\Contracts\JobRepository;
 use Laravel\Horizon\Contracts\TagRepository;
-use NckRtl\HorizonNewDawn\Jobs\Data\JobPageData;
-use NckRtl\HorizonNewDawn\Jobs\JobsData;
-use NckRtl\HorizonNewDawn\Monitoring\Data\MonitoredTagData;
-use NckRtl\HorizonNewDawn\Monitoring\Data\MonitoringPageData;
-use NckRtl\HorizonNewDawn\Monitoring\Data\MonitoringTagSummaryData;
 use Throwable;
 
 final readonly class MonitoringData
@@ -21,6 +24,7 @@ final readonly class MonitoringData
         private TagRepository $tags,
         private JobRepository $jobs,
         private JobsData $jobData,
+        private ?RetainedJobQuery $retainedQuery = null,
     ) {}
 
     public function index(): MonitoringPageData
@@ -115,14 +119,69 @@ final readonly class MonitoringData
         }
     }
 
-    public function page(string $tag, MonitoringStatus $status, int $startingAt): JobPageData
-    {
+    public function page(
+        string $tag,
+        MonitoringStatus $status,
+        int|string|null $startingAt,
+        ?JobIndexFiltersData $filters = null,
+        ?string $search = null,
+    ): JobPageData {
+        $filters ??= JobIndexFiltersData::none();
+        $search = is_string($search) ? trim($search) : '';
+        $search = $search === '' ? null : $search;
+
+        if ($this->retainedQuery !== null && ($filters->hasAny() || $search !== null)) {
+            try {
+                $type = $status === MonitoringStatus::Failed
+                    ? RetainedJobType::Failed
+                    : RetainedJobType::Completed;
+                $page = $this->retainedQuery->page(
+                    $type,
+                    $filters,
+                    $startingAt,
+                    $tag,
+                    $search,
+                );
+
+                $items = [];
+
+                foreach ($page->jobs as $job) {
+                    $row = $this->jobData->row($job);
+
+                    if ($row !== null) {
+                        $items[] = $row;
+                    }
+                }
+
+                return new JobPageData(
+                    available: true,
+                    items: $items,
+                    total: $page->total,
+                    current: $page->current,
+                    next: $page->next,
+                    message: null,
+                );
+            } catch (Throwable $exception) {
+                report($exception);
+
+                return new JobPageData(
+                    available: false,
+                    items: [],
+                    total: 0,
+                    current: $startingAt,
+                    next: null,
+                    message: 'Exact tag search is currently unavailable.',
+                );
+            }
+        }
+
         try {
+            $offset = is_numeric($startingAt) ? (int) $startingAt : 0;
             $repositoryTag = $status->repositoryTag($tag);
-            $references = $this->tags->paginate($repositoryTag, $startingAt, self::PAGE_SIZE + 1);
+            $references = $this->tags->paginate($repositoryTag, $offset, self::PAGE_SIZE + 1);
             $pageReferences = array_slice($references, 0, self::PAGE_SIZE);
             $jobIds = array_values(array_filter($pageReferences, is_string(...)));
-            $jobs = $this->jobs->getJobs($jobIds, $startingAt);
+            $jobs = $this->jobs->getJobs($jobIds, $offset);
             $items = [];
 
             foreach ($jobs as $job) {
@@ -141,8 +200,8 @@ final readonly class MonitoringData
                 available: true,
                 items: $items,
                 total: $this->tags->count($repositoryTag),
-                current: $startingAt,
-                next: count($references) > self::PAGE_SIZE ? $startingAt + self::PAGE_SIZE : null,
+                current: $offset,
+                next: count($references) > self::PAGE_SIZE ? $offset + self::PAGE_SIZE : null,
                 message: null,
             );
         } catch (Throwable $exception) {

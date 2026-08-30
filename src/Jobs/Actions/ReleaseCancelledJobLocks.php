@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Jobs\Actions;
+namespace DevactionLabs\HorizonNewDawn\Jobs\Actions;
 
 use Illuminate\Bus\DebounceLock;
 use Illuminate\Bus\UniqueLock;

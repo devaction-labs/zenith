@@ -2,7 +2,7 @@ import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefa
 import jobs from './jobs'
 import retryFailed from './retry-failed'
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\MonitoringController::index
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\MonitoringController::index
 * @see src/Http/Controllers/MonitoringController.php:20
 * @route '/horizon/monitoring'
 */
@@ -17,7 +17,7 @@ index.definition = {
 } satisfies RouteDefinition<["get","head"]>
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\MonitoringController::index
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\MonitoringController::index
 * @see src/Http/Controllers/MonitoringController.php:20
 * @route '/horizon/monitoring'
 */
@@ -26,7 +26,7 @@ index.url = (options?: RouteQueryOptions) => {
 }
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\MonitoringController::index
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\MonitoringController::index
 * @see src/Http/Controllers/MonitoringController.php:20
 * @route '/horizon/monitoring'
 */
@@ -36,7 +36,7 @@ index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\MonitoringController::index
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\MonitoringController::index
 * @see src/Http/Controllers/MonitoringController.php:20
 * @route '/horizon/monitoring'
 */
@@ -46,7 +46,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 })
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\MonitoringController::store
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\MonitoringController::store
 * @see src/Http/Controllers/MonitoringController.php:34
 * @route '/horizon/monitoring'
 */
@@ -61,7 +61,7 @@ store.definition = {
 } satisfies RouteDefinition<["post"]>
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\MonitoringController::store
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\MonitoringController::store
 * @see src/Http/Controllers/MonitoringController.php:34
 * @route '/horizon/monitoring'
 */
@@ -70,7 +70,7 @@ store.url = (options?: RouteQueryOptions) => {
 }
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\MonitoringController::store
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\MonitoringController::store
 * @see src/Http/Controllers/MonitoringController.php:34
 * @route '/horizon/monitoring'
 */
@@ -80,7 +80,7 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 })
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\MonitoringController::destroy
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\MonitoringController::destroy
 * @see src/Http/Controllers/MonitoringController.php:49
 * @route '/horizon/monitoring/actions/stop/{tag}'
 */
@@ -95,7 +95,7 @@ destroy.definition = {
 } satisfies RouteDefinition<["delete"]>
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\MonitoringController::destroy
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\MonitoringController::destroy
 * @see src/Http/Controllers/MonitoringController.php:49
 * @route '/horizon/monitoring/actions/stop/{tag}'
 */
@@ -122,7 +122,7 @@ destroy.url = (args: { tag: string | number } | [tag: string | number ] | string
 }
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\MonitoringController::destroy
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\MonitoringController::destroy
 * @see src/Http/Controllers/MonitoringController.php:49
 * @route '/horizon/monitoring/actions/stop/{tag}'
 */
@@ -132,7 +132,7 @@ destroy.delete = (args: { tag: string | number } | [tag: string | number ] | str
 })
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\MonitoringTagController::show
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\MonitoringTagController::show
 * @see src/Http/Controllers/MonitoringTagController.php:18
 * @route '/horizon/monitoring/{tag}/{status?}'
 */
@@ -147,7 +147,7 @@ show.definition = {
 } satisfies RouteDefinition<["get","head"]>
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\MonitoringTagController::show
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\MonitoringTagController::show
 * @see src/Http/Controllers/MonitoringTagController.php:18
 * @route '/horizon/monitoring/{tag}/{status?}'
 */
@@ -177,7 +177,7 @@ show.url = (args: { tag: string | number, status?: string | number } | [tag: str
 }
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\MonitoringTagController::show
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\MonitoringTagController::show
 * @see src/Http/Controllers/MonitoringTagController.php:18
 * @route '/horizon/monitoring/{tag}/{status?}'
 */
@@ -187,7 +187,7 @@ show.get = (args: { tag: string | number, status?: string | number } | [tag: str
 })
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\MonitoringTagController::show
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\MonitoringTagController::show
 * @see src/Http/Controllers/MonitoringTagController.php:18
 * @route '/horizon/monitoring/{tag}/{status?}'
 */

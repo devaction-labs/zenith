@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Http\Middleware;
+namespace DevactionLabs\HorizonNewDawn\Http\Middleware;
 
 use Closure;
+use DevactionLabs\HorizonNewDawn\Support\FrameworkCapabilities;
 use Illuminate\Http\Request;
-use NckRtl\HorizonNewDawn\Support\FrameworkCapabilities;
 use Symfony\Component\HttpFoundation\Response;
 
 final readonly class EnsureQueuePausingIsSupported

@@ -50,6 +50,7 @@ export type QueueList = {
   available: boolean;
   queues: QueueRow[];
   message: string | null;
+  allPaused?: boolean;
 };
 
 export type QueueActivityTab = "pending" | "completed" | "failed" | "silenced" | "batches";
@@ -102,6 +103,12 @@ export type QueueSummary = {
   throughput: number | null;
   averageRuntime: number | null;
   message: string | null;
+  routing?: {
+    available: boolean;
+    classRoutes: Array<{ class: string; queue: string; connection: string | null }>;
+    forwardedQueue: string | null;
+    forwardedConnection: string | null;
+  } | null;
 };
 
 export type QueueActivity = {
@@ -117,9 +124,11 @@ type QueuesHorizon = {
   baseUrl: string;
   pollInterval: number;
   status: HorizonStatus;
+  allQueuesPaused?: boolean;
   capabilities?: {
     queuePausing: boolean;
     timedQueuePausing: boolean;
+    queuePausingAll?: boolean;
   };
 };
 

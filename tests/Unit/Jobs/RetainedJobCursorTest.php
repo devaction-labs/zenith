@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-use NckRtl\HorizonNewDawn\Jobs\RetainedJobCursor;
-use NckRtl\HorizonNewDawn\Jobs\RetainedJobPosition;
-use NckRtl\HorizonNewDawn\Jobs\RetainedJobType;
+use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobCursor;
+use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobPosition;
+use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobType;
 
 function retainedJobCursorTestBase64UrlEncode(string $value): string
 {

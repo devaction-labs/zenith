@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Http\Requests;
+namespace DevactionLabs\HorizonNewDawn\Http\Requests;
 
+use DevactionLabs\HorizonNewDawn\Batches\BatchCreatedRange;
+use DevactionLabs\HorizonNewDawn\Batches\BatchSort;
+use DevactionLabs\HorizonNewDawn\Batches\BatchSortDirection;
+use DevactionLabs\HorizonNewDawn\Batches\BatchStatus;
+use DevactionLabs\HorizonNewDawn\Batches\Data\BatchIndexFiltersData;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
-use NckRtl\HorizonNewDawn\Batches\BatchCreatedRange;
-use NckRtl\HorizonNewDawn\Batches\BatchSort;
-use NckRtl\HorizonNewDawn\Batches\BatchSortDirection;
-use NckRtl\HorizonNewDawn\Batches\BatchStatus;
-use NckRtl\HorizonNewDawn\Batches\Data\BatchIndexFiltersData;
 
 final class BatchIndexRequest extends FormRequest
 {

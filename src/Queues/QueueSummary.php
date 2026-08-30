@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Queues;
+namespace DevactionLabs\HorizonNewDawn\Queues;
 
+use DevactionLabs\HorizonNewDawn\Metrics\SnapshotJobsPerMinute;
+use DevactionLabs\HorizonNewDawn\Queues\Data\QueueRowData;
+use DevactionLabs\HorizonNewDawn\Queues\Data\QueueSummaryData;
 use Laravel\Horizon\Contracts\MetricsRepository;
-use NckRtl\HorizonNewDawn\Metrics\SnapshotJobsPerMinute;
-use NckRtl\HorizonNewDawn\Queues\Data\QueueRowData;
-use NckRtl\HorizonNewDawn\Queues\Data\QueueSummaryData;
 use Throwable;
 
 final readonly class QueueSummary
@@ -17,6 +17,7 @@ final readonly class QueueSummary
         private QueueBatchesData $batches,
         private MetricsRepository $metrics,
         private SnapshotJobsPerMinute $snapshotJobsPerMinute,
+        private ?QueueRouting $routing = null,
     ) {}
 
     public function forQueue(QueueRowData $queue): QueueSummaryData
@@ -67,6 +68,7 @@ final readonly class QueueSummary
             throughput: $throughput,
             averageRuntime: $averageRuntime,
             message: $this->partialDataMessage($jobs->message, $batches->message),
+            routing: ($this->routing ?? new QueueRouting)->forQueue($queue->name, $queue->connections),
         );
     }
 

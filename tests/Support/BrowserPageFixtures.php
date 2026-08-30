@@ -2,8 +2,28 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Tests\Support;
+namespace DevactionLabs\HorizonNewDawn\Tests\Support;
 
+use DevactionLabs\HorizonNewDawn\Batches\BatchesData;
+use DevactionLabs\HorizonNewDawn\Batches\BatchJobsData;
+use DevactionLabs\HorizonNewDawn\FailedJobs\FailedJobRetryEligibility;
+use DevactionLabs\HorizonNewDawn\FailedJobs\FailedJobsData;
+use DevactionLabs\HorizonNewDawn\Jobs\ForgetsPendingJob;
+use DevactionLabs\HorizonNewDawn\Jobs\JobsData;
+use DevactionLabs\HorizonNewDawn\Metrics\MetricsData;
+use DevactionLabs\HorizonNewDawn\Metrics\SnapshotJobsPerMinute;
+use DevactionLabs\HorizonNewDawn\Monitoring\MonitoringData;
+use DevactionLabs\HorizonNewDawn\Queues\QueueActivityData;
+use DevactionLabs\HorizonNewDawn\Queues\QueueBatchesData;
+use DevactionLabs\HorizonNewDawn\Queues\QueueJobsData;
+use DevactionLabs\HorizonNewDawn\Queues\QueuePauseMetadata;
+use DevactionLabs\HorizonNewDawn\Queues\QueuePauseStatus;
+use DevactionLabs\HorizonNewDawn\Queues\QueuesData;
+use DevactionLabs\HorizonNewDawn\Queues\QueueSummary;
+use DevactionLabs\HorizonNewDawn\Queues\QueueWaitThreshold;
+use DevactionLabs\HorizonNewDawn\Supervisors\SupervisorDetails;
+use DevactionLabs\HorizonNewDawn\Support\FrameworkCapabilities;
+use DevactionLabs\HorizonNewDawn\Support\HorizonRuntime;
 use Illuminate\Bus\BatchRepository;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Illuminate\Contracts\Config\Repository as ConfigRepository;
@@ -26,26 +46,6 @@ use Laravel\Horizon\MasterSupervisor;
 use Laravel\Horizon\SupervisorCommands\ContinueWorking;
 use Laravel\Horizon\SupervisorCommands\Pause;
 use Laravel\Horizon\WaitTimeCalculator;
-use NckRtl\HorizonNewDawn\Batches\BatchesData;
-use NckRtl\HorizonNewDawn\Batches\BatchJobsData;
-use NckRtl\HorizonNewDawn\FailedJobs\FailedJobRetryEligibility;
-use NckRtl\HorizonNewDawn\FailedJobs\FailedJobsData;
-use NckRtl\HorizonNewDawn\Jobs\ForgetsPendingJob;
-use NckRtl\HorizonNewDawn\Jobs\JobsData;
-use NckRtl\HorizonNewDawn\Metrics\MetricsData;
-use NckRtl\HorizonNewDawn\Metrics\SnapshotJobsPerMinute;
-use NckRtl\HorizonNewDawn\Monitoring\MonitoringData;
-use NckRtl\HorizonNewDawn\Queues\QueueActivityData;
-use NckRtl\HorizonNewDawn\Queues\QueueBatchesData;
-use NckRtl\HorizonNewDawn\Queues\QueueJobsData;
-use NckRtl\HorizonNewDawn\Queues\QueuePauseMetadata;
-use NckRtl\HorizonNewDawn\Queues\QueuePauseStatus;
-use NckRtl\HorizonNewDawn\Queues\QueuesData;
-use NckRtl\HorizonNewDawn\Queues\QueueSummary;
-use NckRtl\HorizonNewDawn\Queues\QueueWaitThreshold;
-use NckRtl\HorizonNewDawn\Supervisors\SupervisorDetails;
-use NckRtl\HorizonNewDawn\Support\FrameworkCapabilities;
-use NckRtl\HorizonNewDawn\Support\HorizonRuntime;
 
 function bindBrowserPageFixtures(
     int $pendingJobCount = 0,

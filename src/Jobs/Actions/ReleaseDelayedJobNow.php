@@ -2,8 +2,11 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Jobs\Actions;
+namespace DevactionLabs\HorizonNewDawn\Jobs\Actions;
 
+use DevactionLabs\HorizonNewDawn\Jobs\ReleaseDelayedJobNowResult;
+use DevactionLabs\HorizonNewDawn\Support\RedisQueueName;
+use DevactionLabs\HorizonNewDawn\Support\RedisScript;
 use Illuminate\Queue\QueueManager;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Date;
@@ -11,9 +14,6 @@ use JsonException;
 use Laravel\Horizon\Contracts\JobRepository;
 use Laravel\Horizon\JobPayload;
 use Laravel\Horizon\RedisQueue;
-use NckRtl\HorizonNewDawn\Jobs\ReleaseDelayedJobNowResult;
-use NckRtl\HorizonNewDawn\Support\RedisQueueName;
-use NckRtl\HorizonNewDawn\Support\RedisScript;
 use RuntimeException;
 use Throwable;
 

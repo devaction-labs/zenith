@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
+use DevactionLabs\HorizonNewDawn\Support\RedisScript;
 use Illuminate\Redis\Connections\Connection;
 use Illuminate\Redis\Connections\PhpRedisConnection;
-use NckRtl\HorizonNewDawn\Support\RedisScript;
 
 describe('RedisScript', function (): void {
     it('formats Lua arguments for Predis-style connections', function (): void {

@@ -1,6 +1,6 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition } from './../../../../wayfinder'
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\FailedJobClearAllController::destroy
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\FailedJobClearAllController::destroy
 * @see src/Http/Controllers/FailedJobClearAllController.php:14
 * @route '/horizon/failed'
 */
@@ -15,7 +15,7 @@ destroy.definition = {
 } satisfies RouteDefinition<["delete"]>
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\FailedJobClearAllController::destroy
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\FailedJobClearAllController::destroy
 * @see src/Http/Controllers/FailedJobClearAllController.php:14
 * @route '/horizon/failed'
 */
@@ -24,7 +24,7 @@ destroy.url = (options?: RouteQueryOptions) => {
 }
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\FailedJobClearAllController::destroy
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\FailedJobClearAllController::destroy
 * @see src/Http/Controllers/FailedJobClearAllController.php:14
 * @route '/horizon/failed'
 */

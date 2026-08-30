@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Supervisors;
+namespace DevactionLabs\HorizonNewDawn\Supervisors;
 
+use DevactionLabs\HorizonNewDawn\Instances\LocalInstanceName;
 use Illuminate\Support\Str;
-use NckRtl\HorizonNewDawn\Instances\LocalInstanceName;
 
 final class LocalSupervisor
 {

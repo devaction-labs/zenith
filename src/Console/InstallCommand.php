@@ -2,19 +2,20 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Console;
+namespace DevactionLabs\HorizonNewDawn\Console;
 
+use DevactionLabs\HorizonNewDawn\Assets\AssetPath;
+use DevactionLabs\HorizonNewDawn\Assets\AssetsPublisher;
+use DevactionLabs\HorizonNewDawn\Batches\DatabaseBatchCapability;
+use DevactionLabs\HorizonNewDawn\Support\ComposerAssetHook;
+use DevactionLabs\HorizonNewDawn\Support\ComposerAssetHookResult;
+use DevactionLabs\HorizonNewDawn\Support\RedisClusterDetector;
 use Illuminate\Console\Command;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Queue\NullQueue;
 use Illuminate\Queue\QueueManager;
 use Illuminate\Queue\SyncQueue;
-use NckRtl\HorizonNewDawn\Assets\AssetPath;
-use NckRtl\HorizonNewDawn\Assets\AssetsPublisher;
-use NckRtl\HorizonNewDawn\Batches\DatabaseBatchCapability;
-use NckRtl\HorizonNewDawn\Support\ComposerAssetHook;
-use NckRtl\HorizonNewDawn\Support\ComposerAssetHookResult;
 use RuntimeException;
 use Throwable;
 
@@ -119,6 +120,12 @@ final class InstallCommand extends Command
         } elseif (! $batchQueryCapability->attributionSupported) {
             $this->components->warn(
                 'Run `php artisan migrate` to enable batch queue and connection filters.',
+            );
+        }
+
+        if (RedisClusterDetector::enabled()) {
+            $this->components->warn(
+                'Redis Cluster detected. Retained-job indexes copy source sets into hash-tagged keys to avoid CROSSSLOT commands; leave extra memory headroom for those snapshots.',
             );
         }
 

@@ -2,29 +2,31 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Http\Controllers;
+namespace DevactionLabs\HorizonNewDawn\Http\Controllers;
 
-use Illuminate\Http\Request;
+use DevactionLabs\HorizonNewDawn\Http\Requests\JobIndexRequest;
+use DevactionLabs\HorizonNewDawn\Monitoring\MonitoringData;
+use DevactionLabs\HorizonNewDawn\Monitoring\MonitoringStatus;
+use DevactionLabs\HorizonNewDawn\Support\Data\PageMetaData;
+use DevactionLabs\HorizonNewDawn\Support\NavigationItem;
+use DevactionLabs\HorizonNewDawn\Support\Scrolling\HorizonScrollMetadata;
 use Inertia\Inertia;
 use Inertia\Response;
-use NckRtl\HorizonNewDawn\Monitoring\MonitoringData;
-use NckRtl\HorizonNewDawn\Monitoring\MonitoringStatus;
-use NckRtl\HorizonNewDawn\Support\Data\PageMetaData;
-use NckRtl\HorizonNewDawn\Support\NavigationItem;
-use NckRtl\HorizonNewDawn\Support\Scrolling\HorizonScrollMetadata;
 
 final class MonitoringTagController
 {
     public function show(
-        Request $request,
+        JobIndexRequest $request,
         MonitoringData $monitoring,
         string $tag,
         ?string $status = null,
     ): Response {
         $monitoringStatus = MonitoringStatus::from($status ?? MonitoringStatus::Jobs->value);
-        $startingAt = $request->integer('starting_at', 0);
+        $startingAt = $request->startingAt() ?? 0;
+        $query = $request->search();
+        $filters = $request->getData();
         $resolvePage = fn () => once(
-            fn () => $monitoring->page($tag, $monitoringStatus, $startingAt),
+            fn () => $monitoring->page($tag, $monitoringStatus, $startingAt, $filters, $query),
         );
         $title = $monitoringStatus === MonitoringStatus::Failed
             ? "Failed Jobs for \"{$tag}\""
@@ -34,6 +36,8 @@ final class MonitoringTagController
             'meta' => new PageMetaData($title, NavigationItem::Monitoring),
             'tag' => $tag,
             'status' => $monitoringStatus->value,
+            'query' => $query ?? '',
+            'filters' => $filters,
             'summary' => fn () => $monitoring->summary($tag),
             'listRevision' => function () use ($resolvePage): string {
                 $page = $resolvePage();

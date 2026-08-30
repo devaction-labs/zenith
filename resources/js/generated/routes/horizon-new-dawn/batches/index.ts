@@ -4,7 +4,7 @@ import cancel from './cancel'
 import retry from './retry'
 import failed from './failed'
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\BatchController::index
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\BatchController::index
 * @see src/Http/Controllers/BatchController.php:21
 * @route '/horizon/batches'
 */
@@ -19,7 +19,7 @@ index.definition = {
 } satisfies RouteDefinition<["get","head"]>
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\BatchController::index
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\BatchController::index
 * @see src/Http/Controllers/BatchController.php:21
 * @route '/horizon/batches'
 */
@@ -28,7 +28,7 @@ index.url = (options?: RouteQueryOptions) => {
 }
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\BatchController::index
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\BatchController::index
 * @see src/Http/Controllers/BatchController.php:21
 * @route '/horizon/batches'
 */
@@ -38,7 +38,7 @@ index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 })
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\BatchController::index
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\BatchController::index
 * @see src/Http/Controllers/BatchController.php:21
 * @route '/horizon/batches'
 */
@@ -48,7 +48,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 })
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\BatchController::show
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\BatchController::show
 * @see src/Http/Controllers/BatchController.php:163
 * @route '/horizon/batches/{batch}'
 */
@@ -63,7 +63,7 @@ show.definition = {
 } satisfies RouteDefinition<["get","head"]>
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\BatchController::show
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\BatchController::show
 * @see src/Http/Controllers/BatchController.php:163
 * @route '/horizon/batches/{batch}'
 */
@@ -90,7 +90,7 @@ show.url = (args: { batch: string | number } | [batch: string | number ] | strin
 }
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\BatchController::show
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\BatchController::show
 * @see src/Http/Controllers/BatchController.php:163
 * @route '/horizon/batches/{batch}'
 */
@@ -100,7 +100,7 @@ show.get = (args: { batch: string | number } | [batch: string | number ] | strin
 })
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\BatchController::show
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\BatchController::show
 * @see src/Http/Controllers/BatchController.php:163
 * @route '/horizon/batches/{batch}'
 */

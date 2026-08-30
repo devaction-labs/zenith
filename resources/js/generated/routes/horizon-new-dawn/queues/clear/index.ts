@@ -1,6 +1,6 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../../../wayfinder'
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\QueueClearController::destroy
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\QueueClearController::destroy
 * @see src/Http/Controllers/QueueClearController.php:15
 * @route '/horizon/queues/{connection}/{queue}/clear'
 */
@@ -15,7 +15,7 @@ destroy.definition = {
 } satisfies RouteDefinition<["delete"]>
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\QueueClearController::destroy
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\QueueClearController::destroy
 * @see src/Http/Controllers/QueueClearController.php:15
 * @route '/horizon/queues/{connection}/{queue}/clear'
 */
@@ -41,7 +41,7 @@ destroy.url = (args: { connection: string | number, queue: string | number } | [
 }
 
 /**
-* @see \NckRtl\HorizonNewDawn\Http\Controllers\QueueClearController::destroy
+* @see \DevactionLabs\HorizonNewDawn\Http\Controllers\QueueClearController::destroy
 * @see src/Http/Controllers/QueueClearController.php:15
 * @route '/horizon/queues/{connection}/{queue}/clear'
 */

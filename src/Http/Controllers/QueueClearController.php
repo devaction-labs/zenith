@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Http\Controllers;
+namespace DevactionLabs\HorizonNewDawn\Http\Controllers;
 
+use DevactionLabs\HorizonNewDawn\Http\Requests\ClearQueueRequest;
+use DevactionLabs\HorizonNewDawn\Queues\Actions\ClearQueue;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Str;
-use NckRtl\HorizonNewDawn\Http\Requests\ClearQueueRequest;
-use NckRtl\HorizonNewDawn\Queues\Actions\ClearQueue;
 use Throwable;
 
 final class QueueClearController

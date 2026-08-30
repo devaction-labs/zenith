@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Http\Controllers;
+namespace DevactionLabs\HorizonNewDawn\Http\Controllers;
 
+use DevactionLabs\HorizonNewDawn\Http\Requests\PauseQueueRequest;
+use DevactionLabs\HorizonNewDawn\Http\Requests\ResumeQueueRequest;
+use DevactionLabs\HorizonNewDawn\Queues\Actions\PauseQueue;
+use DevactionLabs\HorizonNewDawn\Queues\Actions\ResumeQueue;
+use DevactionLabs\HorizonNewDawn\Support\FrameworkCapabilities;
 use Illuminate\Http\RedirectResponse;
-use NckRtl\HorizonNewDawn\Http\Requests\PauseQueueRequest;
-use NckRtl\HorizonNewDawn\Http\Requests\ResumeQueueRequest;
-use NckRtl\HorizonNewDawn\Queues\Actions\PauseQueue;
-use NckRtl\HorizonNewDawn\Queues\Actions\ResumeQueue;
-use NckRtl\HorizonNewDawn\Support\FrameworkCapabilities;
 use Throwable;
 
 final class QueuePauseController

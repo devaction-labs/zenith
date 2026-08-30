@@ -3,13 +3,13 @@
 declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
+use DevactionLabs\HorizonNewDawn\Queues\QueuePauseMetadata;
+use DevactionLabs\HorizonNewDawn\Queues\QueuePauseStatus;
+use DevactionLabs\HorizonNewDawn\Support\FrameworkCapabilities;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Illuminate\Queue\QueueManager;
-use NckRtl\HorizonNewDawn\Queues\QueuePauseMetadata;
-use NckRtl\HorizonNewDawn\Queues\QueuePauseStatus;
-use NckRtl\HorizonNewDawn\Support\FrameworkCapabilities;
 
-use function NckRtl\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
 
 beforeEach(function (): void {
     CarbonImmutable::setTestNow('2026-07-20 18:00:00 UTC');
@@ -85,5 +85,40 @@ describe('QueuePauseStatus', function (): void {
             'paused' => true,
             'pausedUntil' => null,
         ]);
+    });
+
+    it('does not report a global pause when the framework cannot pause all queues', function (): void {
+        $metadata = new QueuePauseMetadata(app(CacheFactory::class));
+        app(CacheFactory::class)->store()->forever('illuminate:queues:paused', true);
+
+        $status = new QueuePauseStatus(
+            queues: mockDashboardContract(QueueManager::class),
+            metadata: $metadata,
+            capabilities: new FrameworkCapabilities(queuePausing: true, queuePausingAll: false),
+        );
+
+        expect($status->allPaused())->toBeFalse();
+    });
+
+    it('reports Laravel global pause independently of a single queue pause', function (): void {
+        requireQueuePausingAll();
+
+        $metadata = new QueuePauseMetadata(app(CacheFactory::class));
+        $queues = app(QueueManager::class);
+        $status = new QueuePauseStatus($queues, $metadata);
+
+        $queues->pause('redis', 'reports');
+
+        expect($status->allPaused())->toBeFalse();
+
+        $queues->pauseAll();
+
+        expect($status->allPaused())->toBeTrue()
+            ->and($queues->isPaused('redis', 'reports'))->toBeTrue();
+
+        $queues->resumeAll();
+
+        expect($status->allPaused())->toBeFalse()
+            ->and($queues->isPaused('redis', 'reports'))->toBeTrue();
     });
 });

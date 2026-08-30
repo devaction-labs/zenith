@@ -2,20 +2,22 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Http\Middleware;
+namespace DevactionLabs\HorizonNewDawn\Http\Middleware;
 
+use DevactionLabs\HorizonNewDawn\Assets\AssetManifest;
+use DevactionLabs\HorizonNewDawn\Authorization\HorizonAbilityAuthorizer;
+use DevactionLabs\HorizonNewDawn\Monitoring\MonitoringData;
+use DevactionLabs\HorizonNewDawn\Queues\QueuePauseStatus;
+use DevactionLabs\HorizonNewDawn\Support\Data\HorizonShellData;
+use DevactionLabs\HorizonNewDawn\Support\Data\NavigationCountsData;
+use DevactionLabs\HorizonNewDawn\Support\FrameworkCapabilities;
+use DevactionLabs\HorizonNewDawn\Support\HorizonRuntime;
+use DevactionLabs\HorizonNewDawn\Support\NavigationCounts;
+use DevactionLabs\HorizonNewDawn\Support\PollInterval;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Middleware;
-use NckRtl\HorizonNewDawn\Assets\AssetManifest;
-use NckRtl\HorizonNewDawn\Monitoring\MonitoringData;
-use NckRtl\HorizonNewDawn\Support\Data\HorizonShellData;
-use NckRtl\HorizonNewDawn\Support\Data\NavigationCountsData;
-use NckRtl\HorizonNewDawn\Support\FrameworkCapabilities;
-use NckRtl\HorizonNewDawn\Support\HorizonRuntime;
-use NckRtl\HorizonNewDawn\Support\NavigationCounts;
-use NckRtl\HorizonNewDawn\Support\PollInterval;
 
 final class HandleInertiaRequests extends Middleware
 {
@@ -28,6 +30,8 @@ final class HandleInertiaRequests extends Middleware
         private readonly Application $application,
         private readonly AssetManifest $assets,
         private readonly FrameworkCapabilities $capabilities,
+        private readonly QueuePauseStatus $queuePauseStatus,
+        private readonly HorizonAbilityAuthorizer $abilities,
     ) {}
 
     public function version(Request $request): string
@@ -58,6 +62,8 @@ final class HandleInertiaRequests extends Middleware
                         'horizon-new-dawn.job_navigation_breakdown',
                         false,
                     ) === true,
+                    allQueuesPaused: $this->queuePauseStatus->allPaused(),
+                    abilities: $this->abilities->abilities(),
                 );
             },
             'monitoredTags' => fn (): array => $this->monitoring->monitoredTags(),

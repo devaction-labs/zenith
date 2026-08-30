@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\FailedJobs\Actions;
+namespace DevactionLabs\HorizonNewDawn\FailedJobs\Actions;
 
+use DevactionLabs\HorizonNewDawn\BulkOperations\BulkOperationChunkResult;
+use DevactionLabs\HorizonNewDawn\BulkOperations\BulkOperationSnapshot;
 use Laravel\Horizon\Contracts\JobRepository;
-use NckRtl\HorizonNewDawn\BulkOperations\BulkOperationChunkResult;
-use NckRtl\HorizonNewDawn\BulkOperations\BulkOperationSnapshot;
 use Throwable;
 
 final readonly class RetryAllFailedJobs

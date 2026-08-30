@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\BulkOperations\Jobs;
+namespace DevactionLabs\HorizonNewDawn\BulkOperations\Jobs;
 
+use DevactionLabs\HorizonNewDawn\BulkOperations\BulkOperationJob;
+use DevactionLabs\HorizonNewDawn\Jobs\Actions\CancelPendingJobs;
+use DevactionLabs\HorizonNewDawn\Jobs\PendingJobCancellationScope;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Log;
-use NckRtl\HorizonNewDawn\BulkOperations\BulkOperationJob;
-use NckRtl\HorizonNewDawn\Jobs\Actions\CancelPendingJobs;
-use NckRtl\HorizonNewDawn\Jobs\PendingJobCancellationScope;
 
 final class CancelPendingJobsJob extends BulkOperationJob
 {

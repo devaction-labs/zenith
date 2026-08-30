@@ -3,13 +3,15 @@
 declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
+use DevactionLabs\HorizonNewDawn\Queues\Actions\PauseAllQueues;
+use DevactionLabs\HorizonNewDawn\Queues\Actions\PauseQueue;
+use DevactionLabs\HorizonNewDawn\Queues\Actions\ResumeAllQueues;
+use DevactionLabs\HorizonNewDawn\Queues\Actions\ResumeQueue;
+use DevactionLabs\HorizonNewDawn\Queues\Data\PauseQueueData;
+use DevactionLabs\HorizonNewDawn\Queues\QueuePauseMetadata;
+use DevactionLabs\HorizonNewDawn\Support\FrameworkCapabilities;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Illuminate\Queue\QueueManager;
-use NckRtl\HorizonNewDawn\Queues\Actions\PauseQueue;
-use NckRtl\HorizonNewDawn\Queues\Actions\ResumeQueue;
-use NckRtl\HorizonNewDawn\Queues\Data\PauseQueueData;
-use NckRtl\HorizonNewDawn\Queues\QueuePauseMetadata;
-use NckRtl\HorizonNewDawn\Support\FrameworkCapabilities;
 
 beforeEach(function (): void {
     requireQueuePausing();
@@ -78,5 +80,37 @@ describe('queue pause actions', function (): void {
 
         expect($queues->isPaused('redis', 'reports'))->toBeFalse()
             ->and($metadata->pausedUntil('redis', 'reports'))->toBeNull();
+    });
+
+    it('pauses every queue without clearing an individual pause deadline', function (): void {
+        requireQueuePausingAll();
+
+        $metadata = new QueuePauseMetadata(app(CacheFactory::class));
+        $deadline = CarbonImmutable::now()->addHour();
+        $metadata->storeUntil('redis', 'reports', $deadline);
+        $queues = app(QueueManager::class);
+        $queues->pause('redis', 'reports');
+
+        (new PauseAllQueues($queues))->handle();
+
+        expect($queues->isPaused('redis', 'reports'))->toBeTrue()
+            ->and($queues->isPaused('redis', 'mail'))->toBeTrue()
+            ->and($metadata->pausedUntil('redis', 'reports'))->toBe($deadline->timestamp)
+            ->and($metadata->laravelGlobalPauseActive())->toBeTrue();
+    });
+
+    it('clears only the global pause so individually paused queues stay paused', function (): void {
+        requireQueuePausingAll();
+
+        $metadata = new QueuePauseMetadata(app(CacheFactory::class));
+        $queues = app(QueueManager::class);
+        $queues->pause('redis', 'reports');
+        $queues->pauseAll();
+
+        (new ResumeAllQueues($queues))->handle();
+
+        expect($metadata->laravelGlobalPauseActive())->toBeFalse()
+            ->and($queues->isPaused('redis', 'reports'))->toBeTrue()
+            ->and($queues->isPaused('redis', 'mail'))->toBeFalse();
     });
 });

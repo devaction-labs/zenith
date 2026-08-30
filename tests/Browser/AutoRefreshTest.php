@@ -6,9 +6,9 @@ use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
-use function NckRtl\HorizonNewDawn\Tests\Support\bindBrowserInfiniteScrollRefreshFixtures;
-use function NckRtl\HorizonNewDawn\Tests\Support\bindBrowserPageFixtures;
-use function NckRtl\HorizonNewDawn\Tests\Support\bindBrowserQueueCompletedSummaryRefreshFixtures;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\bindBrowserInfiniteScrollRefreshFixtures;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\bindBrowserPageFixtures;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\bindBrowserQueueCompletedSummaryRefreshFixtures;
 
 describe('automatic refresh', function (): void {
     it('intercepts asset-version changes in the rendered interface', function (): void {

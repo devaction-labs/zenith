@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\BulkOperations;
+namespace DevactionLabs\HorizonNewDawn\BulkOperations;
 
 use Illuminate\Contracts\Bus\Dispatcher;
 use Illuminate\Queue\NullQueue;

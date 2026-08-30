@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Monitoring\Actions;
+namespace DevactionLabs\HorizonNewDawn\Monitoring\Actions;
 
+use DevactionLabs\HorizonNewDawn\BulkOperations\BulkOperationChunkResult;
+use DevactionLabs\HorizonNewDawn\BulkOperations\BulkOperationSnapshot;
+use DevactionLabs\HorizonNewDawn\FailedJobs\Actions\RetryFailedJob;
+use DevactionLabs\HorizonNewDawn\Monitoring\MonitoringTagGuard;
 use Laravel\Horizon\Contracts\JobRepository;
 use Laravel\Horizon\Contracts\TagRepository;
-use NckRtl\HorizonNewDawn\BulkOperations\BulkOperationChunkResult;
-use NckRtl\HorizonNewDawn\BulkOperations\BulkOperationSnapshot;
-use NckRtl\HorizonNewDawn\FailedJobs\Actions\RetryFailedJob;
-use NckRtl\HorizonNewDawn\Monitoring\MonitoringTagGuard;
 use Throwable;
 
 final readonly class RetryFailedJobs

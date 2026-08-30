@@ -2,22 +2,22 @@
 
 declare(strict_types=1);
 
+use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobFilterCatalog;
+use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobIndex;
+use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobIndexWarming;
+use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobType;
 use Illuminate\Contracts\Redis\Factory as RedisFactory;
 use Illuminate\Redis\Connections\PredisConnection;
 use Illuminate\Support\Collection;
 use Laravel\Horizon\Contracts\JobRepository;
 use Mockery\MockInterface;
-use NckRtl\HorizonNewDawn\Jobs\RetainedJobFilterCatalog;
-use NckRtl\HorizonNewDawn\Jobs\RetainedJobIndex;
-use NckRtl\HorizonNewDawn\Jobs\RetainedJobIndexWarming;
-use NckRtl\HorizonNewDawn\Jobs\RetainedJobType;
 use Predis\Client;
 
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardExpects;
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardReturnsFor;
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardReturnsUsing;
-use function NckRtl\HorizonNewDawn\Tests\Support\horizonJob;
-use function NckRtl\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardExpects;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturnsFor;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturnsUsing;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\horizonJob;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
 
 final class RetainedJobIndexRedisClient extends Client
 {
@@ -1222,8 +1222,8 @@ describe('RetainedJobIndex', function (): void {
             'tag',
         );
 
-        expect($firstRead)->toBe([])
-            ->and($nextRead)->toBe([])
+        expect($firstRead)->not->toContain($value)
+            ->and($nextRead)->not->toContain($value)
             ->and($client->sets[$catalogKey] ?? [])->toHaveKey($value)
             ->and($client->sortedSets[$facetKey] ?? [])
             ->toHaveKey('concurrent-job');

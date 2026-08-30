@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
+use DevactionLabs\HorizonNewDawn\Queues\QueueWaitThreshold;
+use DevactionLabs\HorizonNewDawn\Queues\QueueWaitThresholdStatus;
 use Illuminate\Contracts\Config\Repository;
-use NckRtl\HorizonNewDawn\Queues\QueueWaitThreshold;
-use NckRtl\HorizonNewDawn\Queues\QueueWaitThresholdStatus;
 
 it('classifies waits against the effective Horizon threshold', function (): void {
     config()->set('horizon.waits', [

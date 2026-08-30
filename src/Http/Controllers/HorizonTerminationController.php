@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace NckRtl\HorizonNewDawn\Http\Controllers;
+namespace DevactionLabs\HorizonNewDawn\Http\Controllers;
 
+use DevactionLabs\HorizonNewDawn\Instances\Actions\TerminateHorizon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use NckRtl\HorizonNewDawn\Instances\Actions\TerminateHorizon;
 use Symfony\Component\HttpFoundation\Response;
 use Throwable;
 

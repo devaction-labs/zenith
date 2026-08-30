@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use DevactionLabs\HorizonNewDawn\BulkOperations\Jobs\ClearPendingJobsJob;
 use Illuminate\Contracts\Queue\Queue;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
@@ -11,11 +12,10 @@ use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Exceptions;
 use Laravel\Horizon\Contracts\JobRepository;
 use Laravel\Horizon\Horizon;
-use NckRtl\HorizonNewDawn\BulkOperations\Jobs\ClearPendingJobsJob;
 
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardExpects;
-use function NckRtl\HorizonNewDawn\Tests\Support\dashboardReturns;
-use function NckRtl\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardExpects;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturns;
+use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
 use function Pest\Laravel\delete;
 use function Pest\Laravel\withoutMiddleware;
 

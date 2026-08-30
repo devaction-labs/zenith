@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
+use DevactionLabs\HorizonNewDawn\Http\Middleware\HandleInertiaRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Laravel\Horizon\Http\Middleware\Authenticate;
-use NckRtl\HorizonNewDawn\Http\Middleware\HandleInertiaRequests;
 use Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException;
 
 describe('New Dawn routes', function (): void {
@@ -33,6 +33,8 @@ describe('New Dawn routes', function (): void {
             'horizon-new-dawn.batches.retry.store' => ['POST', 'horizon/batches/{batch}/retry'],
             'horizon-new-dawn.queues.index' => ['GET', 'horizon/queues'],
             'horizon-new-dawn.queues.clear-all.destroy' => ['DELETE', 'horizon/queues'],
+            'horizon-new-dawn.queues.pause-all.store' => ['POST', 'horizon/queues/pause-all'],
+            'horizon-new-dawn.queues.pause-all.destroy' => ['DELETE', 'horizon/queues/pause-all'],
             'horizon-new-dawn.queues.show' => ['GET', 'horizon/queues/{queue}'],
             'horizon-new-dawn.queues.pause.store' => ['POST', 'horizon/queues/{connection}/{queue}/pause'],
             'horizon-new-dawn.queues.pause.destroy' => ['DELETE', 'horizon/queues/{connection}/{queue}/pause'],
@@ -46,6 +48,7 @@ describe('New Dawn routes', function (): void {
             'horizon-new-dawn.failed-jobs.show' => ['GET', 'horizon/failed/{job}'],
             'horizon-new-dawn.failed-jobs.destroy' => ['DELETE', 'horizon/failed/{job}'],
             'horizon-new-dawn.failed-jobs.retry.store' => ['POST', 'horizon/failed/{job}/retry'],
+            'horizon-new-dawn.audit.index' => ['GET', 'horizon/audit'],
         ];
 
         foreach ($expected as $name => [$method, $uri]) {
