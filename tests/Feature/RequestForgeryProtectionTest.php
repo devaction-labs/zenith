@@ -51,6 +51,7 @@ function zenithRouteParameterPlaceholders(): array
     return [
         'zenith.batches.clear.destroy:scope' => 'incomplete',
         'zenith.jobs.pending.cancel.destroy:scope' => 'ready',
+        'zenith.jobs.retry.store:type' => 'completed',
         'job' => '1',
         'batch' => '1',
         'instance' => '1',
@@ -60,6 +61,7 @@ function zenithRouteParameterPlaceholders(): array
         'connection' => 'redis',
         'event' => '1',
         'workflow' => '1',
+        'cron' => '1',
     ];
 }
 

@@ -69,7 +69,7 @@ Route::delete('/supervisors/{supervisor}/pause', [SupervisorPauseController::cla
     ->where('supervisor', '.+?')
     ->name('supervisors.pause.destroy');
 Route::post('/supervisors/{supervisor}/scale', [SupervisorScaleController::class, 'store'])
-    ->middleware(horizonAbility('manageInstances'))
+    ->middleware(AuthorizeHorizonAbility::for('manageInstances'))
     ->where('supervisor', '.+?')
     ->name('supervisors.scale.store');
 Route::get('/supervisors/{supervisor}', [SupervisorController::class, 'show'])
@@ -173,7 +173,7 @@ Route::delete('/jobs/pending/cancel/{scope}', [PendingJobsCancellationController
     ->where('scope', 'ready|delayed|pending')
     ->name('jobs.pending.cancel.destroy');
 Route::delete('/jobs/pending/cancel-selected', [PendingJobsSelectedCancelController::class, 'destroy'])
-    ->middleware(horizonAbility('cancelJobs'))
+    ->middleware(AuthorizeHorizonAbility::for('cancelJobs'))
     ->name('jobs.pending.cancel-selected.destroy');
 Route::post('/jobs/pending/{job}/release', [DelayedJobReleaseController::class, 'store'])
     ->middleware(AuthorizeHorizonAbility::for('cancelJobs'))
@@ -188,7 +188,7 @@ Route::get('/jobs/{type}/{job}', [JobController::class, 'show'])
     ->where('type', 'pending|completed|silenced')
     ->name('jobs.show');
 Route::post('/jobs/{type}/{job}/retry', [JobRetryController::class, 'store'])
-    ->middleware(horizonAbility('retryJobs'))
+    ->middleware(AuthorizeHorizonAbility::for('retryJobs'))
     ->where('type', 'completed|silenced')
     ->name('jobs.retry.store');
 
@@ -200,10 +200,10 @@ Route::post('/failed/retry-all', [FailedJobRetryAllController::class, 'store'])
     ->middleware(AuthorizeHorizonAbility::for('retryJobs'))
     ->name('failed-jobs.retry-all.store');
 Route::post('/failed/retry-selected', [FailedJobsSelectedRetryController::class, 'store'])
-    ->middleware(horizonAbility('retryJobs'))
+    ->middleware(AuthorizeHorizonAbility::for('retryJobs'))
     ->name('failed-jobs.retry-selected.store');
 Route::delete('/failed/selected', [FailedJobsSelectedClearController::class, 'destroy'])
-    ->middleware(horizonAbility('clearQueues'))
+    ->middleware(AuthorizeHorizonAbility::for('clearQueues'))
     ->name('failed-jobs.selected.destroy');
 Route::get('/failed/{job}', [FailedJobController::class, 'show'])->name('failed-jobs.show');
 Route::delete('/failed/{job}', [FailedJobController::class, 'destroy'])
@@ -218,31 +218,31 @@ Route::post('/failed/{job}/explain', [FailedJobExplainController::class, 'store'
 Route::get('/audit', [AuditController::class, 'index'])->name('audit.index');
 Route::get('/schedule', [ScheduleController::class, 'index'])->name('schedule.index');
 Route::post('/schedule/pause', [SchedulePauseController::class, 'store'])
-    ->middleware(horizonAbility('manageSchedule'))
+    ->middleware(AuthorizeHorizonAbility::for('manageSchedule'))
     ->name('schedule.pause.store');
 Route::delete('/schedule/pause', [SchedulePauseController::class, 'destroy'])
-    ->middleware(horizonAbility('manageSchedule'))
+    ->middleware(AuthorizeHorizonAbility::for('manageSchedule'))
     ->name('schedule.pause.destroy');
 Route::post('/schedule/{event}/run', [ScheduleRunController::class, 'store'])
     ->middleware(AuthorizeHorizonAbility::for('manageSchedule'))
     ->name('schedule.run.store');
 Route::post('/schedule/dynamic-crons', [DynamicCronController::class, 'store'])
-    ->middleware(horizonAbility('manageSchedule'))
+    ->middleware(AuthorizeHorizonAbility::for('manageSchedule'))
     ->name('schedule.dynamic-crons.store');
 Route::put('/schedule/dynamic-crons/{cron}', [DynamicCronController::class, 'update'])
-    ->middleware(horizonAbility('manageSchedule'))
+    ->middleware(AuthorizeHorizonAbility::for('manageSchedule'))
     ->whereNumber('cron')
     ->name('schedule.dynamic-crons.update');
 Route::delete('/schedule/dynamic-crons/{cron}', [DynamicCronController::class, 'destroy'])
-    ->middleware(horizonAbility('manageSchedule'))
+    ->middleware(AuthorizeHorizonAbility::for('manageSchedule'))
     ->whereNumber('cron')
     ->name('schedule.dynamic-crons.destroy');
 Route::post('/schedule/dynamic-crons/{cron}/pause', [DynamicCronPauseController::class, 'store'])
-    ->middleware(horizonAbility('manageSchedule'))
+    ->middleware(AuthorizeHorizonAbility::for('manageSchedule'))
     ->whereNumber('cron')
     ->name('schedule.dynamic-crons.pause.store');
 Route::delete('/schedule/dynamic-crons/{cron}/pause', [DynamicCronPauseController::class, 'destroy'])
-    ->middleware(horizonAbility('manageSchedule'))
+    ->middleware(AuthorizeHorizonAbility::for('manageSchedule'))
     ->whereNumber('cron')
     ->name('schedule.dynamic-crons.pause.destroy');
 Route::get('/workflows', [WorkflowController::class, 'index'])->name('workflows.index');

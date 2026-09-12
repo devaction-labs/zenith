@@ -61,7 +61,7 @@ function props(): FailedJobsPageProps {
   return {
     horizon: { baseUrl: "/horizon", pollInterval: 0, status: "running" },
     query: "",
-    filters: { job: null, queue: null, connection: null, state: null },
+    filters: { job: null, queue: null, connection: null, state: null, tag: null },
     querySignature: "signature-1",
     listRevision: "revision-1",
     actions: {

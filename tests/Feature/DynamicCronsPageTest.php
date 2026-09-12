@@ -5,10 +5,12 @@ declare(strict_types=1);
 use DevactionLabs\Zenith\Audit\HorizonAuditEvent;
 use DevactionLabs\Zenith\Schedule\DynamicCron;
 use DevactionLabs\Zenith\Schedule\DynamicSchedule;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Schema;
 use Inertia\Testing\AssertableInertia;
 use Laravel\Horizon\Horizon;
 
@@ -31,6 +33,16 @@ beforeEach(function (): void {
     Horizon::auth(static fn (): bool => true);
     migrateDynamicCronsTable('migrate:refresh');
     config()->set('zenith.dynamic_cron_allowed_classes', [FetchWorkflowStep::class]);
+    Schema::dropIfExists('zenith_audit_events');
+    Schema::create('zenith_audit_events', function (Blueprint $table): void {
+        $table->id();
+        $table->timestamp('occurred_at')->index();
+        $table->string('action', 128);
+        $table->string('route', 128);
+        $table->string('user_id')->nullable();
+        $table->string('ip', 45)->nullable();
+        $table->json('context')->nullable();
+    });
 });
 
 afterEach(function (): void {

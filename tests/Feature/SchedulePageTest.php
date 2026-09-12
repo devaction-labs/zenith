@@ -11,6 +11,7 @@ use DevactionLabs\Zenith\Schedule\SchedulePauseStatus;
 use DevactionLabs\Zenith\Schedule\ScheduleRunHistory;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Support\Facades\Artisan;
@@ -110,6 +111,17 @@ it('shows recorded run history for a scheduled event', function (): void {
 });
 
 it('pauses and resumes the scheduler, and audits both changes', function (): void {
+    Schema::dropIfExists('zenith_audit_events');
+    Schema::create('zenith_audit_events', function (Blueprint $table): void {
+        $table->id();
+        $table->timestamp('occurred_at')->index();
+        $table->string('action', 128);
+        $table->string('route', 128);
+        $table->string('user_id')->nullable();
+        $table->string('ip', 45)->nullable();
+        $table->json('context')->nullable();
+    });
+
     post('/horizon/schedule/pause')
         ->assertRedirect()
         ->assertSessionHas('toast.success');

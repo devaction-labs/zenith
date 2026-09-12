@@ -224,7 +224,7 @@ it('shows the newest retained completed jobs first by default', function (): voi
                 (link) => decodeURIComponent(link.getAttribute('href')?.split('/').at(-1) ?? ''),
             ),
             completedSort: document
-                .querySelector('table thead th:nth-child(3)')
+                .querySelector('table thead th:nth-child(4)')
                 ?.getAttribute('aria-sort') ?? null,
         })
     JS);

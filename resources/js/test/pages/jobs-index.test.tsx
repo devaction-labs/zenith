@@ -69,7 +69,7 @@ function props(): JobsPageProps {
     type: "pending",
     query: "",
     pendingCounts: null,
-    filters: { job: null, queue: null, connection: null, state: null },
+    filters: { job: null, queue: null, connection: null, state: null, tag: null },
     querySignature: "signature-1",
     listRevision: "revision-1",
     jobs: {

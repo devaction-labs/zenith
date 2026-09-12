@@ -16,6 +16,7 @@ function step(overrides: Partial<WorkflowStep> & { name: string }): WorkflowStep
     finishedAt: null,
     nested: false,
     childId: null,
+    stale: false,
     ...overrides,
   };
 }
