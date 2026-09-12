@@ -13,6 +13,17 @@ enum WorkflowStatus: string
     case Cancelled = 'cancelled';
     case Dispatched = 'dispatched';
 
+    /**
+     * @return list<string>
+     */
+    public static function finishedValues(): array
+    {
+        return array_values(array_map(
+            static fn (self $status): string => $status->value,
+            array_filter(self::cases(), static fn (self $status): bool => $status->finished()),
+        ));
+    }
+
     public function finished(): bool
     {
         return match ($this) {
