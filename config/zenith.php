@@ -18,4 +18,8 @@ return [
         'store' => null,
         'ttl' => 3600,
     ],
+    'chunks' => [
+        'store' => null,
+        'ttl' => 86400,
+    ],
 ];

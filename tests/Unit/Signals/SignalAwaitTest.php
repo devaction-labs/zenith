@@ -169,8 +169,8 @@ it('delivers a signal to exactly one of several concurrent consumers', function 
 
     $lockWaits = InterleavingArrayStore::interleave([$consume, $consume, $consume, $consume]);
 
-    expect($received)->toHaveCount(4)
-        ->and(array_values(array_filter($received)))->toBe([['ok' => true]])
+    expect(array_values(array_filter($received)))->toBe([['ok' => true]])
+        ->and($received)->toHaveCount(4)
         ->and($lockWaits)->toBeGreaterThan(0);
 });
 
