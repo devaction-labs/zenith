@@ -22,4 +22,7 @@ return [
         'store' => null,
         'ttl' => 86400,
     ],
+    'chains' => [
+        'store' => null,
+    ],
 ];

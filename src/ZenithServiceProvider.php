@@ -9,6 +9,8 @@ use DevactionLabs\Zenith\Batches\DatabaseBatchCapability;
 use DevactionLabs\Zenith\Batches\DatabaseBatchMetadataSynchronizer;
 use DevactionLabs\Zenith\Batches\DatabaseBatchQuery;
 use DevactionLabs\Zenith\BulkOperations\BulkOperationSnapshot;
+use DevactionLabs\Zenith\Chains\ChainFailureListener;
+use DevactionLabs\Zenith\Chains\ChainPayloadHook;
 use DevactionLabs\Zenith\Chunks\ChunkBuffer;
 use DevactionLabs\Zenith\Console\AssetsCommand;
 use DevactionLabs\Zenith\Console\InstallCommand;
@@ -44,8 +46,11 @@ use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Contracts\Bus\Dispatcher;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Illuminate\Contracts\Container\BindingResolutionException;
+use Illuminate\Contracts\Events\Dispatcher as EventDispatcher;
 use Illuminate\Contracts\Foundation\CachesRoutes;
 use Illuminate\Contracts\Redis\Factory as RedisFactory;
+use Illuminate\Queue\Events\JobFailed;
+use Illuminate\Queue\Queue;
 use Illuminate\Routing\Router;
 use Illuminate\Support\ServiceProvider;
 use Inertia\Inertia;
@@ -102,6 +107,8 @@ final class ZenithServiceProvider extends ServiceProvider
             __DIR__.'/../config/zenith.php',
             'zenith',
         );
+
+        Queue::createPayloadUsing(new ChainPayloadHook);
 
         $this->app->bind(HorizonBatchesController::class, BatchesApiController::class);
         $this->app->bind(HorizonHomeController::class, HomeController::class);
@@ -192,6 +199,8 @@ final class ZenithServiceProvider extends ServiceProvider
 
         $this->loadMigrationsFrom(dirname(__DIR__).'/database/migrations');
         $this->loadViewsFrom(__DIR__.'/../resources/views', 'zenith');
+
+        $this->app->make(EventDispatcher::class)->listen(JobFailed::class, [ChainFailureListener::class, 'handle']);
 
         $this->publishes([
             __DIR__.'/../config/zenith.php' => config_path('zenith.php'),
