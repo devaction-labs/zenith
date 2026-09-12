@@ -59,6 +59,7 @@ export function inertiaTestMocks(options?: {
       reload: vi.fn(),
       post: vi.fn(),
       delete: vi.fn(),
+      poll: vi.fn(() => ({ start: vi.fn(), stop: vi.fn(), destroy: vi.fn() })),
       replace: vi.fn(({ url }: { url?: string }) => {
         if (url !== undefined) {
           window.history.replaceState(window.history.state, "", url);

@@ -348,6 +348,22 @@ describe("HorizonLayout", () => {
     inertia.props.horizon.maintenanceMode = false;
   });
 
+  it("opens the keyboard shortcuts help dialog on ?", () => {
+    render(
+      <TooltipProvider>
+        <HorizonLayout>
+          <p>Dashboard content</p>
+        </HorizonLayout>
+      </TooltipProvider>,
+    );
+
+    expect(screen.queryByRole("dialog", { name: "Keyboard shortcuts" })).not.toBeInTheDocument();
+
+    fireEvent.keyDown(document, { key: "?" });
+
+    expect(screen.getByRole("dialog", { name: "Keyboard shortcuts" })).toBeVisible();
+  });
+
   it("warns when Laravel's global queue pause is active", () => {
     inertia.props.horizon.allQueuesPaused = true;
 

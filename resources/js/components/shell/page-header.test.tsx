@@ -5,20 +5,32 @@ import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { PageHeader } from "@/components/shell/page-header";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarProvider } from "@/components/ui/sidebar";
+import { RefreshRateProvider } from "@/hooks/use-refresh-rate";
 import { resetAutoRefreshStatusForTests, trackBackgroundRefresh } from "@/lib/auto-refresh-status";
 
 function renderHeader({
   autoLoad = false,
+  defaultIntervalMs = 5000,
   children,
-}: { autoLoad?: boolean; children?: ReactNode } = {}) {
+}: { autoLoad?: boolean; defaultIntervalMs?: number; children?: ReactNode } = {}) {
   return render(
     <TooltipProvider>
-      <SidebarProvider>
-        <PageHeader status="running" autoLoad={autoLoad} onAutoLoadChange={vi.fn()} />
-        {children}
-      </SidebarProvider>
+      <RefreshRateProvider defaultIntervalMs={defaultIntervalMs}>
+        <SidebarProvider>
+          <PageHeader status="running" autoLoad={autoLoad} onAutoLoadChange={vi.fn()} />
+          {children}
+        </SidebarProvider>
+      </RefreshRateProvider>
     </TooltipProvider>,
   );
+}
+
+function selectOption(name: string) {
+  const option = screen.getByRole("option", { name });
+
+  fireEvent.pointerDown(option);
+  fireEvent.pointerUp(option);
+  fireEvent.click(option);
 }
 
 function runTrackedRefresh(outcome: "success" | "failure", id = "poll-1") {
@@ -39,6 +51,7 @@ function runTrackedRefresh(outcome: "success" | "failure", id = "poll-1") {
 
 describe("PageHeader", () => {
   beforeEach(() => {
+    window.localStorage.clear();
     resetAutoRefreshStatusForTests();
     Object.defineProperty(window, "matchMedia", {
       configurable: true,
@@ -138,5 +151,30 @@ describe("PageHeader", () => {
     expect(refresh).toHaveAttribute("aria-busy", "false");
     expect(refresh).toHaveAttribute("data-refresh-status", "idle");
     expect(refresh).toHaveAccessibleName("Auto load new entries");
+  });
+
+  it("defaults the refresh-rate selector to the server poll interval", () => {
+    renderHeader({ defaultIntervalMs: 5000 });
+
+    expect(screen.getByRole("combobox", { name: "Refresh rate" })).toHaveTextContent("5s");
+  });
+
+  it("persists a selected refresh rate for every page to reuse", () => {
+    renderHeader({ defaultIntervalMs: 5000 });
+
+    fireEvent.click(screen.getByRole("combobox", { name: "Refresh rate" }));
+    selectOption("1s");
+
+    expect(window.localStorage.getItem("horizonRefreshRateMs")).toBe("1000");
+  });
+
+  it("lets the refresh rate be turned off", () => {
+    renderHeader({ defaultIntervalMs: 5000 });
+
+    fireEvent.click(screen.getByRole("combobox", { name: "Refresh rate" }));
+    selectOption("Off");
+
+    expect(window.localStorage.getItem("horizonRefreshRateMs")).toBe("0");
+    expect(screen.getByRole("combobox", { name: "Refresh rate" })).toHaveTextContent("Off");
   });
 });

@@ -13,10 +13,13 @@ import { useEffect } from "react";
 import { toast } from "@/components/ui/toast";
 
 import { AppSidebar } from "@/components/app-sidebar";
+import { ShortcutsHelpDialog } from "@/components/shell/shortcuts-help-dialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { SidebarInset, SidebarProvider, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { useHorizonFavicon } from "@/hooks/use-horizon-favicon";
+import { useGlobalShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { NavigationCountsProvider } from "@/hooks/use-navigation-counts";
+import { RefreshRateProvider } from "@/hooks/use-refresh-rate";
 import { cn } from "@/lib/utils";
 import type { HorizonPageProps, NavigationCounts } from "@/types/page";
 
@@ -146,6 +149,7 @@ export function HorizonLayout({ children }: { children: ReactNode }) {
     () => navigationCounts ?? storedNavigationCounts(horizon.baseUrl),
   );
   const autoLoadValue = useMemo(() => ({ autoLoad }), [autoLoad]);
+  const [shortcutsHelpOpen, setShortcutsHelpOpen] = useState(false);
   useHorizonFavicon(horizon.status);
 
   const updateAutoLoad = useCallback((enabled: boolean) => {
@@ -155,6 +159,10 @@ export function HorizonLayout({ children }: { children: ReactNode }) {
       localStorage.setItem(AUTO_LOAD_STORAGE_KEY, enabled ? "1" : "0");
     } catch {}
   }, []);
+
+  const openShortcutsHelp = useCallback(() => setShortcutsHelpOpen(true), []);
+
+  useGlobalShortcuts({ baseUrl: horizon.baseUrl, onOpenHelp: openShortcutsHelp });
 
   useEffect(() => {
     if (navigationCounts !== undefined) {
@@ -174,54 +182,57 @@ export function HorizonLayout({ children }: { children: ReactNode }) {
   }, [flash?.error, flash?.success]);
 
   return (
-    <AutoLoadContext.Provider value={autoLoadValue}>
-      <NavigationCountsProvider value={resolvedNavigationCounts}>
-        <SidebarProvider
-          className="relative mx-auto max-w-[1400px] min-[1140px]:min-w-[1140px]"
-          style={
-            {
-              "--horizon-sidebar-offset": "max(0px, calc((100vw - 1400px) / 2))",
-            } as CSSProperties
-          }
-        >
-          <AppSidebar
-            activeNavigation={meta.activeNavigation}
-            horizonBaseUrl={horizon.baseUrl}
-            status={horizon.status}
-            processing={horizon.processing}
-            autoLoad={autoLoad}
-            onAutoLoadChange={updateAutoLoad}
-            navigationCounts={resolvedNavigationCounts}
-            jobNavigationBreakdown={horizon.jobNavigationBreakdown ?? false}
-          />
-          <SidebarInset className="min-w-0 overflow-clip">
-            <div className="flex w-full flex-1 flex-col gap-3.5 p-[7px] min-[1140px]:pt-3.5 min-[1140px]:pr-3.5 min-[1140px]:pb-3.5 min-[1140px]:pl-6">
-              {horizon.maintenanceMode ? (
-                <Alert variant="warning" className="mb-4">
-                  <TriangleAlertIcon aria-hidden="true" />
-                  <AlertTitle>Application maintenance mode</AlertTitle>
-                  <AlertDescription>
-                    Queued jobs may not be processed unless the worker is using the force flag.
-                  </AlertDescription>
-                </Alert>
-              ) : null}
-              {horizon.allQueuesPaused ? (
-                <Alert variant="warning" className="mb-4">
-                  <TriangleAlertIcon aria-hidden="true" />
-                  <AlertTitle>All queues are paused</AlertTitle>
-                  <AlertDescription>
-                    Laravel&apos;s global queue pause is active. Workers will not reserve new jobs
-                    until it is cleared. Individually paused queues stay paused after a global
-                    resume.
-                  </AlertDescription>
-                </Alert>
-              ) : null}
-              {children}
-            </div>
-          </SidebarInset>
-          <MobileSidebarTrigger />
-        </SidebarProvider>
-      </NavigationCountsProvider>
-    </AutoLoadContext.Provider>
+    <RefreshRateProvider defaultIntervalMs={horizon.pollInterval}>
+      <AutoLoadContext.Provider value={autoLoadValue}>
+        <NavigationCountsProvider value={resolvedNavigationCounts}>
+          <SidebarProvider
+            className="relative mx-auto max-w-[1400px] min-[1140px]:min-w-[1140px]"
+            style={
+              {
+                "--horizon-sidebar-offset": "max(0px, calc((100vw - 1400px) / 2))",
+              } as CSSProperties
+            }
+          >
+            <AppSidebar
+              activeNavigation={meta.activeNavigation}
+              horizonBaseUrl={horizon.baseUrl}
+              status={horizon.status}
+              processing={horizon.processing}
+              autoLoad={autoLoad}
+              onAutoLoadChange={updateAutoLoad}
+              navigationCounts={resolvedNavigationCounts}
+              jobNavigationBreakdown={horizon.jobNavigationBreakdown ?? false}
+            />
+            <SidebarInset className="min-w-0 overflow-clip">
+              <div className="flex w-full flex-1 flex-col gap-3.5 p-[7px] min-[1140px]:pt-3.5 min-[1140px]:pr-3.5 min-[1140px]:pb-3.5 min-[1140px]:pl-6">
+                {horizon.maintenanceMode ? (
+                  <Alert variant="warning" className="mb-4">
+                    <TriangleAlertIcon aria-hidden="true" />
+                    <AlertTitle>Application maintenance mode</AlertTitle>
+                    <AlertDescription>
+                      Queued jobs may not be processed unless the worker is using the force flag.
+                    </AlertDescription>
+                  </Alert>
+                ) : null}
+                {horizon.allQueuesPaused ? (
+                  <Alert variant="warning" className="mb-4">
+                    <TriangleAlertIcon aria-hidden="true" />
+                    <AlertTitle>All queues are paused</AlertTitle>
+                    <AlertDescription>
+                      Laravel&apos;s global queue pause is active. Workers will not reserve new jobs
+                      until it is cleared. Individually paused queues stay paused after a global
+                      resume.
+                    </AlertDescription>
+                  </Alert>
+                ) : null}
+                {children}
+              </div>
+            </SidebarInset>
+            <MobileSidebarTrigger />
+            <ShortcutsHelpDialog open={shortcutsHelpOpen} onOpenChange={setShortcutsHelpOpen} />
+          </SidebarProvider>
+        </NavigationCountsProvider>
+      </AutoLoadContext.Provider>
+    </RefreshRateProvider>
   );
 }
