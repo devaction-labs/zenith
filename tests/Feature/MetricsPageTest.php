@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use DevactionLabs\Zenith\Metrics\MetricsData;
 use DevactionLabs\Zenith\Support\HorizonRuntime;
+use DevactionLabs\Zenith\Telemetry\TelemetryMetricsReader;
 use Inertia\Testing\AssertableInertia;
 use Laravel\Horizon\Contracts\MasterSupervisorRepository;
 use Laravel\Horizon\Contracts\MetricsRepository;
@@ -12,6 +13,7 @@ use Laravel\Horizon\Horizon;
 use function DevactionLabs\Zenith\Tests\Support\dashboardReturns;
 use function DevactionLabs\Zenith\Tests\Support\dashboardReturnsFor;
 use function DevactionLabs\Zenith\Tests\Support\mockDashboardContract;
+use function DevactionLabs\Zenith\Tests\Support\telemetryRedis;
 use function Pest\Laravel\get;
 
 beforeEach(function (): void {
@@ -127,6 +129,9 @@ describe('metrics pages', function (): void {
 
     it('reports live percentiles as available once the recorder is enabled', function (): void {
         config()->set('zenith.telemetry.enabled', true);
+
+        ['redis' => $redis] = telemetryRedis();
+        app()->instance(TelemetryMetricsReader::class, new TelemetryMetricsReader($redis));
 
         $repository = mockDashboardContract(MetricsRepository::class);
         dashboardReturnsFor($repository, 'snapshotsForQueue', ['emails'], []);

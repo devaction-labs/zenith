@@ -2,11 +2,13 @@
 
 declare(strict_types=1);
 
+use DevactionLabs\Zenith\Telemetry\TelemetryMetricsReader;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Inertia\Testing\AssertableInertia;
 use Laravel\Horizon\Horizon;
 
+use function DevactionLabs\Zenith\Tests\Support\telemetryRedis;
 use function Pest\Laravel\get;
 use function Pest\Laravel\withoutMiddleware;
 
@@ -46,6 +48,9 @@ it('falls back to the defaults for an unrecognized group-by or window', function
 
 it('reports live throughput as available once the recorder is enabled', function (): void {
     config()->set('zenith.telemetry.enabled', true);
+
+    ['redis' => $redis] = telemetryRedis();
+    app()->instance(TelemetryMetricsReader::class, new TelemetryMetricsReader($redis));
 
     get('/horizon/dashboard')
         ->assertOk()
