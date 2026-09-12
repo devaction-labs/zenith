@@ -14,6 +14,7 @@ use DevactionLabs\Zenith\Chains\ChainPayloadHook;
 use DevactionLabs\Zenith\Chunks\ChunkBuffer;
 use DevactionLabs\Zenith\Console\AssetsCommand;
 use DevactionLabs\Zenith\Console\InstallCommand;
+use DevactionLabs\Zenith\Console\RepairWorkflowsCommand;
 use DevactionLabs\Zenith\Console\WarmBatchMetadataCommand;
 use DevactionLabs\Zenith\Console\WarmRetainedJobsCommand;
 use DevactionLabs\Zenith\Dashboard\DashboardPendingState;
@@ -214,6 +215,7 @@ final class ZenithServiceProvider extends ServiceProvider
             $this->commands([
                 AssetsCommand::class,
                 InstallCommand::class,
+                RepairWorkflowsCommand::class,
                 WarmBatchMetadataCommand::class,
                 WarmRetainedJobsCommand::class,
             ]);

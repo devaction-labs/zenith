@@ -213,6 +213,26 @@ final readonly class AdvanceWorkflow
     }
 
     /**
+     * Record that the worker running a claimed step received a shutdown signal, without
+     * otherwise touching the step. WorkflowLifeline treats an interrupted step as stale on
+     * its very next repair pass instead of waiting out the step's full timeout, since a
+     * signal is direct evidence the worker is shutting down and will not finish it.
+     */
+    public function markInterrupted(string $workflowId, string $stepName, string $token): void
+    {
+        $step = WorkflowStep::query()
+            ->where('workflow_id', $workflowId)
+            ->where('name', $stepName)
+            ->where('job_uuid', $token)
+            ->first();
+
+        $step?->transition(
+            [WorkflowStatus::Dispatched, WorkflowStatus::Running],
+            ['interrupted_at' => Date::now()],
+        );
+    }
+
+    /**
      * Queue a fresh job for a step that is waiting for a signal, so waiting does not use
      * up the attempts of the job that runs it.
      */

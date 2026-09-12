@@ -560,7 +560,7 @@
     "src": "resources/images/favicon.svg"
   },
   "resources/js/app.tsx": {
-    "file": "assets/app-J-S-JVnP.js",
+    "file": "assets/app-freGzOcc.js",
     "name": "app",
     "src": "resources/js/app.tsx",
     "isEntry": true,
@@ -704,7 +704,7 @@
     ]
   },
   "resources/js/pages/failed-jobs/index.tsx": {
-    "file": "assets/failed-jobs-DyJ3jnYm.js",
+    "file": "assets/failed-jobs-DE1mwy7O.js",
     "name": "failed-jobs",
     "src": "resources/js/pages/failed-jobs/index.tsx",
     "isDynamicEntry": true,
@@ -762,7 +762,7 @@
     ]
   },
   "resources/js/pages/jobs/index.tsx": {
-    "file": "assets/jobs-VmXwDaVn.js",
+    "file": "assets/jobs-klsS06EK.js",
     "name": "jobs",
     "src": "resources/js/pages/jobs/index.tsx",
     "isDynamicEntry": true,
@@ -926,7 +926,7 @@
     ]
   },
   "resources/js/pages/queues/show.tsx": {
-    "file": "assets/show-DTDQotgT.js",
+    "file": "assets/show-DI0eXJLx.js",
     "name": "show",
     "src": "resources/js/pages/queues/show.tsx",
     "isDynamicEntry": true,
@@ -1006,7 +1006,7 @@
     ]
   },
   "resources/js/pages/workflows/show.tsx": {
-    "file": "assets/show-LjkZrANg.js",
+    "file": "assets/show-DozA1ijh.js",
     "name": "show",
     "src": "resources/js/pages/workflows/show.tsx",
     "isDynamicEntry": true,
