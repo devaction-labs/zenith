@@ -172,6 +172,11 @@ function WorkflowShow({ horizon, workflow }: HorizonPageProps & WorkflowDetailPa
                         <TableCell>
                           <Badge variant={workflowStatusVariant(step.status)}>{step.status}</Badge>
                           {step.cascade ? <Badge className="ml-1">Cascade</Badge> : null}
+                          {step.stale ? (
+                            <Badge className="ml-1" variant="warning">
+                              Stale
+                            </Badge>
+                          ) : null}
                         </TableCell>
                         <TableCell className="tabular-nums">{step.attempts}</TableCell>
                         <TableCell className="max-w-xs break-all text-xs">

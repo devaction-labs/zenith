@@ -99,4 +99,14 @@ return [
         'store' => null,
         'window_minutes' => 60,
     ],
+    'chains' => [
+        'store' => null,
+    ],
+    'recorded' => [
+        'store' => null,
+        'ttl' => 86400,
+    ],
+    'starvation' => [
+        'threshold_seconds' => 300,
+    ],
 ];

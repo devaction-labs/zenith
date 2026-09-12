@@ -109,6 +109,10 @@ final class WorkflowDefinition
     {
         $this->validate();
 
+        if (Workflow::isFaking()) {
+            Workflow::recordDispatch($this);
+        }
+
         return app(DispatchWorkflow::class)->handle($this);
     }
 

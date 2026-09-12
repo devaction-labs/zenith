@@ -538,6 +538,87 @@ a row governs it; list a rule with no filters last, since it is a catch-all
 and nothing after it can ever match. Rows matched by no rule are kept
 indefinitely rather than pruned by guesswork.
 
+## Testing
+
+`Workflow`, `Signal`, and `Relay` each expose a `fake()`, mirroring Laravel's
+`Bus::fake()` ergonomics:
+
+```php
+use DevactionLabs\Zenith\Workflows\RunWorkflowStep;
+use DevactionLabs\Zenith\Workflows\Workflow;
+use DevactionLabs\Zenith\Workflows\WorkflowDefinition;
+use Illuminate\Support\Facades\Bus;
+
+Workflow::fake();
+
+$workflow = WorkflowDefinition::make('onboarding')
+    ->add('provision', ProvisionAccount::class)
+    ->dispatch();
+
+Workflow::assertDispatched('onboarding');
+Bus::assertNotDispatched(RunWorkflowStep::class);
+```
+
+`Workflow::fake()` fakes the bus too, so there is no separate `Bus::fake()`
+call to make. `dispatch()` still persists the real workflow and step rows —
+the step above ends up `WorkflowStatus::Dispatched` — but `RunWorkflowStep` is
+never actually queued. `Workflow::assertDispatched()` takes no argument to
+assert any workflow was dispatched, a string to match a dispatched workflow's
+`name()`, or a closure that receives each dispatched `WorkflowDefinition`:
+
+```php
+Workflow::assertDispatched(
+    fn (WorkflowDefinition $definition) => $definition->name() === 'onboarding'
+        && count($definition->steps()) === 1,
+);
+```
+
+Call `Workflow::fake()` again for a clean slate; it forgets every previously
+recorded dispatch.
+
+`Signal::fake()` and `Relay::fake()` swap the store the feature reads and
+writes for an isolated in-memory one, so a test can send and await signals, or
+record and await relayed results, without configuring a real cache:
+
+```php
+use DevactionLabs\Zenith\Relay\Relay;
+use DevactionLabs\Zenith\Signals\Signal;
+
+Signal::fake();
+Signal::send('approval', ['approved' => true]);
+
+expect(Signal::pull('approval'))->toBe(['approved' => true]);
+
+Relay::fake();
+Relay::record('job-1', ['ok' => true]);
+
+expect(Relay::await('job-1', seconds: 5))->toBe(['ok' => true]);
+```
+
+Calling either again also gives a clean slate.
+
+Faking any of the three stops queued jobs from running, so a workflow
+dispatched under `Workflow::fake()` (or a plain `Bus::fake()`) stops at its
+first claimed step. Zenith's own Pest suite drains one to a terminal status
+in-process instead of through a real queue worker:
+
+```php
+$workflow = drainWorkflow($workflow);
+
+expect($workflow->status)->toBe(WorkflowStatus::Completed);
+```
+
+`drainWorkflow()` repeatedly runs whichever claimed step or compensation the
+workflow is waiting on — exactly as `RunWorkflowStep` or
+`RunWorkflowCompensation` would — until nothing is left to claim. It does not
+retry a failed step: run directly instead of through a queued job, a step
+fails immediately on its first exception, the same as the sync queue driver.
+It is a plain test-support function, defined in
+`tests/Support/WorkflowDrain.php` and wired into `tests/Pest.php` the same way
+`tests/Support/WorkflowTables.php`'s `migrateWorkflowTables()` is; an
+application testing its own workflows can copy the same short helper into its
+own test suite.
+
 ## Development
 
 ```bash

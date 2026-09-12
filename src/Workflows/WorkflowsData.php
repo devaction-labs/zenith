@@ -12,6 +12,8 @@ use Illuminate\Support\Facades\Schema;
 
 final class WorkflowsData
 {
+    public function __construct(private readonly WorkflowStepStaleness $staleness = new WorkflowStepStaleness) {}
+
     public function available(): bool
     {
         return Schema::hasTable('zenith_workflows');
@@ -62,6 +64,7 @@ final class WorkflowsData
             finishedAt: $step->finished_at?->getTimestamp(),
             nested: $step->isNested(),
             childId: $workflow->children->firstWhere('parent_step', $step->name)?->id,
+            stale: $this->staleness->isStale($step),
         ))->all();
 
         $retryable = $workflow->steps->contains(

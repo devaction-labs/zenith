@@ -70,6 +70,7 @@ function migrateWorkflowTables(): void
         $table->unsignedInteger('attempts')->default(0);
         $table->timestamps();
         $table->timestamp('finished_at')->nullable();
+        $table->timestamp('interrupted_at')->nullable();
         $table->unique(['workflow_id', 'name']);
     });
 }

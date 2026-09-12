@@ -593,6 +593,47 @@ New routes must:
 - avoid exposing raw job payloads, exception bodies, or Redis details;
 - avoid modifying or shadowing Horizon API routes unless the change is intentional and documented.
 
+## Anti-starvation alerting
+
+`QueueStarvationAlert` builds on `QueueWaitThreshold`'s already-computed
+`oldestReadyAgeSeconds` to flag a queue whose oldest ready job has aged past
+`zenith.starvation.threshold_seconds`. It is deliberately alert-only: it
+never reprioritizes, moves, or otherwise touches a job. A starved queue is
+just data surfaced on `QueueRowData`, for an operator to act on.
+
+Actually promoting a starved job (moving it, or a redispatched copy of it,
+onto a higher-priority queue so it is picked up sooner) was considered and
+rejected for this pass:
+
+- Horizon's queue priority comes entirely from worker configuration (the
+  order queues are listed for a supervisor), not from any per-job priority
+  field. Promoting a job means either moving its payload to a different
+  Redis list Horizon does not know originated elsewhere, or re-dispatching a
+  copy and cancelling the original — both change a job's queue, connection,
+  and retry/attempt history under the operator's feet, which this package
+  has otherwise been careful never to do implicitly (see the bulk-operations
+  and pending-job-cancellation sections above).
+- Promotion needs a policy for *how much* to promote by and *how often* to
+  re-evaluate, or it just turns into a second, competing scheduler sitting
+  on top of Horizon's own supervisors. Getting that wrong (over-promoting)
+  can starve the queues a job was promoted away from, trading one starvation
+  problem for another.
+- A promoted job that fails still needs its failure attributed to its
+  original queue for metrics and alerting to keep making sense, which the
+  alert-only design gets for free by never moving anything.
+- Alerting has an immediate, low-risk payoff: an operator (or a scheduled
+  command reading this same data) can rebalance supervisor queue lists, add
+  workers, or manually requeue a specific job, all decisions that need
+  human or application-specific judgment Horizon's generic queue mechanics
+  cannot make safely on their own.
+
+Promotion remains worth revisiting as an explicit, opt-in feature once
+alerting has been observed in practice — for example, a supervisor-scoped
+option that only ever *copies* a starved job onto an explicitly configured
+overflow queue after it has been starved for a second, longer threshold,
+leaving the original job and its history untouched until the copy
+succeeds.
+
 ## Development environment
 
 Orchestra Testbench verifies package behavior in isolation. The Workbench application provides deterministic successful and failing jobs for live dashboard development.

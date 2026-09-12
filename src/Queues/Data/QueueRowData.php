@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace DevactionLabs\Zenith\Queues\Data;
 
+use DevactionLabs\Zenith\Queues\QueueStarvationStatus;
 use Spatie\LaravelData\Data;
 
 final class QueueRowData extends Data
@@ -22,5 +23,6 @@ final class QueueRowData extends Data
         public readonly int $processes,
         public readonly int|float $wait,
         public readonly QueueWaitThresholdData $waitThreshold,
+        public readonly QueueStarvationData $starvation = new QueueStarvationData(QueueStarvationStatus::Monitoring, 300, null),
     ) {}
 }

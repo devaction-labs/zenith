@@ -7,12 +7,13 @@ namespace DevactionLabs\Zenith\Workflows;
 use DevactionLabs\Zenith\Signals\ReleaseWhileWaiting;
 use DevactionLabs\Zenith\Signals\SignalWaiting;
 use DevactionLabs\Zenith\Workflows\Concerns\AdoptsStepQueueOptions;
+use Illuminate\Contracts\Queue\Interruptible;
 use Illuminate\Contracts\Queue\Job;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Throwable;
 
-final class RunWorkflowStep implements ShouldQueue
+final class RunWorkflowStep implements Interruptible, ShouldQueue
 {
     use AdoptsStepQueueOptions, Queueable;
 
@@ -73,6 +74,17 @@ final class RunWorkflowStep implements ShouldQueue
     public function failed(?Throwable $exception): void
     {
         app(AdvanceWorkflow::class)->failStep($this->workflowId, $this->stepName, $this->token, $exception);
+    }
+
+    /**
+     * Checkpoint a graceful worker shutdown (SIGTERM during a deploy, typically) by
+     * recording that this claimed step was interrupted, without releasing or otherwise
+     * touching it while it may still be running. WorkflowLifeline's scheduled repair pass
+     * picks it up from there on its very next run instead of waiting out its full timeout.
+     */
+    public function interrupted(int $signal): void
+    {
+        app(AdvanceWorkflow::class)->markInterrupted($this->workflowId, $this->stepName, $this->token);
     }
 
     /**

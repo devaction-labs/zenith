@@ -9,10 +9,13 @@ use DevactionLabs\Zenith\Batches\DatabaseBatchCapability;
 use DevactionLabs\Zenith\Batches\DatabaseBatchMetadataSynchronizer;
 use DevactionLabs\Zenith\Batches\DatabaseBatchQuery;
 use DevactionLabs\Zenith\BulkOperations\BulkOperationSnapshot;
+use DevactionLabs\Zenith\Chains\ChainFailureListener;
+use DevactionLabs\Zenith\Chains\ChainPayloadHook;
 use DevactionLabs\Zenith\Chunks\ChunkBuffer;
 use DevactionLabs\Zenith\Console\AssetsCommand;
 use DevactionLabs\Zenith\Console\InstallCommand;
 use DevactionLabs\Zenith\Console\PruneJobHistoryCommand;
+use DevactionLabs\Zenith\Console\RepairWorkflowsCommand;
 use DevactionLabs\Zenith\Console\WarmBatchMetadataCommand;
 use DevactionLabs\Zenith\Console\WarmRetainedJobsCommand;
 use DevactionLabs\Zenith\Dashboard\DashboardPendingState;
@@ -63,6 +66,7 @@ use Illuminate\Queue\Events\JobFailed as QueueJobFailed;
 use Illuminate\Queue\Events\JobProcessed as QueueJobProcessed;
 use Illuminate\Queue\Events\JobProcessing as QueueJobProcessing;
 use Illuminate\Queue\Events\QueueFailedOver;
+use Illuminate\Queue\Queue;
 use Illuminate\Routing\Router;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
@@ -121,6 +125,8 @@ final class ZenithServiceProvider extends ServiceProvider
             __DIR__.'/../config/zenith.php',
             'zenith',
         );
+
+        Queue::createPayloadUsing(new ChainPayloadHook);
 
         $this->app->bind(HorizonBatchesController::class, BatchesApiController::class);
         $this->app->bind(HorizonHomeController::class, HomeController::class);
@@ -219,6 +225,8 @@ final class ZenithServiceProvider extends ServiceProvider
         $this->loadMigrationsFrom(dirname(__DIR__).'/database/migrations');
         $this->loadViewsFrom(__DIR__.'/../resources/views', 'zenith');
 
+        $this->app->make(EventDispatcher::class)->listen(QueueJobFailed::class, [ChainFailureListener::class, 'handle']);
+
         $this->publishes([
             __DIR__.'/../config/zenith.php' => config_path('zenith.php'),
         ], 'zenith-config');
@@ -232,6 +240,7 @@ final class ZenithServiceProvider extends ServiceProvider
                 AssetsCommand::class,
                 InstallCommand::class,
                 PruneJobHistoryCommand::class,
+                RepairWorkflowsCommand::class,
                 WarmBatchMetadataCommand::class,
                 WarmRetainedJobsCommand::class,
             ]);
