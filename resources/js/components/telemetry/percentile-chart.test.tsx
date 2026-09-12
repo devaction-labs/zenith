@@ -40,16 +40,19 @@ describe("PercentileChart", () => {
     const { container } = render(<PercentileChart points={points} />);
 
     expect(screen.getByRole("img", { name: "Execution time percentiles chart" })).toBeVisible();
-    expect(
-      screen.getByRole("img", { name: "Execution time percentiles chart" }),
-    ).toHaveAttribute("data-animation", "disabled");
+    expect(screen.getByRole("img", { name: "Execution time percentiles chart" })).toHaveAttribute(
+      "data-animation",
+      "disabled",
+    );
     expect(container.querySelectorAll(".recharts-line")).toHaveLength(3);
 
     bounds.mockRestore();
   });
 
   it("uses the shadcn empty state when no percentile has been recorded", () => {
-    render(<PercentileChart points={[{ timestamp: 1_784_387_100, p50: null, p95: null, p99: null }]} />);
+    render(
+      <PercentileChart points={[{ timestamp: 1_784_387_100, p50: null, p95: null, p99: null }]} />,
+    );
 
     expect(screen.getByText("Not Enough Data")).toBeVisible();
     expect(

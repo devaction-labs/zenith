@@ -20,8 +20,6 @@ describe("TelemetryWindowSelect", () => {
     render(<TelemetryWindowSelect value="24h" onValueChange={vi.fn()} />);
 
     expect(screen.getByText("Window")).toBeVisible();
-    expect(screen.getByRole("combobox", { name: "Window" })).toHaveTextContent(
-      "Last 24 hours",
-    );
+    expect(screen.getByRole("combobox", { name: "Window" })).toHaveTextContent("Last 24 hours");
   });
 });

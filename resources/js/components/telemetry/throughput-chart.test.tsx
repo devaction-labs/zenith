@@ -77,9 +77,7 @@ describe("ThroughputChart", () => {
     render(<ThroughputChart series={[]} />);
 
     expect(screen.getByText("Not Enough Data")).toBeVisible();
-    expect(
-      screen.getByText("No jobs have been recorded for this window yet."),
-    ).toBeVisible();
+    expect(screen.getByText("No jobs have been recorded for this window yet.")).toBeVisible();
     expect(document.querySelector('[data-slot="empty-icon"] svg')).toHaveClass(
       "lucide-chart-no-axes-combined",
     );

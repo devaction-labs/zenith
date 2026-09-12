@@ -53,7 +53,10 @@ function MetricShow({
               {`Execution time percentiles — ${name}`}
             </CardTitle>
             <CardAction>
-              <TelemetryWindowSelect value={percentilesWindow} onValueChange={changePercentilesWindow} />
+              <TelemetryWindowSelect
+                value={percentilesWindow}
+                onValueChange={changePercentilesWindow}
+              />
             </CardAction>
           </CardHeader>
           <CardContent className="px-0 pt-3 pb-2">

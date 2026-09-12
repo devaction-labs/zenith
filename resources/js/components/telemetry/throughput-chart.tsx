@@ -101,9 +101,7 @@ export function ThroughputChart({ series }: { series: readonly ThroughputSeries[
             <MetricsNavigationIcon aria-hidden="true" />
           </EmptyMedia>
           <EmptyTitle>Not Enough Data</EmptyTitle>
-          <EmptyDescription>
-            No jobs have been recorded for this window yet.
-          </EmptyDescription>
+          <EmptyDescription>No jobs have been recorded for this window yet.</EmptyDescription>
         </EmptyHeader>
       </Empty>
     );

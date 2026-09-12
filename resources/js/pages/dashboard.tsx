@@ -6,7 +6,10 @@ import { SupervisorsTable } from "@/components/dashboard/supervisors-table";
 import { WorkloadTable } from "@/components/dashboard/workload-table";
 import { Duration } from "@/components/duration";
 import { QueueBypassBanner } from "@/components/queues/queue-bypass-banner";
-import { TelemetryGroupBySelect, TelemetryWindowSelect } from "@/components/telemetry/telemetry-controls";
+import {
+  TelemetryGroupBySelect,
+  TelemetryWindowSelect,
+} from "@/components/telemetry/telemetry-controls";
 import { ThroughputChart } from "@/components/telemetry/throughput-chart";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -52,12 +55,11 @@ function Dashboard({
   const fallbackPolling = !autoRefreshEnabled && hasPendingTransitions;
   const hasWorkload = workload.available && workload.items.length > 0;
 
-  useDashboardRefresh(resolveProcessPollInterval(horizon.pollInterval), autoRefreshEnabled || fallbackPolling, [
-    "summary",
-    "workload",
-    "supervisors",
-    "liveThroughput",
-  ]);
+  useDashboardRefresh(
+    resolveProcessPollInterval(horizon.pollInterval),
+    autoRefreshEnabled || fallbackPolling,
+    ["summary", "workload", "supervisors", "liveThroughput"],
+  );
 
   const route = (definition: { url: string }) =>
     resolveHorizonRoute(definition, horizon.baseUrl).url;

@@ -172,7 +172,10 @@ export function QueueTable({
                     />
                   ))}
                   {bypassesHorizon ? (
-                    <Badge variant="warning" title="This queue has a connection that can bypass Horizon.">
+                    <Badge
+                      variant="warning"
+                      title="This queue has a connection that can bypass Horizon."
+                    >
                       Bypasses Horizon
                     </Badge>
                   ) : null}

@@ -94,9 +94,7 @@ export function JobAttributesPanel({ attributes }: { attributes?: JobAttributes 
           <div className="flex flex-wrap gap-2 px-4 pt-4 sm:px-6">
             {attributes.failOnTimeout ? <Badge>Fails on timeout</Badge> : null}
             {attributes.withoutRelations ? <Badge>Without relations</Badge> : null}
-            {attributes.deleteWhenMissingModels ? (
-              <Badge>Deletes when models missing</Badge>
-            ) : null}
+            {attributes.deleteWhenMissingModels ? <Badge>Deletes when models missing</Badge> : null}
           </div>
         ) : null}
         {details.length > 0 ? (

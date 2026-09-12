@@ -27,7 +27,8 @@ export function QueueBypassBanner({
         {warning.hasRecentFailovers ? (
           <p>
             {warning.recentFailoverCount} {warning.recentFailoverCount === 1 ? "job" : "jobs"}{" "}
-            failed over to a backup queue connection in {formatWindow(warning.recentFailoverWindowMinutes)}
+            failed over to a backup queue connection in{" "}
+            {formatWindow(warning.recentFailoverWindowMinutes)}
             {warning.recentFailoverConnections.length > 0
               ? ` (${warning.recentFailoverConnections.join(", ")})`
               : null}
