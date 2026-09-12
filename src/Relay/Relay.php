@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace DevactionLabs\Zenith\Relay;
 
 use DevactionLabs\Zenith\Signals\QueuedWait;
+use Illuminate\Cache\ArrayStore;
 use Illuminate\Cache\RedisStore;
+use Illuminate\Cache\Repository as ArrayRepository;
 use Illuminate\Contracts\Bus\Dispatcher;
 use Illuminate\Contracts\Cache\Factory;
 use Illuminate\Contracts\Cache\Repository;
@@ -35,6 +37,18 @@ final class Relay
     private const int MAX_POLL_MILLISECONDS = 250;
 
     private const int MAX_BLOCK_MILLISECONDS = 5000;
+
+    private static ?Repository $fakeStore = null;
+
+    /**
+     * Route every relay result through an isolated, in-memory store instead of the cache
+     * store named by zenith.relay.store, so a test can record and await relayed results
+     * deterministically without configuring a shared cache. Call it again for a clean slate.
+     */
+    public static function fake(): void
+    {
+        self::$fakeStore = new ArrayRepository(new ArrayStore);
+    }
 
     public static function async(object $job): string
     {
@@ -216,6 +230,10 @@ final class Relay
 
     private static function store(): Repository
     {
+        if (self::$fakeStore instanceof Repository) {
+            return self::$fakeStore;
+        }
+
         $store = config('zenith.relay.store');
 
         return app(Factory::class)->store(is_string($store) ? $store : null);

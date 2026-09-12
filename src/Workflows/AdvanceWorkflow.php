@@ -54,6 +54,10 @@ final readonly class AdvanceWorkflow
                 continue;
             }
 
+            if (Workflow::isFaking()) {
+                continue;
+            }
+
             $this->bus->dispatch(RunWorkflowStep::for($workflow->id, $step->name, $token, $step->job_class));
         }
     }
