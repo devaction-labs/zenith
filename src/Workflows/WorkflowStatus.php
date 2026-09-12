@@ -12,6 +12,7 @@ enum WorkflowStatus: string
     case Failed = 'failed';
     case Cancelled = 'cancelled';
     case Dispatched = 'dispatched';
+    case Retrying = 'retrying';
 
     /**
      * @return list<string>
@@ -33,6 +34,7 @@ enum WorkflowStatus: string
             self::Pending->value,
             self::Dispatched->value,
             self::Running->value,
+            self::Retrying->value,
         ];
     }
 

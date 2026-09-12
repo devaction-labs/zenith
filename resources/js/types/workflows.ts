@@ -1,6 +1,7 @@
 export type WorkflowStatus =
   | "pending"
   | "running"
+  | "retrying"
   | "completed"
   | "failed"
   | "cancelled"

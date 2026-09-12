@@ -2,11 +2,13 @@
 
 declare(strict_types=1);
 
+use DevactionLabs\Zenith\Workflows\AdvanceWorkflow;
 use DevactionLabs\Zenith\Workflows\Workflow;
 use DevactionLabs\Zenith\Workflows\WorkflowDefinition;
 use DevactionLabs\Zenith\Workflows\WorkflowStatus;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
+use Illuminate\Support\Facades\Bus;
 use Inertia\Testing\AssertableInertia;
 use Laravel\Horizon\Horizon;
 
@@ -75,6 +77,31 @@ it('lists only top-level workflows and shows nested children on detail', functio
             ->where('workflow.steps.0.nested', true)
             ->has('workflow.children', 1)
             ->where('workflow.children.0.name', 'inner'));
+});
+
+it('shows a retrying step with its attempt count and last error', function (): void {
+    Bus::fake();
+    FlakyWorkflowStep::$failuresLeft = 1;
+
+    $workflow = WorkflowDefinition::make('flaky')
+        ->add('flaky', FlakyWorkflowStep::class)
+        ->dispatch();
+
+    $job = dispatchedWorkflowStep('flaky')->withFakeQueueInteractions();
+
+    expect(function () use ($job): void {
+        $job->handle(app(AdvanceWorkflow::class));
+    })->toThrow(RuntimeException::class, 'flaky failure');
+
+    get("/horizon/workflows/{$workflow->id}")
+        ->assertSuccessful()
+        ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
+            ->component('Workflows/Show')
+            ->where('workflow.status', WorkflowStatus::Running->value)
+            ->where('workflow.steps.0.status', 'retrying')
+            ->where('workflow.steps.0.attempts', 1)
+            ->where('workflow.steps.0.error', 'flaky failure')
+            ->where('workflow.retryable', false));
 });
 
 it('cancels a running workflow from the dashboard', function (): void {

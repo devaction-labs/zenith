@@ -3,9 +3,17 @@
 declare(strict_types=1);
 
 use DevactionLabs\Zenith\Signals\Signal;
+use DevactionLabs\Zenith\Signals\SignalWaiting;
 use DevactionLabs\Zenith\Workflows\RunWorkflowStep;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Queue\Attributes\Backoff;
+use Illuminate\Queue\Attributes\Connection;
+use Illuminate\Queue\Attributes\FailOnTimeout;
+use Illuminate\Queue\Attributes\MaxExceptions;
+use Illuminate\Queue\Attributes\Queue;
+use Illuminate\Queue\Attributes\Timeout;
+use Illuminate\Queue\Attributes\Tries;
 use Illuminate\Support\Facades\Bus;
 
 function dispatchedWorkflowStep(string $stepName): RunWorkflowStep
@@ -65,6 +73,88 @@ final class FailingWorkflowStep implements ShouldQueue
     public function handle(array $payload, array $context): never
     {
         throw new RuntimeException('step failed');
+    }
+}
+
+#[Tries(3)]
+#[Backoff(5, 10)]
+#[Timeout(30)]
+#[FailOnTimeout]
+#[MaxExceptions(2)]
+#[Queue('workflows')]
+#[Connection('database')]
+final class ConfiguredWorkflowStep implements ShouldQueue
+{
+    use Queueable;
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @param  array<string, mixed>  $context
+     * @return array<string, bool>
+     */
+    public function handle(array $payload, array $context): array
+    {
+        return ['configured' => true];
+    }
+}
+
+#[Tries(3)]
+final class FlakyWorkflowStep implements ShouldQueue
+{
+    use Queueable;
+
+    public static int $failuresLeft = 0;
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @param  array<string, mixed>  $context
+     * @return array<string, bool>
+     */
+    public function handle(array $payload, array $context): array
+    {
+        if (self::$failuresLeft > 0) {
+            self::$failuresLeft--;
+
+            throw new RuntimeException('flaky failure');
+        }
+
+        return ['recovered' => true];
+    }
+}
+
+#[Tries(2)]
+final class ExhaustingWorkflowStep implements ShouldQueue
+{
+    use Queueable;
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @param  array<string, mixed>  $context
+     */
+    public function handle(array $payload, array $context): never
+    {
+        throw new RuntimeException('still failing');
+    }
+}
+
+final class WaitingWorkflowStep implements ShouldQueue
+{
+    use Queueable;
+
+    public static bool $signalled = false;
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @param  array<string, mixed>  $context
+     * @return array<string, bool>
+     */
+    public function handle(array $payload, array $context): array
+    {
+        if (! self::$signalled) {
+            throw new SignalWaiting('Waiting for the approval signal.');
+        }
+
+        return ['approved' => true];
     }
 }
 

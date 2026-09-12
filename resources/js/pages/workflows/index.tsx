@@ -18,6 +18,7 @@ import { show as workflowShow } from "@/generated/routes/zenith/workflows";
 import { usePageRefresh } from "@/hooks/use-dashboard-refresh";
 import { useAutoLoadPreference } from "@/layouts/horizon-layout";
 import { resolveHorizonRoute } from "@/lib/horizon-route";
+import { workflowStatusVariant } from "@/pages/workflows/status";
 import type { HorizonPageProps } from "@/types/page";
 import type { WorkflowsPageProps } from "@/types/workflows";
 
@@ -80,7 +81,9 @@ function WorkflowsIndex({ horizon, available, workflows }: HorizonPageProps & Wo
                         </Link>
                       </TableCell>
                       <TableCell>
-                        <Badge>{workflow.status}</Badge>
+                        <Badge variant={workflowStatusVariant(workflow.status)}>
+                          {workflow.status}
+                        </Badge>
                       </TableCell>
                       <TableCell>
                         {workflow.completedSteps}/{workflow.stepCount}

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace DevactionLabs\Zenith\Workflows;
 
+use DevactionLabs\Zenith\Signals\SignalWaiting;
 use Illuminate\Contracts\Bus\Dispatcher;
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Support\Facades\Date;
@@ -44,14 +45,18 @@ final readonly class AdvanceWorkflow
             ]);
 
             if ($claimed) {
-                $this->bus->dispatch(new RunWorkflowStep($workflow->id, $step->name, $token));
+                $this->bus->dispatch(RunWorkflowStep::for($workflow->id, $step->name, $token, $step->job_class));
             }
         }
     }
 
     /**
      * Run a claimed step. Deliveries for a step that is no longer claimed by the given
-     * token, or that already finished, are ignored.
+     * token, or that already finished, are ignored. A failing attempt is recorded and
+     * rethrown so the job's retry policy decides whether the step fails, and a step that
+     * waits for a signal stays running.
+     *
+     * @throws Throwable
      */
     public function run(string $workflowId, string $stepName, string $token): void
     {
@@ -67,10 +72,10 @@ final readonly class AdvanceWorkflow
             return;
         }
 
-        $started = $step->transition([WorkflowStatus::Dispatched, WorkflowStatus::Running], [
-            'status' => WorkflowStatus::Running->value,
-            'attempts' => $step->attempts + 1,
-        ]);
+        $started = $step->transition(
+            [WorkflowStatus::Dispatched, WorkflowStatus::Running, WorkflowStatus::Retrying],
+            ['status' => WorkflowStatus::Running->value, 'attempts' => $step->attempts + 1],
+        );
 
         if (! $started) {
             return;
@@ -78,18 +83,15 @@ final readonly class AdvanceWorkflow
 
         try {
             $output = $this->execute($workflow, $step);
+        } catch (SignalWaiting $waiting) {
+            throw $waiting;
         } catch (Throwable $exception) {
-            $failed = $step->transition([WorkflowStatus::Running], [
-                'status' => WorkflowStatus::Failed->value,
+            $step->transition([WorkflowStatus::Running], [
+                'status' => WorkflowStatus::Retrying->value,
                 'error' => $exception->getMessage(),
-                'finished_at' => Date::now(),
             ]);
 
-            if ($failed) {
-                $this->fail($workflow);
-            }
-
-            return;
+            throw $exception;
         }
 
         $completed = $step->transition([WorkflowStatus::Running], [
@@ -101,6 +103,57 @@ final readonly class AdvanceWorkflow
 
         if ($completed) {
             $this->advance($workflow);
+        }
+    }
+
+    /**
+     * Fail a step whose job ran out of attempts, which fails its workflow.
+     */
+    public function failStep(string $workflowId, string $stepName, string $token, ?Throwable $exception): void
+    {
+        $workflow = Workflow::query()->with('steps')->find($workflowId);
+
+        if (! $workflow instanceof Workflow) {
+            return;
+        }
+
+        $step = $workflow->steps->firstWhere('name', $stepName);
+
+        if (! $step instanceof WorkflowStep || $step->job_uuid !== $token) {
+            return;
+        }
+
+        $failed = $step->transition(
+            [WorkflowStatus::Dispatched, WorkflowStatus::Running, WorkflowStatus::Retrying],
+            [
+                'status' => WorkflowStatus::Failed->value,
+                'error' => $exception?->getMessage() ?? $step->error,
+                'finished_at' => Date::now(),
+            ],
+        );
+
+        if ($failed) {
+            $this->fail($workflow);
+        }
+    }
+
+    /**
+     * Queue a fresh job for a step that is waiting for a signal, so waiting does not use
+     * up the attempts of the job that runs it.
+     */
+    public function redeliver(string $workflowId, string $stepName, string $token, int $delay): void
+    {
+        $step = WorkflowStep::query()
+            ->where('workflow_id', $workflowId)
+            ->where('name', $stepName)
+            ->where('job_uuid', $token)
+            ->where('status', WorkflowStatus::Running->value)
+            ->first();
+
+        if ($step instanceof WorkflowStep) {
+            $this->bus->dispatch(
+                RunWorkflowStep::for($workflowId, $stepName, $token, $step->job_class)->delay($delay),
+            );
         }
     }
 

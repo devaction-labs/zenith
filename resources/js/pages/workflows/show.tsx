@@ -18,6 +18,7 @@ import { useHorizonAbilities } from "@/hooks/use-horizon-abilities";
 import { usePageRefresh } from "@/hooks/use-dashboard-refresh";
 import { useAutoLoadPreference } from "@/layouts/horizon-layout";
 import { resolveHorizonRoute } from "@/lib/horizon-route";
+import { workflowStatusVariant } from "@/pages/workflows/status";
 import type { HorizonPageProps } from "@/types/page";
 import type { WorkflowDetailPageProps } from "@/types/workflows";
 
@@ -80,7 +81,7 @@ function WorkflowShow({ horizon, workflow }: HorizonPageProps & WorkflowDetailPa
           <CardContent className="p-0">
             <DetailList>
               <DetailListItem label="Status">
-                <Badge>{workflow.status}</Badge>
+                <Badge variant={workflowStatusVariant(workflow.status)}>{workflow.status}</Badge>
               </DetailListItem>
               <DetailListItem label="ID" scrollable>
                 {workflow.id}
@@ -106,6 +107,7 @@ function WorkflowShow({ horizon, workflow }: HorizonPageProps & WorkflowDetailPa
                   <TableHead>Step</TableHead>
                   <TableHead>Depends on</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Attempts</TableHead>
                   <TableHead>Output</TableHead>
                 </TableRow>
               </TableHeader>
@@ -122,9 +124,10 @@ function WorkflowShow({ horizon, workflow }: HorizonPageProps & WorkflowDetailPa
                     </TableCell>
                     <TableCell>{step.deps.length > 0 ? step.deps.join(", ") : "—"}</TableCell>
                     <TableCell>
-                      <Badge>{step.status}</Badge>
+                      <Badge variant={workflowStatusVariant(step.status)}>{step.status}</Badge>
                       {step.cascade ? <Badge className="ml-1">Cascade</Badge> : null}
                     </TableCell>
+                    <TableCell className="tabular-nums">{step.attempts}</TableCell>
                     <TableCell className="max-w-xs break-all text-xs">
                       {step.error ?? (step.output ? JSON.stringify(step.output) : "—")}
                     </TableCell>

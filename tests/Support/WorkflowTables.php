@@ -3,7 +3,39 @@
 declare(strict_types=1);
 
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Queue\WorkerOptions;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+
+function useDatabaseWorkflowQueue(): void
+{
+    Schema::dropIfExists('jobs');
+
+    Schema::create('jobs', function (Blueprint $table): void {
+        $table->id();
+        $table->string('queue')->index();
+        $table->longText('payload');
+        $table->unsignedTinyInteger('attempts');
+        $table->unsignedInteger('reserved_at')->nullable();
+        $table->unsignedInteger('available_at');
+        $table->unsignedInteger('created_at');
+    });
+
+    config([
+        'queue.default' => 'database',
+        'logging.default' => 'null',
+    ]);
+}
+
+function workWorkflowQueue(int $limit = 20): void
+{
+    $worker = app('queue.worker');
+    $options = new WorkerOptions(sleep: 0);
+
+    for ($run = 0; $run < $limit && DB::table('jobs')->exists(); $run++) {
+        $worker->runNextJob('database', 'default', $options);
+    }
+}
 
 function migrateWorkflowTables(): void
 {
