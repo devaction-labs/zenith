@@ -507,6 +507,10 @@ Laravel and Horizon compatibility matrix, the retained-job Redis matrix, a
 dependency audit, and the PHP and frontend quality checks. A single aggregate
 status check named **CI** passes only when all of them pass, and `main` accepts
 only pull requests whose CI check is green.
+Pull requests opened from this repository enable auto-merge as soon as that
+check passes, so they merge on their own with a merge commit unless they are
+drafts. The Auto Merge job needs the organization `GH_PAT` secret to be shared
+with the repository.
 
 Releases come from the separate **Release** workflow, which runs only after the
 Tests workflow succeeds on a push to `main`. To publish one, add the
