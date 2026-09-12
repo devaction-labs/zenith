@@ -130,9 +130,8 @@ bounded snapshot chunks with safe continuations.
 Install and configure Laravel Horizon in the host application first. Then install Zenith and publish its compiled assets:
 
 > [!NOTE]
-> Zenith is not on Packagist yet. Until the first tagged release, add the
-> repository to the host application's `composer.json` and require
-> `devaction-labs/zenith:dev-main` instead of `^0.1.0`:
+> Zenith is not on Packagist yet. Until it is, add the repository to the host
+> application's `composer.json` so Composer can resolve the tagged releases:
 >
 > ```json
 > "repositories": [
@@ -141,7 +140,7 @@ Install and configure Laravel Horizon in the host application first. Then instal
 > ```
 
 ```bash
-composer require devaction-labs/zenith:^0.1.0
+composer require devaction-labs/zenith:^0.2.0
 php artisan zenith:install
 php artisan migrate
 ```
@@ -521,13 +520,16 @@ dependency audit, and the PHP and frontend quality checks. A single aggregate
 status check named **CI** passes only when all of them pass, and `main` accepts
 only pull requests whose CI check is green.
 
-To publish a release, add one of the `release:patch`, `release:minor`, or
-`release:major` labels to the pull request before merging it. After the merge,
-the workflow runs CI again on `main`. If it passes, the workflow creates the next
-semantic version tag (for example `0.2.0`) and a GitHub release with generated
-notes, and Packagist picks up the tag through its GitHub integration.
-Maintainers can also release an explicit version from **Actions → Tests → Run
-workflow**.
+Releases come from the separate **Release** workflow, which runs only after the
+Tests workflow succeeds on a push to `main`. To publish one, add the
+`release:patch`, `release:minor`, or `release:major` label to the pull request
+before merging it. The workflow checks that the merged commit's CI check passed,
+tags the next semantic version, and publishes a GitHub release whose notes come
+from that version's CHANGELOG section, falling back to generated notes when the
+section is missing. Packagist picks up the tag through its GitHub integration.
+Maintainers can release an explicit version from **Actions → Release → Run
+workflow** on `main`. The first Zenith release, 0.2.0, is cut that way because
+there is no earlier tag to bump from; later releases can use the labels.
 
 ## License
 

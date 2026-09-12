@@ -4,24 +4,15 @@ declare(strict_types=1);
 
 use Symfony\Component\Yaml\Yaml;
 
-it('requires an explicit semantic version for a manual release', function (): void {
-    $dispatch = releaseWorkflowSection(releaseWorkflowSection(releaseWorkflow(), 'on'), 'workflow_dispatch');
-
-    expect(releaseWorkflowSection($dispatch, 'inputs')['version'] ?? null)->toBe([
-        'description' => 'Semantic version to tag and release',
-        'required' => true,
-        'type' => 'string',
-    ]);
-});
-
-it('runs on pull requests and on pushes to main', function (): void {
+it('runs CI on pull requests, on pushes to main, and on demand', function (): void {
     $triggers = releaseWorkflowSection(releaseWorkflow(), 'on');
 
     expect($triggers['push'] ?? null)->toBe(['branches' => ['main']])
-        ->and(array_key_exists('pull_request', $triggers))->toBeTrue();
+        ->and(array_key_exists('pull_request', $triggers))->toBeTrue()
+        ->and(array_key_exists('workflow_dispatch', $triggers))->toBeTrue();
 });
 
-it('cancels superseded pull request runs but never main or release runs', function (): void {
+it('cancels superseded pull request runs but never main runs', function (): void {
     expect(releaseWorkflow()['concurrency'] ?? null)->toBe([
         'group' => "\${{ github.event_name == 'pull_request' && format('tests-{0}', github.ref) || format('tests-{0}', github.sha) }}",
         'cancel-in-progress' => "\${{ github.event_name == 'pull_request' }}",
@@ -54,23 +45,62 @@ it('runs the complete test suite in CI without test impact analysis', function (
     expect($runs)->not->toContain('--tia');
 });
 
-it('releases only after CI passes on main', function (): void {
-    $release = releaseWorkflowJob('release');
+it('keeps releases out of the CI workflow', function (): void {
+    expect(array_key_exists('release', releaseWorkflowSection(releaseWorkflow(), 'jobs')))->toBeFalse();
+});
 
-    expect($release['needs'] ?? null)->toBe(['ci'])
-        ->and($release['if'] ?? null)
-        ->toBe("github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')")
-        ->and($release['permissions'] ?? null)->toBe(['contents' => 'write', 'pull-requests' => 'read']);
+it('releases after the Tests workflow succeeds on a push to main', function (): void {
+    $triggers = releaseWorkflowSection(releaseWorkflow('release.yml'), 'on');
+
+    expect($triggers['workflow_run'] ?? null)->toBe([
+        'workflows' => ['Tests'],
+        'types' => ['completed'],
+        'branches' => ['main'],
+    ])
+        ->and(releaseWorkflowJob('release', 'release.yml')['if'] ?? null)
+        ->toBe("github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')");
+});
+
+it('requires an explicit semantic version for a manual release', function (): void {
+    $dispatch = releaseWorkflowSection(releaseWorkflowSection(releaseWorkflow('release.yml'), 'on'), 'workflow_dispatch');
+
+    expect(releaseWorkflowSection($dispatch, 'inputs')['version'] ?? null)->toBe([
+        'description' => 'Semantic version to tag and release',
+        'required' => true,
+        'type' => 'string',
+    ]);
+});
+
+it('grants the release job only the permissions it needs', function (): void {
+    expect(releaseWorkflow('release.yml')['permissions'] ?? null)->toBe(['contents' => 'read'])
+        ->and(releaseWorkflowJob('release', 'release.yml')['permissions'] ?? null)->toBe([
+            'contents' => 'write',
+            'pull-requests' => 'read',
+            'checks' => 'read',
+        ]);
+});
+
+it('refuses to release a commit whose CI check did not pass', function (): void {
+    expect(releaseStep('Verify the CI check')['run'] ?? null)->toBeString()
+        ->toContain('refs/heads/main')
+        ->toContain('commits/${RELEASE_SHA}/check-runs')
+        ->toContain('select(.name == "CI")');
 });
 
 it('derives the next version from the release label of the merged pull request', function (): void {
     expect(releaseStep('Resolve release version')['run'] ?? null)->toBeString()
-        ->toContain('commits/${GITHUB_SHA}/pulls')
+        ->toContain('commits/${RELEASE_SHA}/pulls')
         ->toContain('for candidate in major minor patch; do')
         ->toContain('major) version="$((major + 1)).0.0" ;;')
         ->toContain('minor) version="${major}.$((minor + 1)).0" ;;')
         ->toContain('patch) version="${major}.${minor}.$((patch + 1))" ;;')
         ->toContain('echo "release=false" >> "$GITHUB_OUTPUT"');
+});
+
+it('resumes a label-driven release whose tag already points to the released commit', function (): void {
+    expect(releaseStep('Resolve release version')['run'] ?? null)->toBeString()
+        ->toContain('existing="$(git tag --points-at "$RELEASE_SHA"')
+        ->toContain('echo "version=${existing}" >> "$GITHUB_OUTPUT"');
 });
 
 it('can resume a release only when the existing tag belongs to the released commit', function (): void {
@@ -80,13 +110,20 @@ it('can resume a release only when the existing tag belongs to the released comm
 
     expect($validation['run'] ?? null)->toBeString()
         ->toContain('tag_commit="$(git rev-list -n 1 "refs/tags/$RELEASE_VERSION")"')
-        ->toContain('[[ "$tag_commit" != "$GITHUB_SHA" ]]')
+        ->toContain('[[ "$tag_commit" != "$RELEASE_SHA" ]]')
         ->and($tagCreation['run'] ?? null)->toBeString()
         ->toContain('if git rev-parse --verify --quiet "refs/tags/$RELEASE_VERSION"; then')
-        ->toContain('exit 0')
+        ->toContain('git tag "$RELEASE_VERSION" "$RELEASE_SHA"')
         ->and($releaseCreation['run'] ?? null)->toBeString()
         ->toContain('if gh release view "$RELEASE_VERSION" >/dev/null 2>&1; then')
         ->toContain('exit 0');
+});
+
+it('uses the CHANGELOG section of the version as release notes when present', function (): void {
+    expect(releaseStep('Create GitHub release')['run'] ?? null)->toBeString()
+        ->toContain('## [$RELEASE_VERSION]')
+        ->toContain('--notes-file')
+        ->toContain('--generate-notes');
 });
 
 it('publishes the Pest TIA baseline from main', function (): void {
@@ -125,12 +162,18 @@ it('pins every external action to a full commit sha', function (string $file): v
     foreach ($references as $reference) {
         expect($reference)->toMatch('/\A[^@]+@[a-f0-9]{40}\z/');
     }
-})->with(['tests.yml', 'tia-baseline.yml']);
+})->with(['tests.yml', 'tia-baseline.yml', 'release.yml']);
 
 /** @return array<string, mixed> */
 function releaseWorkflow(string $file = 'tests.yml'): array
 {
-    $workflow = Yaml::parseFile(__DIR__.'/../../.github/workflows/'.$file);
+    $path = __DIR__.'/../../.github/workflows/'.$file;
+
+    if (! is_file($path)) {
+        throw new RuntimeException("The {$file} workflow is missing.");
+    }
+
+    $workflow = Yaml::parseFile($path);
 
     if (! is_array($workflow)) {
         throw new RuntimeException("The {$file} workflow must contain a YAML mapping.");
@@ -213,7 +256,7 @@ function releaseWorkflowRuns(string $job, string $file = 'tests.yml'): string
 /** @return array<string, mixed> */
 function releaseStep(string $name): array
 {
-    foreach (releaseWorkflowSteps('release') as $step) {
+    foreach (releaseWorkflowSteps('release', 'release.yml') as $step) {
         if (($step['name'] ?? null) === $name) {
             return $step;
         }
