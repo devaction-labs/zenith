@@ -10,6 +10,7 @@ use DevactionLabs\Zenith\FailedJobs\FailedJobRetryEligibility;
 use DevactionLabs\Zenith\FailedJobs\FailedJobsData;
 use DevactionLabs\Zenith\Jobs\JobsData;
 use DevactionLabs\Zenith\Support\HorizonRuntime;
+use DevactionLabs\Zenith\Support\PayloadRedactor;
 use Illuminate\Contracts\Bus\Dispatcher;
 use Illuminate\Contracts\Queue\Queue;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
@@ -154,6 +155,42 @@ describe('failed job pages', function (): void {
                 ->where('job.payload.displayName', 'App\\Jobs\\ImportFeed')
                 ->where('job.retryEligible', true)
                 ->where('job.exception', 'sensitive trace'));
+    });
+
+    it('redacts sensitive job argument keys from the failed-job detail payload', function (): void {
+        $job = horizonJob(0, 'failed-secret');
+        $job->status = 'failed';
+        $job->failed_at = '1784281003.5';
+        $job->payload = json_encode([
+            'displayName' => 'App\\Jobs\\ChargeCustomer',
+            'pushedAt' => 1_784_281_000.25,
+            'data' => [
+                'commandName' => 'App\\Jobs\\ChargeCustomer',
+                'apiToken' => 'sk_live_super_secret',
+                'command' => serialize((object) ['customerId' => 9, 'password' => 'hunter2']),
+            ],
+        ], JSON_THROW_ON_ERROR);
+
+        $repository = mockDashboardContract(JobRepository::class);
+        $tags = mockDashboardContract(TagRepository::class);
+        dashboardReturnsFor($repository, 'findFailed', ['failed-secret'], $job);
+        app()->instance(FailedJobsData::class, new FailedJobsData(
+            $repository,
+            $tags,
+            new JobsData($repository),
+            new FailedJobRetryEligibility,
+        ));
+
+        $response = get('/horizon/failed/failed-secret');
+
+        $response->assertOk();
+        $response->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
+            ->component('FailedJobs/Show')
+            ->where('job.payload.data.apiToken', PayloadRedactor::REDACTED_VALUE)
+            ->where('job.payload.data.decodedCommand.customerId', 9)
+            ->where('job.payload.data.decodedCommand.password', PayloadRedactor::REDACTED_VALUE));
+        $response->assertDontSee('sk_live_super_secret');
+        $response->assertDontSee('hunter2');
     });
 
     it('does not pass browser row sorting into the failed-job backend query', function (): void {

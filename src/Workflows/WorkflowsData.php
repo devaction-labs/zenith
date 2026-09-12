@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace DevactionLabs\Zenith\Workflows;
 
+use DevactionLabs\Zenith\Support\PayloadRedactor;
 use DevactionLabs\Zenith\Workflows\Data\WorkflowDetailData;
 use DevactionLabs\Zenith\Workflows\Data\WorkflowRowData;
 use DevactionLabs\Zenith\Workflows\Data\WorkflowStepData;
@@ -55,7 +56,7 @@ final class WorkflowsData
             deps: $step->dependencies(),
             cascade: $step->cascade,
             status: $step->status,
-            output: is_array($step->output) ? $step->outputValues() : null,
+            output: is_array($step->output) ? PayloadRedactor::redact($step->outputValues()) : null,
             error: $step->error,
             attempts: $step->attempts,
             finishedAt: $step->finished_at?->getTimestamp(),
@@ -74,7 +75,7 @@ final class WorkflowsData
             id: $workflow->id,
             name: $workflow->name,
             status: $workflow->status->value,
-            context: $workflow->context ?? [],
+            context: PayloadRedactor::redact($workflow->context ?? []),
             steps: array_values($steps),
             createdAt: $workflow->created_at?->getTimestamp(),
             finishedAt: $workflow->finished_at?->getTimestamp(),

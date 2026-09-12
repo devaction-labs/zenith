@@ -2,10 +2,12 @@
 
 declare(strict_types=1);
 
+use DevactionLabs\Zenith\Support\PayloadRedactor;
 use DevactionLabs\Zenith\Workflows\AdvanceWorkflow;
 use DevactionLabs\Zenith\Workflows\Workflow;
 use DevactionLabs\Zenith\Workflows\WorkflowDefinition;
 use DevactionLabs\Zenith\Workflows\WorkflowStatus;
+use DevactionLabs\Zenith\Zenith;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Support\Facades\Bus;
@@ -20,6 +22,10 @@ beforeEach(function (): void {
     withoutMiddleware([PreventRequestForgery::class, ValidateCsrfToken::class]);
     Horizon::auth(static fn (): bool => true);
     migrateWorkflowTables();
+});
+
+afterEach(function (): void {
+    Zenith::resetRedactPayloadUsing();
 });
 
 it('lists workflows', function (): void {
@@ -120,6 +126,45 @@ it('shows a failed compensation as retryable', function (): void {
             ->where('workflow.steps.0.status', WorkflowStatus::CompensationFailed->value)
             ->where('workflow.steps.0.error', 'compensation failed')
             ->where('workflow.retryable', true));
+});
+
+it('redacts sensitive step output and workflow context values', function (): void {
+    $workflow = WorkflowDefinition::make('billing')
+        ->context(['password' => 'hunter2', 'tenant' => 7])
+        ->add('charge', SecretReturningWorkflowStep::class, ['seed' => [1]])
+        ->dispatch();
+
+    get("/horizon/workflows/{$workflow->id}")
+        ->assertSuccessful()
+        ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
+            ->component('Workflows/Show')
+            ->where('workflow.context.password', PayloadRedactor::REDACTED_VALUE)
+            ->where('workflow.context.tenant', 7)
+            ->where('workflow.steps.0.output.apiToken', PayloadRedactor::REDACTED_VALUE)
+            ->where('workflow.steps.0.output.itemCount', 3));
+
+    get("/horizon/workflows/{$workflow->id}")
+        ->assertSuccessful()
+        ->assertDontSee('hunter2')
+        ->assertDontSee('super-secret-token');
+});
+
+it('lets a host application fully replace workflow payload redaction', function (): void {
+    Zenith::redactPayloadUsing(static fn (array $payload): array => array_map(
+        static fn (mixed $value): mixed => is_string($value) ? strrev($value) : $value,
+        $payload,
+    ));
+
+    $workflow = WorkflowDefinition::make('reversible')
+        ->context(['password' => 'hunter2'])
+        ->add('charge', SecretReturningWorkflowStep::class)
+        ->dispatch();
+
+    get("/horizon/workflows/{$workflow->id}")
+        ->assertSuccessful()
+        ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
+            ->where('workflow.context.password', strrev('hunter2'))
+            ->where('workflow.steps.0.output.apiToken', strrev('super-secret-token')));
 });
 
 it('cancels a running workflow from the dashboard', function (): void {
