@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- Pull requests from this repository enable auto-merge with a merge commit as soon as the aggregate `CI` check passes, through an Auto Merge job that uses the organization `GH_PAT` secret so the merge triggers the follow-up workflows. Draft pull requests are skipped.
+
 ## [0.2.0] - 2026-09-12
 
 First release under the Zenith name. Earlier versions were published as Horizon New Dawn.

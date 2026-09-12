@@ -45,6 +45,20 @@ it('runs the complete test suite in CI without test impact analysis', function (
     expect($runs)->not->toContain('--tia');
 });
 
+it('enables auto-merge on same-repository pull requests once CI passes', function (): void {
+    $autoMerge = releaseWorkflowJob('auto-merge');
+    $step = releaseWorkflowSteps('auto-merge')[0] ?? [];
+
+    expect($autoMerge['name'] ?? null)->toBe('Auto Merge')
+        ->and($autoMerge['needs'] ?? null)->toBe(['ci'])
+        ->and($autoMerge['if'] ?? null)
+        ->toBe("github.event_name == 'pull_request' && !github.event.pull_request.draft && github.event.pull_request.head.repo.full_name == github.repository && needs.ci.result == 'success'")
+        ->and($step['env'] ?? null)->toMatchArray(['GH_TOKEN' => '${{ secrets.GH_PAT }}'])
+        ->and(releaseWorkflowRuns('auto-merge'))
+        ->toContain('gh pr merge "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --merge --delete-branch --auto')
+        ->toContain('if [[ -z "$GH_TOKEN" ]]; then');
+});
+
 it('keeps releases out of the CI workflow', function (): void {
     expect(array_key_exists('release', releaseWorkflowSection(releaseWorkflow(), 'jobs')))->toBeFalse();
 });
