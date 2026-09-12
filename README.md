@@ -120,18 +120,8 @@ bounded snapshot chunks with safe continuations.
 
 Install and configure Laravel Horizon in the host application first. Then install Zenith and publish its compiled assets:
 
-> [!NOTE]
-> Zenith is not on Packagist yet. Until it is, add the repository to the host
-> application's `composer.json` so Composer can resolve the tagged releases:
->
-> ```json
-> "repositories": [
->     { "type": "vcs", "url": "https://github.com/devaction-labs/zenith" }
-> ]
-> ```
-
 ```bash
-composer require devaction-labs/zenith:^0.2.0
+composer require devaction-labs/zenith:^0.3.0
 php artisan zenith:install
 php artisan migrate
 ```
