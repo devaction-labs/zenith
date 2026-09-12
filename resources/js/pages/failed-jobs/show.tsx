@@ -8,8 +8,10 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 
+import { AttemptTimeline } from "@/components/jobs/attempt-timeline";
 import { DetailList, DetailListItem } from "@/components/detail-list";
 import { Duration } from "@/components/duration";
+import { JobAttributesPanel } from "@/components/jobs/job-attributes";
 import { JobCompositionPanel } from "@/components/jobs/job-composition";
 import { FailedJobActionsMenu } from "@/components/jobs/failed-job-actions";
 import { JobStatus } from "@/components/jobs/job-status";
@@ -189,6 +191,7 @@ function FailedJobShow({ horizon, job }: FailedJobDetailPageProps) {
                 jobId={job.id}
                 horizonBaseUrl={horizon.baseUrl}
                 canRetry={job.retryEligible}
+                canExplainFailure={job.canExplainFailure}
               />
             </CardAction>
           </CardHeader>
@@ -216,7 +219,9 @@ function FailedJobShow({ horizon, job }: FailedJobDetailPageProps) {
         </Card>
 
         <JobCompositionPanel composition={job.composition} />
+        <JobAttributesPanel attributes={job.attributes} />
         <FailedJobDataTabs job={job} horizonBaseUrl={horizon.baseUrl} />
+        <AttemptTimeline timeline={job.attemptTimeline} />
       </div>
     </>
   );

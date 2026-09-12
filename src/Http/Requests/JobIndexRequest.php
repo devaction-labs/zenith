@@ -23,6 +23,7 @@ final class JobIndexRequest extends FormRequest
             'filter_queue',
             'filter_connection',
             'filter_state',
+            'filter_tag',
             'tag',
         ] as $key) {
             $value = $this->input($key);
@@ -46,6 +47,7 @@ final class JobIndexRequest extends FormRequest
                 'nullable',
                 Rule::in(['ready', 'reserved', 'delayed', 'released']),
             ],
+            'filter_tag' => ['nullable', 'string', 'max:255'],
             'tag' => ['nullable', 'string', 'max:255'],
         ];
     }
@@ -64,6 +66,7 @@ final class JobIndexRequest extends FormRequest
             queue: $this->nullableString('filter_queue'),
             connection: $this->nullableString('filter_connection'),
             state: $this->nullableString('filter_state'),
+            tag: $this->nullableString('filter_tag'),
         );
     }
 

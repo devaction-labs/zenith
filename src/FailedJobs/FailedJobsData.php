@@ -15,6 +15,7 @@ use DevactionLabs\Zenith\Jobs\JobsData;
 use DevactionLabs\Zenith\Jobs\RetainedJobFilterCatalog;
 use DevactionLabs\Zenith\Jobs\RetainedJobQuery;
 use DevactionLabs\Zenith\Jobs\RetainedJobType;
+use DevactionLabs\Zenith\Zenith;
 use Illuminate\Contracts\Redis\Factory as RedisFactory;
 use Illuminate\Redis\Connections\PhpRedisConnection;
 use Illuminate\Redis\Connections\PredisConnection;
@@ -257,7 +258,10 @@ final readonly class FailedJobsData
                 exception: is_string($job->exception ?? null)
                     ? mb_convert_encoding($job->exception, 'UTF-8', 'UTF-8')
                     : '',
+                attemptTimeline: $detail->attemptTimeline,
                 composition: $detail->composition,
+                attributes: $detail->attributes,
+                canExplainFailure: Zenith::explainsFailures(),
             );
         } catch (Throwable $exception) {
             report($exception);

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use DevactionLabs\Zenith\Jobs\JobListType;
 use DevactionLabs\Zenith\Jobs\JobsData;
+use DevactionLabs\Zenith\Support\PayloadRedactor;
 use Illuminate\Contracts\Redis\Factory as RedisFactory;
 use Illuminate\Redis\Connections\Connection;
 use Illuminate\Support\Collection;
@@ -224,6 +225,36 @@ describe('JobsData', function (): void {
             ])
             ->and(json_encode($detail?->payload))->not->toContain('serialized-secret-command')
             ->and(json_encode($detail?->toArray()))->not->toContain('sensitive trace', 'secret":"context');
+    });
+
+    it('redacts sensitive argument keys from the detail payload', function (): void {
+        $repository = mockDashboardContract(JobRepository::class);
+        $job = horizonJob(0);
+        $command = (object) [
+            'customerId' => 42,
+            'password' => 'hunter2',
+            'apiToken' => 'abc123',
+        ];
+        $job->payload = json_encode([
+            'displayName' => 'App\\Jobs\\ImportFeed',
+            'pushedAt' => 1_784_281_000,
+            'data' => [
+                'commandName' => 'App\\Jobs\\ImportFeed',
+                'password' => 'top-level-secret',
+                'command' => serialize($command),
+            ],
+        ], JSON_THROW_ON_ERROR);
+        dashboardReturns($repository, 'getJobs', new Collection([$job]));
+
+        $detail = (new JobsData($repository))->find('job-1');
+        $data = $detail?->payload['data'] ?? null;
+
+        expect($detail)->not->toBeNull()
+            ->and(data_get($data, 'password'))->toBe(PayloadRedactor::REDACTED_VALUE)
+            ->and(data_get($data, 'decodedCommand.customerId'))->toBe(42)
+            ->and(data_get($data, 'decodedCommand.password'))->toBe(PayloadRedactor::REDACTED_VALUE)
+            ->and(data_get($data, 'decodedCommand.apiToken'))->toBe(PayloadRedactor::REDACTED_VALUE)
+            ->and(json_encode($detail?->payload))->not->toContain('hunter2', 'abc123', 'top-level-secret');
     });
 
     it('normalizes batch delayed-until and decoded command diagnostics', function (): void {

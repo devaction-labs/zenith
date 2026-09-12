@@ -18,15 +18,27 @@ final class JobComposition
      */
     public static function fromPayload(array $payload, ?array $decodedCommand): JobCompositionData
     {
-        $data = is_array($payload['data'] ?? null) ? $payload['data'] : [];
-        $commandName = $data['commandName'] ?? $decodedCommand['class'] ?? null;
-        $class = is_string($commandName) && $commandName !== '' ? $commandName : null;
+        $class = self::commandClass($payload, $decodedCommand);
 
         return new JobCompositionData(
             unique: self::implements($class, ShouldBeUnique::class),
             encrypted: self::implements($class, ShouldBeEncrypted::class),
             chain: self::chain($decodedCommand),
         );
+    }
+
+    /**
+     * Resolve the retained job's command class name without instantiating it.
+     *
+     * @param  array<string, mixed>  $payload
+     * @param  array<array-key, mixed>|null  $decodedCommand
+     */
+    public static function commandClass(array $payload, ?array $decodedCommand): ?string
+    {
+        $data = is_array($payload['data'] ?? null) ? $payload['data'] : [];
+        $commandName = $data['commandName'] ?? $decodedCommand['class'] ?? null;
+
+        return is_string($commandName) && $commandName !== '' ? $commandName : null;
     }
 
     /**

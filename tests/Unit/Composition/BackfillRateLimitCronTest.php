@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Schema;
 
 beforeEach(function (): void {
     app(Repository::class)->clear();
+    config()->set('zenith.dynamic_cron_allowed_classes', [FetchWorkflowStep::class]);
     Schema::dropIfExists('zenith_dynamic_crons');
     Schema::create('zenith_dynamic_crons', function (Blueprint $table): void {
         $table->id();

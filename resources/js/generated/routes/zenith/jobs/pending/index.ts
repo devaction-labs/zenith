@@ -1,6 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../../../wayfinder'
 import clear from './clear'
 import cancel from './cancel'
+import cancelSelected from './cancel-selected'
 import release from './release'
 /**
 * @see \DevactionLabs\Zenith\Http\Controllers\PendingJobController::destroy
@@ -57,6 +58,7 @@ destroy.delete = (args: { job: string | number } | [job: string | number ] | str
 const pending = {
     clear: Object.assign(clear, clear),
     cancel: Object.assign(cancel, cancel),
+    cancelSelected: Object.assign(cancelSelected, cancelSelected),
     release: Object.assign(release, release),
     destroy: Object.assign(destroy, destroy),
 }

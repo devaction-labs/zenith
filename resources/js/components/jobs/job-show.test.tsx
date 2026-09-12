@@ -1,3 +1,4 @@
+import { router } from "@inertiajs/react";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 
@@ -32,12 +33,14 @@ const props: JobDetailPageProps = {
     completedAt: null,
     failedAt: null,
     runtime: null,
+    retryEligible: false,
     payload: {
       data: {
         commandName: "App\\Jobs\\ImportFeed",
         decodedCommand: { customerId: 42 },
       },
     },
+    attemptTimeline: { available: false, attempts: [], message: null },
   },
 };
 
@@ -138,5 +141,68 @@ describe("JobShow", () => {
     rerender(<JobShow {...props} />);
 
     expect(screen.queryByRole("button", { name: "Pending job actions" })).not.toBeInTheDocument();
+  });
+
+  it("offers a retry action for a retry-eligible completed job", () => {
+    render(
+      <JobShow
+        {...props}
+        type="completed"
+        job={{
+          ...props.job,
+          status: "completed",
+          completedAt: 1_784_281_002,
+          retryEligible: true,
+        }}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Retry job" }));
+
+    expect(router.post).toHaveBeenCalledWith(
+      "/horizon/jobs/completed/job-1/retry",
+      {},
+      expect.objectContaining({ preserveScroll: true }),
+    );
+  });
+
+  it("offers a retry action for a retry-eligible silenced job", () => {
+    render(
+      <JobShow
+        {...props}
+        type="silenced"
+        job={{
+          ...props.job,
+          status: "completed",
+          completedAt: 1_784_281_002,
+          retryEligible: true,
+        }}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Retry job" }));
+
+    expect(router.post).toHaveBeenCalledWith(
+      "/horizon/jobs/silenced/job-1/retry",
+      {},
+      expect.objectContaining({ preserveScroll: true }),
+    );
+  });
+
+  it("hides the retry action for a completed job that is not retry-eligible", () => {
+    render(
+      <JobShow
+        {...props}
+        type="completed"
+        job={{
+          ...props.job,
+          status: "completed",
+          completedAt: 1_784_281_002,
+          retryEligible: false,
+        }}
+      />,
+    );
+
+    expect(screen.queryByRole("button", { name: "Retry job" })).not.toBeInTheDocument();
   });
 });

@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace DevactionLabs\Zenith\Signals;
 
 use Closure;
+use Illuminate\Cache\ArrayStore;
+use Illuminate\Cache\Repository as ArrayRepository;
 use Illuminate\Contracts\Cache\Factory;
 use Illuminate\Contracts\Cache\LockProvider;
 use Illuminate\Contracts\Cache\Repository;
@@ -27,6 +29,18 @@ final class Signal
     private const string LOCK_PREFIX = 'zenith:signal-lock:';
 
     private const int LOCK_SECONDS = 10;
+
+    private static ?Repository $fakeStore = null;
+
+    /**
+     * Route every signal through an isolated, in-memory store instead of the cache store
+     * named by zenith.signals.store, so a test can send and await signals deterministically
+     * without configuring a shared, lock-capable cache. Call it again for a clean slate.
+     */
+    public static function fake(): void
+    {
+        self::$fakeStore = new ArrayRepository(new ArrayStore);
+    }
 
     /**
      * @param  array<string, mixed>  $payload
@@ -124,6 +138,10 @@ final class Signal
 
     private static function store(): Repository
     {
+        if (self::$fakeStore instanceof Repository) {
+            return self::$fakeStore;
+        }
+
         $store = config('zenith.signals.store');
 
         return app(Factory::class)->store(is_string($store) ? $store : null);

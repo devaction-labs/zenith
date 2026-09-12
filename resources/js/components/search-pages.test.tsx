@@ -131,7 +131,7 @@ const exactBatchQueryProps = {
 };
 const exactJobQueryProps = {
   listRevision: "[0,null]",
-  filters: { job: null, queue: null, connection: null, state: null },
+  filters: { job: null, queue: null, connection: null, state: null, tag: null },
   filterCatalog: {
     available: true,
     jobs: [],
@@ -263,7 +263,7 @@ describe("Inertia search pages", () => {
       <FailedJobsIndex
         horizon={horizon}
         query=""
-        filters={{ job: null, queue: null, connection: null, state: null }}
+        filters={{ job: null, queue: null, connection: null, state: null, tag: null }}
         filterCatalog={{
           available: true,
           jobs: [{ value: "App\\Jobs\\ArchivedExport", label: "ArchivedExport" }],
@@ -303,7 +303,7 @@ describe("Inertia search pages", () => {
         type="completed"
         pendingCounts={null}
         query=""
-        filters={{ job: null, queue: null, connection: null, state: null }}
+        filters={{ job: null, queue: null, connection: null, state: null, tag: null }}
         filterCatalog={{
           available: true,
           jobs: [{ value: "App\\Jobs\\ArchivedExport", label: "ArchivedExport" }],
@@ -322,7 +322,7 @@ describe("Inertia search pages", () => {
     ).toBeVisible();
     expect(jobFilters.props).toHaveBeenCalledWith(
       expect.objectContaining({
-        filterKeys: ["job", "queue", "connection"],
+        filterKeys: ["job", "queue", "connection", "tag"],
         options: {
           job: [{ value: "App\\Jobs\\ArchivedExport", label: "ArchivedExport" }],
           queue: [{ value: "archive", label: "archive" }],
@@ -366,7 +366,7 @@ describe("Inertia search pages", () => {
         type="completed"
         pendingCounts={null}
         query=""
-        filters={{ job: null, queue: null, connection: null, state: null }}
+        filters={{ job: null, queue: null, connection: null, state: null, tag: null }}
         filterCatalog={{
           available: true,
           jobs: [{ value: "App\\Jobs\\ArchivedExport", label: "ArchivedExport" }],
@@ -435,7 +435,7 @@ describe("Inertia search pages", () => {
       horizon,
       type: "completed" as const,
       pendingCounts: null,
-      filters: { job: null, queue: null, connection: null, state: null },
+      filters: { job: null, queue: null, connection: null, state: null, tag: null },
       filterCatalog: exactJobQueryProps.filterCatalog,
       listRevision: "[0,null]",
       jobs: { data: [], total: 0, available: true, message: null },
@@ -475,7 +475,7 @@ describe("Inertia search pages", () => {
         type="completed"
         pendingCounts={null}
         query=""
-        filters={{ job: null, queue: null, connection: null, state: null }}
+        filters={{ job: null, queue: null, connection: null, state: null, tag: null }}
         querySignature="completed-preparing-filters"
         listRevision="[0,null]"
         jobs={{ data: [], total: 0, available: true, message: null }}
@@ -496,7 +496,7 @@ describe("Inertia search pages", () => {
         type="completed"
         pendingCounts={null}
         query=""
-        filters={{ job: null, queue: null, connection: null, state: null }}
+        filters={{ job: null, queue: null, connection: null, state: null, tag: null }}
         filterCatalog={{
           available: false,
           jobs: [],
@@ -523,7 +523,7 @@ describe("Inertia search pages", () => {
       <FailedJobsIndex
         horizon={horizon}
         query=""
-        filters={{ job: null, queue: null, connection: null, state: null }}
+        filters={{ job: null, queue: null, connection: null, state: null, tag: null }}
         querySignature="failed-preparing-filters"
         listRevision="[0,null]"
         actions={failedJobActions(false)}
@@ -560,7 +560,7 @@ describe("Inertia search pages", () => {
         type="completed"
         pendingCounts={null}
         query=""
-        filters={{ job: null, queue: "mail", connection: null, state: null }}
+        filters={{ job: null, queue: "mail", connection: null, state: null, tag: null }}
         filterCatalog={{
           available: true,
           jobs: [],
@@ -650,7 +650,7 @@ describe("Inertia search pages", () => {
       <FailedJobsIndex
         horizon={horizon}
         query="tenant:42"
-        filters={{ job: null, queue: null, connection: "redis", state: null }}
+        filters={{ job: null, queue: null, connection: "redis", state: null, tag: null }}
         filterCatalog={{
           available: true,
           jobs: [],

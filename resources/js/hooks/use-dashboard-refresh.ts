@@ -1,6 +1,7 @@
-import { router, usePoll } from "@inertiajs/react";
+import { router } from "@inertiajs/react";
 import { useEffect, useRef } from "react";
 
+import { useEffectiveRefreshRate } from "@/hooks/use-refresh-rate";
 import { trackBackgroundRefresh } from "@/lib/auto-refresh-status";
 
 const dashboardProps = ["summary", "workload", "supervisors"];
@@ -10,6 +11,7 @@ export function usePageRefresh(
   enabled: boolean,
   includeSharedProps = true,
 ) {
+  const refreshRate = useEffectiveRefreshRate(interval);
   const requestOptions = () =>
     trackBackgroundRefresh({
       only: [
@@ -19,36 +21,31 @@ export function usePageRefresh(
       showProgress: false,
     });
   const requestOptionsRef = useRef(requestOptions);
-  const wasPollingRef = useRef(enabled && interval > 0);
+  const wasPollingRef = useRef(enabled && refreshRate > 0);
 
   requestOptionsRef.current = requestOptions;
 
-  const poll = usePoll(interval, () => requestOptionsRef.current(), {
-    autoStart: false,
-    mode: "cancel",
-  });
-  const pollRef = useRef(poll);
-
-  pollRef.current = poll;
-
   useEffect(() => {
-    const controls = pollRef.current;
-    const shouldPoll = enabled && interval > 0;
+    const shouldPoll = enabled && refreshRate > 0;
 
-    if (shouldPoll) {
-      if (!wasPollingRef.current) {
-        router.reload(requestOptionsRef.current());
-      }
+    if (!shouldPoll) {
+      wasPollingRef.current = false;
 
-      controls.start();
-    } else {
-      controls.stop();
+      return;
     }
 
-    wasPollingRef.current = shouldPoll;
+    if (!wasPollingRef.current) {
+      router.reload(requestOptionsRef.current());
+    }
 
-    return () => controls.stop();
-  }, [enabled, includeSharedProps, interval]);
+    wasPollingRef.current = true;
+
+    const poll = router.poll(refreshRate, () => requestOptionsRef.current(), {
+      mode: "cancel",
+    });
+
+    return () => poll.destroy();
+  }, [enabled, includeSharedProps, refreshRate]);
 }
 
 export function useDashboardRefresh(interval: number, enabled: boolean, props = dashboardProps) {

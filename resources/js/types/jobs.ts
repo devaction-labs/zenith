@@ -1,7 +1,7 @@
 import type { HorizonStatus } from "@/types/dashboard";
 
 export type JobListType = "pending" | "completed" | "silenced";
-export type JobFilterKey = "job" | "queue" | "connection" | "state";
+export type JobFilterKey = "job" | "queue" | "connection" | "state" | "tag";
 export type JobSort = "name" | "pushedAt" | "completedAt" | "failedAt" | "runtime";
 
 export type JobFilterValues = Record<JobFilterKey, string | null>;
@@ -44,6 +44,14 @@ export type JobRow = {
   inspectable?: boolean;
 };
 
+export type JobTableSelection = {
+  label: string;
+  selectedIds: ReadonlySet<string>;
+  onToggle: (id: string) => void;
+  onSelectIds: (ids: readonly string[]) => void;
+  onClear: () => void;
+};
+
 export type JobCollection = {
   data: JobRow[];
   total: number;
@@ -57,6 +65,41 @@ export type JobComposition = {
   chain: Array<{ class: string }>;
 };
 
+export type JobAttempt = {
+  attempt: number;
+  outcome: string;
+  exceptionClass: string | null;
+  message: string | null;
+  fingerprint: string | null;
+  runtimeMilliseconds: number | null;
+  node: string;
+  occurredAt: number;
+};
+
+export type AttemptTimeline = {
+  available: boolean;
+  attempts: JobAttempt[];
+  message: string | null;
+};
+
+export type JobAttributes = {
+  tries: number | null;
+  backoff: number | number[] | null;
+  timeout: number | null;
+  failOnTimeout: boolean;
+  maxExceptions: number | null;
+  uniqueFor: number | null;
+  debounceFor: number | null;
+  debounceMaxWait: number | null;
+  queue: string | null;
+  connection: string | null;
+  delay: number | null;
+  withoutRelations: boolean;
+  deleteWhenMissingModels: boolean;
+  routedQueue: string | null;
+  routedConnection: string | null;
+};
+
 export type JobDetail = Omit<
   JobRow,
   | "index"
@@ -65,12 +108,13 @@ export type JobDetail = Omit<
   | "retryCompleted"
   | "retryCount"
   | "latestRetryStatus"
-  | "retryEligible"
   | "attemptsComplete"
 > & {
   batchId: string | null;
   payload: Record<string, unknown>;
+  attemptTimeline: AttemptTimeline;
   composition?: JobComposition;
+  attributes?: JobAttributes;
 };
 
 export type FailedJobRetry = {
@@ -85,6 +129,7 @@ export type FailedJobDetail = Omit<JobDetail, "completedAt"> & {
   retryEligible: boolean;
   context: Record<string, unknown> | unknown[];
   exception: string;
+  canExplainFailure: boolean;
 };
 
 export type FailedJobBulkActions = {

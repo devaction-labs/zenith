@@ -1,3 +1,13 @@
+export type ScheduleRunStatus = "success" | "failed" | "skipped";
+
+export type ScheduleRun = {
+  status: ScheduleRunStatus;
+  startedAt: number;
+  durationMs: number | null;
+  exitCode: number | null;
+  outputTail: string | null;
+};
+
 export type ScheduleEvent = {
   id: string;
   expression: string;
@@ -12,9 +22,13 @@ export type ScheduleEvent = {
   overlapping: boolean;
   runtimeEditable: boolean;
   paused: boolean;
+  history: ScheduleRun[];
+  dynamicCronId: number | null;
+  payload: Record<string, unknown> | null;
 };
 
 export type SchedulePageProps = {
   events: ScheduleEvent[];
   canRun: boolean;
+  dynamicCronAllowedClasses: string[];
 };

@@ -26,6 +26,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property Carbon|null $finished_at
+ * @property Carbon|null $interrupted_at
  */
 final class WorkflowStep extends Model
 {
@@ -47,6 +48,7 @@ final class WorkflowStep extends Model
         'job_uuid',
         'attempts',
         'finished_at',
+        'interrupted_at',
     ];
 
     /**
@@ -60,6 +62,7 @@ final class WorkflowStep extends Model
             'cascade' => 'boolean',
             'output' => 'array',
             'finished_at' => 'datetime',
+            'interrupted_at' => 'datetime',
         ];
     }
 

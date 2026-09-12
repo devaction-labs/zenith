@@ -54,6 +54,7 @@ beforeEach(function (): void {
 
     Schema::dropIfExists('zenith_dynamic_crons');
     runDynamicCronMigration('migrate:refresh');
+    config()->set('zenith.dynamic_cron_allowed_classes', [DynamicCronProbeJob::class]);
 });
 
 afterEach(function (): void {
@@ -162,6 +163,48 @@ it('does nothing when the cron row was deleted', function (): void {
     Bus::dispatch(new RunDynamicCron(999));
 
     Bus::assertNothingDispatched();
+});
+
+it('rejects creating a cron for a job class outside the configured allowlist', function (): void {
+    config()->set('zenith.dynamic_cron_allowed_classes', []);
+
+    expect(fn (): mixed => app(DynamicSchedule::class)->create('often', '* * * * *', DynamicCronProbeJob::class))
+        ->toThrow(InvalidArgumentException::class);
+});
+
+it('updates a cron and re-validates the expression, timezone, and job class', function (): void {
+    $cron = app(DynamicSchedule::class)->create('often', '* * * * *', DynamicCronProbeJob::class);
+
+    $updated = app(DynamicSchedule::class)->update(
+        $cron->id,
+        'often-renamed',
+        '*/5 * * * *',
+        DynamicCronProbeJob::class,
+        ['region' => 'us'],
+        'America/Sao_Paulo',
+    );
+
+    expect($updated->name)->toBe('often-renamed')
+        ->and($updated->expression)->toBe('*/5 * * * *')
+        ->and($updated->payload)->toBe(['region' => 'us'])
+        ->and($updated->timezone)->toBe('America/Sao_Paulo');
+});
+
+it('rejects an update to a job class outside the configured allowlist', function (): void {
+    $cron = app(DynamicSchedule::class)->create('often', '* * * * *', DynamicCronProbeJob::class);
+    config()->set('zenith.dynamic_cron_allowed_classes', []);
+
+    expect(fn (): mixed => app(DynamicSchedule::class)->update($cron->id, 'often', '* * * * *', DynamicCronProbeJob::class))
+        ->toThrow(InvalidArgumentException::class);
+});
+
+it('refuses to dispatch a job class that is no longer allowlisted', function (): void {
+    $cron = app(DynamicSchedule::class)->create('often', '* * * * *', DynamicCronProbeJob::class);
+    config()->set('zenith.dynamic_cron_allowed_classes', []);
+
+    Bus::dispatch(new RunDynamicCron($cron->id));
+
+    expect(DynamicCronProbeJob::$regions)->toBe([]);
 });
 
 it('runs the dynamic cron tick from the scheduler', function (): void {

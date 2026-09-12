@@ -14,6 +14,7 @@ const inertia = vi.hoisted(() => ({
       processing: false,
       maintenanceMode: false,
       allQueuesPaused: false,
+      schedulePaused: false,
     },
     navigationCounts: undefined as
       | {
@@ -348,6 +349,22 @@ describe("HorizonLayout", () => {
     inertia.props.horizon.maintenanceMode = false;
   });
 
+  it("opens the keyboard shortcuts help dialog on ?", () => {
+    render(
+      <TooltipProvider>
+        <HorizonLayout>
+          <p>Dashboard content</p>
+        </HorizonLayout>
+      </TooltipProvider>,
+    );
+
+    expect(screen.queryByRole("dialog", { name: "Keyboard shortcuts" })).not.toBeInTheDocument();
+
+    fireEvent.keyDown(document, { key: "?" });
+
+    expect(screen.getByRole("dialog", { name: "Keyboard shortcuts" })).toBeVisible();
+  });
+
   it("warns when Laravel's global queue pause is active", () => {
     inertia.props.horizon.allQueuesPaused = true;
 
@@ -363,5 +380,22 @@ describe("HorizonLayout", () => {
     expect(screen.getByText(/global queue pause is active/)).toBeVisible();
 
     inertia.props.horizon.allQueuesPaused = false;
+  });
+
+  it("warns when the scheduler is paused", () => {
+    inertia.props.horizon.schedulePaused = true;
+
+    render(
+      <TooltipProvider>
+        <HorizonLayout>
+          <p>Dashboard content</p>
+        </HorizonLayout>
+      </TooltipProvider>,
+    );
+
+    expect(screen.getByText("Scheduler is paused")).toBeVisible();
+    expect(screen.getByText(/scheduled events will not run/i)).toBeVisible();
+
+    inertia.props.horizon.schedulePaused = false;
   });
 });

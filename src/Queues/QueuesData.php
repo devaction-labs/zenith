@@ -24,6 +24,7 @@ final readonly class QueuesData
         private MetricsRepository $metrics,
         private QueuePauseStatus $pauseStatus,
         private QueueWaitThreshold $waitThreshold,
+        private QueueStarvationAlert $starvationAlert = new QueueStarvationAlert,
     ) {}
 
     public function all(): QueueListData
@@ -75,6 +76,8 @@ final readonly class QueuesData
                 $connectionNames = array_keys($queueConnections);
                 sort($connectionNames, SORT_NATURAL);
 
+                $waitThresholdSummary = $this->waitThreshold->summarize($waitThresholdTargets);
+
                 $rows[] = new QueueRowData(
                     name: $queueName,
                     connections: $connectionNames,
@@ -97,7 +100,8 @@ final readonly class QueuesData
                     delayed: $delayed,
                     processes: $processCount,
                     wait: $wait,
-                    waitThreshold: $this->waitThreshold->summarize($waitThresholdTargets),
+                    waitThreshold: $waitThresholdSummary,
+                    starvation: $this->starvationAlert->evaluate($waitThresholdSummary->oldestReadyAgeSeconds),
                 );
             }
 

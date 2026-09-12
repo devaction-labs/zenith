@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use DevactionLabs\Zenith\Metrics\MetricsData;
 use DevactionLabs\Zenith\Support\HorizonRuntime;
+use DevactionLabs\Zenith\Telemetry\TelemetryMetricsReader;
 use Inertia\Testing\AssertableInertia;
 use Laravel\Horizon\Contracts\MasterSupervisorRepository;
 use Laravel\Horizon\Contracts\MetricsRepository;
@@ -12,6 +13,7 @@ use Laravel\Horizon\Horizon;
 use function DevactionLabs\Zenith\Tests\Support\dashboardReturns;
 use function DevactionLabs\Zenith\Tests\Support\dashboardReturnsFor;
 use function DevactionLabs\Zenith\Tests\Support\mockDashboardContract;
+use function DevactionLabs\Zenith\Tests\Support\telemetryRedis;
 use function Pest\Laravel\get;
 
 beforeEach(function (): void {
@@ -93,5 +95,52 @@ describe('metrics pages', function (): void {
 
     it('rejects metric types outside the route constraint', function (): void {
         get('/horizon/metrics/workers')->assertNotFound();
+    });
+
+    it('renders a metric preview with live percentiles disabled by default', function (): void {
+        config()->set('zenith.telemetry.enabled', false);
+
+        $repository = mockDashboardContract(MetricsRepository::class);
+        dashboardReturnsFor($repository, 'snapshotsForQueue', ['emails'], []);
+        app()->instance(MetricsData::class, new MetricsData($repository));
+
+        get('/horizon/metrics/queues/emails')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
+                ->component('Metrics/Show')
+                ->where('percentiles.available', false)
+                ->where('percentiles.points', [])
+                ->whereType('percentiles.message', 'string')
+                ->where('percentilesWindow', '1h'));
+    });
+
+    it('reads the percentiles window from the query string', function (): void {
+        config()->set('zenith.telemetry.enabled', false);
+
+        $repository = mockDashboardContract(MetricsRepository::class);
+        dashboardReturnsFor($repository, 'snapshotsForJob', ['App\\Jobs\\ProcessPayment'], []);
+        app()->instance(MetricsData::class, new MetricsData($repository));
+
+        get('/horizon/metrics/jobs/App%5CJobs%5CProcessPayment?window=24h')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
+                ->where('percentilesWindow', '24h'));
+    });
+
+    it('reports live percentiles as available once the recorder is enabled', function (): void {
+        config()->set('zenith.telemetry.enabled', true);
+
+        ['redis' => $redis] = telemetryRedis();
+        app()->instance(TelemetryMetricsReader::class, new TelemetryMetricsReader($redis));
+
+        $repository = mockDashboardContract(MetricsRepository::class);
+        dashboardReturnsFor($repository, 'snapshotsForQueue', ['emails'], []);
+        app()->instance(MetricsData::class, new MetricsData($repository));
+
+        get('/horizon/metrics/queues/emails')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
+                ->where('percentiles.available', true)
+                ->where('percentiles.message', null));
     });
 });

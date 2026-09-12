@@ -1,4 +1,5 @@
 import type { QueueWaitThreshold } from "@/types/queues";
+import type { TelemetryGroupBy, TelemetryWindow, ThroughputChart } from "@/types/telemetry";
 
 export type HorizonStatus = "running" | "paused" | "inactive" | "unavailable";
 export type HorizonTransitionStatus = "continuing" | "pausing";
@@ -118,6 +119,14 @@ export type RecentFailures = {
   message: string | null;
 };
 
+export type QueueBypassWarning = {
+  hasRecentFailovers: boolean;
+  recentFailoverCount: number;
+  recentFailoverWindowMinutes: number;
+  recentFailoverConnections: string[];
+  bypassProneConnections: string[];
+};
+
 export type DashboardPageProps = {
   horizon: {
     baseUrl: string;
@@ -133,6 +142,10 @@ export type DashboardPageProps = {
   summary: DashboardSummary;
   workload: DashboardWorkload;
   supervisors?: DashboardSupervisors;
+  liveThroughput: ThroughputChart;
+  liveMetricsGroupBy: TelemetryGroupBy;
+  liveMetricsWindow: TelemetryWindow;
+  queueBypassWarning?: QueueBypassWarning;
 };
 
 export type RunningInstancesPageProps = {

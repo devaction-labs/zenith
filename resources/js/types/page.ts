@@ -2,6 +2,7 @@ import type { HorizonStatus } from "@/types/dashboard";
 
 export type HorizonNavigation =
   | "dashboard"
+  | "executing"
   | "instances"
   | "queues"
   | "monitoring"
@@ -37,6 +38,8 @@ export type HorizonPageProps = {
     maintenanceMode: boolean;
     jobNavigationBreakdown?: boolean;
     allQueuesPaused?: boolean;
+    telemetryEnabled?: boolean;
+    schedulePaused?: boolean;
     capabilities?: {
       queuePausing: boolean;
       timedQueuePausing: boolean;

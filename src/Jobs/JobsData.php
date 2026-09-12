@@ -11,6 +11,11 @@ use DevactionLabs\Zenith\Jobs\Data\JobFilterCatalogData;
 use DevactionLabs\Zenith\Jobs\Data\JobIndexFiltersData;
 use DevactionLabs\Zenith\Jobs\Data\JobPageData;
 use DevactionLabs\Zenith\Jobs\Data\JobRowData;
+use DevactionLabs\Zenith\Jobs\Data\RetainedCompletedJobData;
+use DevactionLabs\Zenith\Support\PayloadRedactor;
+use DevactionLabs\Zenith\Telemetry\AttemptHistory;
+use DevactionLabs\Zenith\Telemetry\Data\AttemptTimelineData;
+use DevactionLabs\Zenith\Telemetry\TelemetryRegistration;
 use Illuminate\Contracts\Redis\Factory as RedisFactory;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Date;
@@ -28,7 +33,36 @@ final readonly class JobsData
         private ?RedisFactory $redis = null,
         private ?RetainedJobQuery $retainedQuery = null,
         private ?RetainedJobFilterCatalog $filterCatalog = null,
+        private ?AttemptHistory $attemptHistory = null,
+        private ?RetainedJobRetryEligibility $retryEligibility = null,
     ) {}
+
+    public function attemptTimeline(string $jobId): AttemptTimelineData
+    {
+        if ($this->attemptHistory === null || ! TelemetryRegistration::enabled()) {
+            return new AttemptTimelineData(
+                available: false,
+                attempts: [],
+                message: 'Enable the telemetry recorder (zenith.telemetry.enabled) to see per-attempt history.',
+            );
+        }
+
+        try {
+            return new AttemptTimelineData(
+                available: true,
+                attempts: $this->attemptHistory->forJob($jobId),
+                message: null,
+            );
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return new AttemptTimelineData(
+                available: false,
+                attempts: [],
+                message: 'Attempt history is currently unavailable.',
+            );
+        }
+    }
 
     public function page(
         JobListType $type,
@@ -37,7 +71,7 @@ final readonly class JobsData
         ?string $search = null,
     ): JobPageData {
         $filters ??= JobIndexFiltersData::none();
-        $search = $this->normalizedSearch($search);
+        [$filters, $search] = $this->resolveSearch($filters, $search);
 
         if ($this->retainedQuery !== null) {
             try {
@@ -132,7 +166,7 @@ final readonly class JobsData
         JobIndexFiltersData $filters,
         ?string $search = null,
     ): string {
-        $search = $this->normalizedSearch($search);
+        [$filters, $search] = $this->resolveSearch($filters, $search);
 
         if ($this->retainedQuery !== null) {
             return $this->retainedQuery->signature(
@@ -156,6 +190,37 @@ final readonly class JobsData
         return $search === '' ? null : $search;
     }
 
+    /**
+     * Extract a `tag:` qualifier from the free-text search box and merge it
+     * into the exact tag facet, unless an explicit tag filter is already
+     * active. The remainder of the search string keeps matching by partial
+     * job class or exact retained ID.
+     *
+     * @return array{0: JobIndexFiltersData, 1: string|null}
+     */
+    private function resolveSearch(JobIndexFiltersData $filters, ?string $search): array
+    {
+        $search = $this->normalizedSearch($search);
+
+        if ($search === null) {
+            return [$filters, null];
+        }
+
+        $qualifiers = JobSearchQualifiers::parse($search);
+
+        if ($qualifiers->tag !== null && $filters->tag === null) {
+            $filters = new JobIndexFiltersData(
+                job: $filters->job,
+                queue: $filters->queue,
+                connection: $filters->connection,
+                state: $filters->state,
+                tag: $qualifiers->tag,
+            );
+        }
+
+        return [$filters, $qualifiers->remainder];
+    }
+
     public function find(string $id): ?JobDetailData
     {
         try {
@@ -167,6 +232,41 @@ final readonly class JobsData
 
             return null;
         }
+    }
+
+    /**
+     * Resolve a retained completed or silenced job for a retry, without
+     * exposing its raw payload beyond what re-dispatching it requires.
+     */
+    public function retainedCompletedJob(string $id): ?RetainedCompletedJobData
+    {
+        $job = $this->jobs->getJobs([$id])->first();
+
+        if (! is_object($job) || ($job->status ?? null) !== 'completed') {
+            return null;
+        }
+
+        $rawPayload = $job->payload ?? null;
+
+        if (! is_string($rawPayload) || $rawPayload === '') {
+            return null;
+        }
+
+        $payload = $this->decodePayload($rawPayload);
+        $decodedCommand = $this->decodedCommand($payload);
+
+        return new RetainedCompletedJobData(
+            id: $id,
+            connection: is_string($job->connection ?? null) ? $job->connection : 'default',
+            queue: is_string($job->queue ?? null) ? $job->queue : 'default',
+            rawPayload: $rawPayload,
+            commandClass: JobComposition::commandClass($payload, $decodedCommand),
+        );
+    }
+
+    private function retainedRetryEligibility(): RetainedJobRetryEligibility
+    {
+        return $this->retryEligibility ?? new RetainedJobRetryEligibility;
     }
 
     public function batchId(object $job): ?string
@@ -254,13 +354,20 @@ final readonly class JobsData
         );
     }
 
+    /**
+     * When $retryEligible is left null, it is derived from the retained-job
+     * retry policy for completed and silenced jobs (which share the
+     * 'completed' status). Callers such as FailedJobsData that already know
+     * their own eligibility, e.g. via FailedJobRetryEligibility, must pass it
+     * explicitly so it is not overwritten by that derivation.
+     */
     public function row(
         object $job,
         bool $retried = false,
         bool $retryCompleted = false,
         int $retryCount = 0,
         ?string $latestRetryStatus = null,
-        bool $retryEligible = false,
+        ?bool $retryEligible = null,
         ?int $attemptsOverride = null,
         bool $attemptsComplete = true,
     ): ?JobRowData {
@@ -302,6 +409,11 @@ final readonly class JobsData
             default => null,
         };
         $runtime = $this->runtime($reservedAt, $finishedAt);
+        $retryEligible ??= $status === 'completed'
+            ? $this->retainedRetryEligibility()->allows(
+                JobComposition::commandClass($payload, $decodedCommand),
+            )
+            : false;
 
         return new JobRowData(
             id: $id,
@@ -360,6 +472,7 @@ final readonly class JobsData
         $payload = $this->decodePayload($job->payload ?? null);
         $decodedCommand = $this->decodedCommand($payload);
         $data = is_array($payload['data'] ?? null) ? $payload['data'] : [];
+        $commandClass = JobComposition::commandClass($payload, $decodedCommand);
 
         return new JobDetailData(
             id: $row->id,
@@ -381,7 +494,10 @@ final readonly class JobsData
             failedAt: $row->failedAt,
             runtime: $row->runtime,
             payload: $this->safePayload($payload, $decodedCommand),
+            attemptTimeline: $this->attemptTimeline($row->id),
+            retryEligible: $row->retryEligible,
             composition: JobComposition::fromPayload($payload, $decodedCommand),
+            attributes: JobAttributes::fromClass($commandClass),
         );
     }
 
@@ -547,7 +663,9 @@ final readonly class JobsData
      */
     private function safePayload(array $payload, ?array $decodedCommand): array
     {
-        $data = is_array($payload['data'] ?? null) ? $payload['data'] : [];
+        $data = is_array($payload['data'] ?? null)
+            ? array_filter($payload['data'], is_string(...), ARRAY_FILTER_USE_KEY)
+            : [];
         unset($data['command']);
 
         if ($decodedCommand !== null) {
@@ -560,7 +678,7 @@ final readonly class JobsData
             'uuid' => is_string($payload['uuid'] ?? null) ? $payload['uuid'] : null,
             'maxTries' => is_numeric($payload['maxTries'] ?? null) ? (int) $payload['maxTries'] : null,
             'timeout' => is_numeric($payload['timeout'] ?? null) ? (int) $payload['timeout'] : null,
-            'data' => $data,
+            'data' => PayloadRedactor::redact($data),
         ], static fn (mixed $value): bool => $value !== null);
     }
 

@@ -8,12 +8,14 @@ use DevactionLabs\Zenith\Assets\AssetManifest;
 use DevactionLabs\Zenith\Authorization\HorizonAbilityAuthorizer;
 use DevactionLabs\Zenith\Monitoring\MonitoringData;
 use DevactionLabs\Zenith\Queues\QueuePauseStatus;
+use DevactionLabs\Zenith\Schedule\SchedulePauseStatus;
 use DevactionLabs\Zenith\Support\Data\HorizonShellData;
 use DevactionLabs\Zenith\Support\Data\NavigationCountsData;
 use DevactionLabs\Zenith\Support\FrameworkCapabilities;
 use DevactionLabs\Zenith\Support\HorizonRuntime;
 use DevactionLabs\Zenith\Support\NavigationCounts;
 use DevactionLabs\Zenith\Support\PollInterval;
+use DevactionLabs\Zenith\Telemetry\TelemetryRegistration;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -31,6 +33,7 @@ final class HandleInertiaRequests extends Middleware
         private readonly AssetManifest $assets,
         private readonly FrameworkCapabilities $capabilities,
         private readonly QueuePauseStatus $queuePauseStatus,
+        private readonly SchedulePauseStatus $schedulePauseStatus,
         private readonly HorizonAbilityAuthorizer $abilities,
     ) {}
 
@@ -63,7 +66,9 @@ final class HandleInertiaRequests extends Middleware
                         false,
                     ) === true,
                     allQueuesPaused: $this->queuePauseStatus->allPaused(),
+                    schedulePaused: $this->schedulePauseStatus->paused(),
                     abilities: $this->abilities->abilities(),
+                    telemetryEnabled: TelemetryRegistration::enabled(),
                 );
             },
             'monitoredTags' => fn (): array => $this->monitoring->monitoredTags(),

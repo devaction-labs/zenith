@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition } from './../../../wayfinder'
 /**
 * @see \DevactionLabs\Zenith\Http\Controllers\DashboardController::index
-* @see src/Http/Controllers/DashboardController.php:18
+* @see src/Http/Controllers/DashboardController.php:27
 * @route '/horizon/dashboard'
 */
 export const index = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -16,7 +16,7 @@ index.definition = {
 
 /**
 * @see \DevactionLabs\Zenith\Http\Controllers\DashboardController::index
-* @see src/Http/Controllers/DashboardController.php:18
+* @see src/Http/Controllers/DashboardController.php:27
 * @route '/horizon/dashboard'
 */
 index.url = (options?: RouteQueryOptions) => {
@@ -25,7 +25,7 @@ index.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \DevactionLabs\Zenith\Http\Controllers\DashboardController::index
-* @see src/Http/Controllers/DashboardController.php:18
+* @see src/Http/Controllers/DashboardController.php:27
 * @route '/horizon/dashboard'
 */
 index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -35,7 +35,7 @@ index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 
 /**
 * @see \DevactionLabs\Zenith\Http\Controllers\DashboardController::index
-* @see src/Http/Controllers/DashboardController.php:18
+* @see src/Http/Controllers/DashboardController.php:27
 * @route '/horizon/dashboard'
 */
 index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({

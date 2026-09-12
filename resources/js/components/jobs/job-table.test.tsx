@@ -1,3 +1,4 @@
+import { router } from "@inertiajs/react";
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 
@@ -237,6 +238,78 @@ describe("JobTable", () => {
     const row = screen.getByRole("row", { name: `No ${type} jobs` });
 
     expect(row.querySelector('[data-slot="empty-icon"] svg')).toHaveClass(iconName);
+  });
+
+  it("adds a checkbox column and reports toggled row selection", () => {
+    const onToggle = vi.fn();
+    const onSelectIds = vi.fn();
+    const onClear = vi.fn();
+
+    render(
+      <JobTable
+        jobs={jobs}
+        type="completed"
+        horizonBaseUrl="/horizon"
+        selection={{
+          label: "completed jobs",
+          selectedIds: new Set(["job-slow"]),
+          onToggle,
+          onSelectIds,
+          onClear,
+        }}
+      />,
+    );
+
+    expect(screen.getAllByRole("columnheader")).toHaveLength(5);
+    expect(screen.getByRole("checkbox", { name: "Select job SlowJob" })).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "Select job FastJob" })).not.toBeChecked();
+
+    fireEvent.click(screen.getByRole("checkbox", { name: "Select job FastJob" }));
+    expect(onToggle).toHaveBeenCalledWith("job-fast");
+  });
+
+  it("does not navigate to the job detail page when a row checkbox is clicked", () => {
+    render(
+      <JobTable
+        jobs={jobs}
+        type="completed"
+        horizonBaseUrl="/horizon"
+        selection={{
+          label: "completed jobs",
+          selectedIds: new Set(),
+          onToggle: vi.fn(),
+          onSelectIds: vi.fn(),
+          onClear: vi.fn(),
+        }}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("checkbox", { name: "Select job SlowJob" }));
+
+    expect(router.visit).not.toHaveBeenCalled();
+  });
+
+  it("excludes reserved pending jobs from selection", () => {
+    render(
+      <JobTable
+        jobs={[
+          { ...jobs[0], id: "job-reserved", status: "reserved" },
+          { ...jobs[1], id: "job-ready", status: "pending" },
+        ]}
+        type="pending"
+        horizonBaseUrl="/horizon"
+        selection={{
+          label: "pending jobs",
+          selectedIds: new Set(),
+          onToggle: vi.fn(),
+          onSelectIds: vi.fn(),
+          onClear: vi.fn(),
+        }}
+      />,
+    );
+
+    expect(screen.queryByRole("checkbox", { name: "Select job SlowJob" })).not.toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: "Select job FastJob" })).toBeInTheDocument();
   });
 
   it("supports batch-specific empty-state copy", () => {

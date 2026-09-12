@@ -1,10 +1,18 @@
-import { Head } from "@inertiajs/react";
+import { Head, router } from "@inertiajs/react";
+import { TriangleAlertIcon } from "lucide-react";
 
 import { DashboardOverview } from "@/components/dashboard/dashboard-overview";
 import { SupervisorsTable } from "@/components/dashboard/supervisors-table";
 import { WorkloadTable } from "@/components/dashboard/workload-table";
 import { Duration } from "@/components/duration";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { QueueBypassBanner } from "@/components/queues/queue-bypass-banner";
+import {
+  TelemetryGroupBySelect,
+  TelemetryWindowSelect,
+} from "@/components/telemetry/telemetry-controls";
+import { ThroughputChart } from "@/components/telemetry/throughput-chart";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Statistic,
   StatisticGrid,
@@ -14,6 +22,7 @@ import {
 } from "@/components/ui/statistic";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { index as batchesIndex, show as batchShow } from "@/generated/routes/zenith/batches";
+import { index as dashboardIndex } from "@/generated/routes/zenith/dashboard";
 import { index as failedJobsIndex } from "@/generated/routes/zenith/failed-jobs";
 import { index as jobsIndex } from "@/generated/routes/zenith/jobs";
 import { useDashboardRefresh } from "@/hooks/use-dashboard-refresh";
@@ -21,8 +30,18 @@ import { resolveProcessPollInterval, useProcessTransitions } from "@/hooks/use-p
 import { useAutoLoadPreference } from "@/layouts/horizon-layout";
 import { resolveHorizonRoute } from "@/lib/horizon-route";
 import type { DashboardPageProps } from "@/types/dashboard";
+import type { TelemetryGroupBy, TelemetryWindow } from "@/types/telemetry";
 
-function Dashboard({ horizon, summary, workload, supervisors }: DashboardPageProps) {
+function Dashboard({
+  horizon,
+  summary,
+  workload,
+  supervisors,
+  liveThroughput,
+  liveMetricsGroupBy,
+  liveMetricsWindow,
+  queueBypassWarning,
+}: DashboardPageProps) {
   const { autoLoad } = useAutoLoadPreference();
   const {
     hasPendingTransitions,
@@ -39,15 +58,30 @@ function Dashboard({ horizon, summary, workload, supervisors }: DashboardPagePro
   useDashboardRefresh(
     resolveProcessPollInterval(horizon.pollInterval),
     autoRefreshEnabled || fallbackPolling,
+    ["summary", "workload", "supervisors", "liveThroughput"],
   );
 
   const route = (definition: { url: string }) =>
     resolveHorizonRoute(definition, horizon.baseUrl).url;
 
+  const changeLiveMetrics = (next: { groupBy?: TelemetryGroupBy; window?: TelemetryWindow }) => {
+    const url = route(
+      dashboardIndex({
+        query: {
+          groupBy: next.groupBy ?? liveMetricsGroupBy,
+          window: next.window ?? liveMetricsWindow,
+        },
+      }),
+    );
+
+    router.visit(url, { preserveScroll: true, preserveState: true, replace: true });
+  };
+
   return (
     <>
       <Head title="Dashboard" />
       <div className="flex flex-col gap-[7px] min-[1140px]:gap-3.5">
+        <QueueBypassBanner warning={queueBypassWarning} />
         <DashboardOverview
           summary={summary}
           links={{
@@ -58,6 +92,35 @@ function Dashboard({ horizon, summary, workload, supervisors }: DashboardPagePro
             batch: (id) => route(batchShow(id)),
           }}
         />
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Live Metrics</CardTitle>
+            <CardAction className="flex flex-wrap items-center gap-3">
+              <TelemetryGroupBySelect
+                value={liveMetricsGroupBy}
+                onValueChange={(groupBy) => changeLiveMetrics({ groupBy })}
+              />
+              <TelemetryWindowSelect
+                value={liveMetricsWindow}
+                onValueChange={(windowValue) => changeLiveMetrics({ window: windowValue })}
+              />
+            </CardAction>
+          </CardHeader>
+          <CardContent className="px-0 pt-3 pb-2">
+            {!liveThroughput.available ? (
+              <Alert variant="destructive" className="mx-4 sm:mx-6">
+                <TriangleAlertIcon aria-hidden="true" />
+                <AlertTitle>Live metrics unavailable</AlertTitle>
+                <AlertDescription>
+                  {liveThroughput.message ?? "Live throughput is currently unavailable."}
+                </AlertDescription>
+              </Alert>
+            ) : (
+              <ThroughputChart series={liveThroughput.series} />
+            )}
+          </CardContent>
+        </Card>
 
         <Card>
           <CardHeader>

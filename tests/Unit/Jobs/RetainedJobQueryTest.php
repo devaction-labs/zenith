@@ -1811,6 +1811,49 @@ describe('RetainedJobQuery', function () use ($retainedPageJobIds): void {
             ->and($page->jobs->pluck('id')->all())->toBe(['failed-75']);
     });
 
+    it('filters pending jobs by an exact tag facet, reusing the same projection as failed tags', function (): void {
+        $redis = new RetainedJobQueryRedisClient;
+        $redis->seedSortedSet('pending_jobs', retainedSource(101, 'pending'));
+        $fixture = retainedJobQueryFixture($redis);
+
+        $page = $fixture['query']->page(
+            RetainedJobType::Pending,
+            new JobIndexFiltersData(null, null, null, null, 'tenant:production'),
+            -1,
+        );
+
+        expect($page->total)->toBe(1)
+            ->and($page->jobs->pluck('id')->all())->toBe(['pending-75']);
+    });
+
+    it('parses a tag: qualifier out of the jobs search box and lets the remainder fall through to class search', function (): void {
+        $redis = new RetainedJobQueryRedisClient;
+        $redis->seedSortedSet('completed_jobs', retainedSource(101, 'completed'));
+        $fixture = retainedJobQueryFixture($redis);
+
+        $page = (new JobsData(
+            jobs: $fixture['repository'],
+            retainedQuery: $fixture['query'],
+        ))->page(JobListType::Completed, -1, search: 'tag:tenant:production');
+
+        expect($page->total)->toBe(1)
+            ->and(array_column($page->items, 'id'))->toBe(['completed-75']);
+    });
+
+    it('still matches by job class when a search has no tag: qualifier', function (): void {
+        $redis = new RetainedJobQueryRedisClient;
+        $redis->seedSortedSet('completed_jobs', retainedSource(101, 'completed'));
+        $fixture = retainedJobQueryFixture($redis);
+
+        $page = (new JobsData(
+            jobs: $fixture['repository'],
+            retainedQuery: $fixture['query'],
+        ))->page(JobListType::Completed, -1, search: 'ProductionOnly');
+
+        expect($page->total)->toBe(1)
+            ->and(array_column($page->items, 'id'))->toBe(['completed-75']);
+    });
+
     it('uses newest-first retained chronology and stable opaque cursors', function (): void {
         $redis = new RetainedJobQueryRedisClient;
         $redis->seedSortedSet('completed_jobs', retainedSource(101, 'completed'));

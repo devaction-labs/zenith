@@ -7,6 +7,7 @@ namespace DevactionLabs\Zenith\Support;
 enum NavigationItem: string
 {
     case Dashboard = 'dashboard';
+    case Executing = 'executing';
     case Instances = 'instances';
     case Queues = 'queues';
     case Monitoring = 'monitoring';

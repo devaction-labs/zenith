@@ -9,9 +9,15 @@ use DevactionLabs\Zenith\Batches\DatabaseBatchCapability;
 use DevactionLabs\Zenith\Batches\DatabaseBatchMetadataSynchronizer;
 use DevactionLabs\Zenith\Batches\DatabaseBatchQuery;
 use DevactionLabs\Zenith\BulkOperations\BulkOperationSnapshot;
+use DevactionLabs\Zenith\Chains\ChainFailureListener;
+use DevactionLabs\Zenith\Chains\ChainPayloadHook;
 use DevactionLabs\Zenith\Chunks\ChunkBuffer;
 use DevactionLabs\Zenith\Console\AssetsCommand;
+use DevactionLabs\Zenith\Console\ExportMetricsCommand;
 use DevactionLabs\Zenith\Console\InstallCommand;
+use DevactionLabs\Zenith\Console\PruneJobHistoryCommand;
+use DevactionLabs\Zenith\Console\RelayOutboxCommand;
+use DevactionLabs\Zenith\Console\RepairWorkflowsCommand;
 use DevactionLabs\Zenith\Console\WarmBatchMetadataCommand;
 use DevactionLabs\Zenith\Console\WarmRetainedJobsCommand;
 use DevactionLabs\Zenith\Dashboard\DashboardPendingState;
@@ -19,6 +25,8 @@ use DevactionLabs\Zenith\FailedJobs\Actions\RetryAllFailedJobs;
 use DevactionLabs\Zenith\FailedJobs\Actions\RetryFailedJob;
 use DevactionLabs\Zenith\FailedJobs\FailedJobRetryEligibility;
 use DevactionLabs\Zenith\FailedJobs\FailedJobRetryLock;
+use DevactionLabs\Zenith\History\JobHistoryRecorder;
+use DevactionLabs\Zenith\History\JobHistoryStopwatch;
 use DevactionLabs\Zenith\Http\Controllers\BatchesApiController;
 use DevactionLabs\Zenith\Http\Controllers\HomeController;
 use DevactionLabs\Zenith\Http\Controllers\MonitoringApiController;
@@ -33,20 +41,36 @@ use DevactionLabs\Zenith\Jobs\PendingJobStateIndex;
 use DevactionLabs\Zenith\Jobs\RetainedJobFilterCatalog;
 use DevactionLabs\Zenith\Jobs\RetainedJobIndex;
 use DevactionLabs\Zenith\Jobs\RetainedJobQuery;
+use DevactionLabs\Zenith\Jobs\RetainedJobRetryEligibility;
 use DevactionLabs\Zenith\Queues\ClearQueueMetadata;
 use DevactionLabs\Zenith\Queues\ClearsQueueMetadata;
+use DevactionLabs\Zenith\Queues\RecordQueueFailover;
 use DevactionLabs\Zenith\Schedule\DynamicSchedule;
 use DevactionLabs\Zenith\Schedule\InternalScheduledEvent;
+use DevactionLabs\Zenith\Schedule\ScheduleHistoryRecorder;
 use DevactionLabs\Zenith\Support\FrameworkCapabilities;
 use DevactionLabs\Zenith\Support\HorizonRuntime;
 use DevactionLabs\Zenith\Support\HorizonWorkCommandCompatibility;
+use DevactionLabs\Zenith\Telemetry\AttemptHistory;
+use DevactionLabs\Zenith\Telemetry\TelemetryEventSubscriber;
+use DevactionLabs\Zenith\Telemetry\TelemetryRegistration;
+use Illuminate\Console\Events\ScheduledTaskFailed;
+use Illuminate\Console\Events\ScheduledTaskFinished;
+use Illuminate\Console\Events\ScheduledTaskSkipped;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Contracts\Bus\Dispatcher;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Illuminate\Contracts\Container\BindingResolutionException;
+use Illuminate\Contracts\Events\Dispatcher as EventDispatcher;
 use Illuminate\Contracts\Foundation\CachesRoutes;
 use Illuminate\Contracts\Redis\Factory as RedisFactory;
+use Illuminate\Queue\Events\JobFailed as QueueJobFailed;
+use Illuminate\Queue\Events\JobProcessed as QueueJobProcessed;
+use Illuminate\Queue\Events\JobProcessing as QueueJobProcessing;
+use Illuminate\Queue\Events\QueueFailedOver;
+use Illuminate\Queue\Queue;
 use Illuminate\Routing\Router;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 use Inertia\Inertia;
 use Inertia\Ssr\ExcludesSsrPaths;
@@ -67,6 +91,7 @@ final class ZenithServiceProvider extends ServiceProvider
     private const array ROOT_PATH_SSR_EXCLUSIONS = [
         '/',
         'dashboard',
+        'executing',
         'instances',
         'supervisors/*',
         'monitoring',
@@ -102,6 +127,8 @@ final class ZenithServiceProvider extends ServiceProvider
             __DIR__.'/../config/zenith.php',
             'zenith',
         );
+
+        Queue::createPayloadUsing(new ChainPayloadHook);
 
         $this->app->bind(HorizonBatchesController::class, BatchesApiController::class);
         $this->app->bind(HorizonHomeController::class, HomeController::class);
@@ -157,6 +184,8 @@ final class ZenithServiceProvider extends ServiceProvider
                 redis: $this->app->make(RedisFactory::class),
                 retainedQuery: $this->app->make(RetainedJobQuery::class),
                 filterCatalog: $this->app->make(RetainedJobFilterCatalog::class),
+                attemptHistory: $this->app->make(AttemptHistory::class),
+                retryEligibility: $this->app->make(RetainedJobRetryEligibility::class),
             ),
         );
         $this->app->resolving(
@@ -171,6 +200,8 @@ final class ZenithServiceProvider extends ServiceProvider
             FrameworkCapabilities::class,
             fn (): FrameworkCapabilities => FrameworkCapabilities::detect(),
         );
+        $this->app->singleton(JobHistoryStopwatch::class);
+        $this->app->singleton(TelemetryEventSubscriber::class);
         $this->app->bind(
             HorizonRuntime::class,
             fn (): HorizonRuntime => new HorizonRuntime(
@@ -186,12 +217,17 @@ final class ZenithServiceProvider extends ServiceProvider
     /**
      * @throws BindingResolutionException
      */
-    public function boot(AssetPath $assetPath): void
+    public function boot(AssetPath $assetPath, EventDispatcher $events): void
     {
+        $this->app->make(EventDispatcher::class)->listen(QueueFailedOver::class, RecordQueueFailover::class);
+
         $this->excludeHorizonFromSsr($this->app->make(Gateway::class));
+        $this->registerScheduleHistoryListeners($events);
 
         $this->loadMigrationsFrom(dirname(__DIR__).'/database/migrations');
         $this->loadViewsFrom(__DIR__.'/../resources/views', 'zenith');
+
+        $this->app->make(EventDispatcher::class)->listen(QueueJobFailed::class, [ChainFailureListener::class, 'handle']);
 
         $this->publishes([
             __DIR__.'/../config/zenith.php' => config_path('zenith.php'),
@@ -204,13 +240,35 @@ final class ZenithServiceProvider extends ServiceProvider
         if ($this->app->runningInConsole()) {
             $this->commands([
                 AssetsCommand::class,
+                ExportMetricsCommand::class,
                 InstallCommand::class,
+                PruneJobHistoryCommand::class,
+                RelayOutboxCommand::class,
+                RepairWorkflowsCommand::class,
                 WarmBatchMetadataCommand::class,
                 WarmRetainedJobsCommand::class,
             ]);
         }
 
+        $this->registerJobHistoryListeners();
+
         $this->callAfterResolving(Schedule::class, $this->registerScheduledEvents(...));
+
+        TelemetryRegistration::register($this->app->make(EventDispatcher::class));
+    }
+
+    private function registerJobHistoryListeners(): void
+    {
+        Event::listen(QueueJobProcessing::class, [JobHistoryRecorder::class, 'handleProcessing']);
+        Event::listen(QueueJobProcessed::class, [JobHistoryRecorder::class, 'handleProcessed']);
+        Event::listen(QueueJobFailed::class, [JobHistoryRecorder::class, 'handleFailed']);
+    }
+
+    private function registerScheduleHistoryListeners(EventDispatcher $events): void
+    {
+        $events->listen(ScheduledTaskFinished::class, [ScheduleHistoryRecorder::class, 'finished']);
+        $events->listen(ScheduledTaskFailed::class, [ScheduleHistoryRecorder::class, 'failed']);
+        $events->listen(ScheduledTaskSkipped::class, [ScheduleHistoryRecorder::class, 'skipped']);
     }
 
     private function registerScheduledEvents(Schedule $schedule): void
@@ -225,6 +283,11 @@ final class ZenithServiceProvider extends ServiceProvider
         })
             ->everyMinute()
             ->name(InternalScheduledEvent::ChunkFlush->value);
+
+        $schedule->command(RelayOutboxCommand::class)
+            ->everyMinute()
+            ->name(InternalScheduledEvent::RelayOutbox->value)
+            ->withoutOverlapping(10);
     }
 
     private function excludeHorizonFromSsr(Gateway $gateway): void

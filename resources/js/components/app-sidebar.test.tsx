@@ -9,6 +9,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 const navigationLabels = [
   "Laravel Horizon",
   "Dashboard",
+  "Executing",
   "Monitoring",
   "Metrics",
   "Instances",

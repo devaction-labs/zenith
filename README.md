@@ -36,17 +36,30 @@ Compared with Horizon's bundled interface, Zenith adds:
 - durable workflow DAGs (`WorkflowDefinition`) with named steps, dependencies validated before dispatch, cascade outputs, nested sub-workflows, compensation steps, per-step retry and backoff, and cancel/retry from the dashboard;
 - Signals and Relay, which release the current queue job while waiting for an external decision or a relayed result instead of blocking a worker, and Chunks, which batch items atomically until a size or time threshold is reached (these run as Horizon jobs or cache/database state; they do not replace Horizon workers);
 - Backfills that queue each page as its own retryable job when built from an invokable class name (a closure-based backfill still runs its pages in-process);
-- queue budgets (`QueueBudget`, `EnforceQueueBudget`) that enforce rate limits and concurrency slots atomically across workers.
+- queue budgets (`QueueBudget`, `EnforceQueueBudget`) that enforce rate limits and concurrency slots atomically across workers;
+- an opt-in, event-driven telemetry recorder powering live per-second throughput and wait/runtime percentile charts, per-attempt error history, and an in-flight "Executing" view with a per-node breakdown, falling back to Horizon's own snapshots while disabled;
+- durable, retention-pruned job history (`zenith_job_history`) for terminal job outcomes beyond Horizon's own retained window;
+- a workflow DAG graph view alongside the workflow table, a lifeline that repairs steps stuck past their timeout, and graceful interruption;
+- schedule run history and a global scheduler pause, alongside the runtime-editable dynamic cron rows above;
+- runtime supervisor process scaling, multi-select bulk retry and cancel across job tables, and retrying completed or silenced jobs;
+- Laravel 13 job attributes (tries, backoff, timeout, uniqueness, debounce, routing, and more) shown on job detail without instantiating the job;
+- a Horizon-bypass warning for jobs routed through Laravel's `failover`, `deferred`, or `background` queue drivers;
+- payload redaction and a `tag:` search qualifier across every job list;
+- a per-user refresh-rate selector and keyboard shortcuts for navigation and search;
+- engine-level job-class attributes (`#[GlobalLimit]`, `#[RateLimit]`, `#[Partition]`, `#[ChainBy]`, `#[Recorded]`) enforced through job middleware, plus anti-starvation alerting;
+- `Workflow::fake()`, `Signal::fake()`, `Relay::fake()`, and `drainWorkflow()` test helpers for orchestration primitives;
+- a transactional outbox for job dispatch, and a `zenith:export-metrics` command exporting Prometheus samples for external autoscalers;
+- an AI-assisted failure-explanation hook (`Zenith::explainFailureUsing()`) on the failed-job detail page.
 
 ## Roadmap
 
-Zenith is working toward parity with [Oban Pro and Oban Web](https://oban.pro): live metrics, a workflow graph, and further engine capabilities, built on Horizon and Laravel 13 primitives. Planned work is tracked as [GitHub issues](https://github.com/devaction-labs/zenith/issues) in milestones; [#44](https://github.com/devaction-labs/zenith/issues/44) is the overview.
+Zenith reached parity with [Oban Pro and Oban Web](https://oban.pro) across the milestones below, built on Horizon and Laravel 13 primitives; the capabilities they describe are listed in [Beyond the original Horizon interface](#beyond-the-original-horizon-interface) above. Work is tracked as [GitHub issues](https://github.com/devaction-labs/zenith/issues); [#44](https://github.com/devaction-labs/zenith/issues/44) is the overview, kept open as the ongoing home for further parity and engine work.
 
-| Milestone | Focus |
-| --- | --- |
-| [P1 · Telemetry](https://github.com/devaction-labs/zenith/milestone/2) | Event-driven telemetry: live throughput, wait and runtime percentiles, attempt history, and durable job history. |
-| [P2 · Dashboard parity](https://github.com/devaction-labs/zenith/milestone/3) | Workflow graph, cron history, runtime scaling, multi-select bulk actions, and payload redaction. |
-| [P3 · Engine](https://github.com/devaction-labs/zenith/milestone/4) | Global limits and partitions, ordered chains, recorded output, a transactional outbox, and a workflow lifeline. |
+| Milestone | Focus | Status |
+| --- | --- | --- |
+| [P1 · Telemetry](https://github.com/devaction-labs/zenith/milestone/2) | Event-driven telemetry: live throughput, wait and runtime percentiles, attempt history, and durable job history. | Complete |
+| [P2 · Dashboard parity](https://github.com/devaction-labs/zenith/milestone/3) | Workflow graph, cron history, runtime scaling, multi-select bulk actions, and payload redaction. | Complete |
+| [P3 · Engine](https://github.com/devaction-labs/zenith/milestone/4) | Global limits and partitions, ordered chains, recorded output, a transactional outbox, and a workflow lifeline. | Complete |
 
 ## Renamed from Horizon New Dawn
 
@@ -324,6 +337,14 @@ use Illuminate\Support\Facades\Schedule;
 Schedule::command('horizon:snapshot')->everyFiveMinutes();
 ```
 
+If durable job history is enabled, schedule the prune command outside peak
+traffic with Laravel's `withoutOverlapping()` guard so a slow run is never
+started twice:
+
+```php
+Schedule::command('zenith:prune-history')->daily()->withoutOverlapping();
+```
+
 Rollback by restoring the prior Composer lock file and application release,
 running that release's installer, rebuilding Laravel's caches, and restarting
 the long-lived processes. Redis Cluster remains outside the supported
@@ -443,6 +464,17 @@ return [
     'poll_interval' => 5000,
     'job_navigation_breakdown' => false,
     'job_payload_allowed_classes' => [],
+    'redact_payload_keys' => [
+        'password',
+        'token',
+        'secret',
+        'key',
+        'authorization',
+    ],
+    'supervisor_scale_bounds' => [
+        'min' => 1,
+        'max' => 20,
+    ],
     'bulk_operations' => [
         'connection' => null,
         'queue' => null,
@@ -459,6 +491,43 @@ return [
         'store' => null,
         'ttl' => 86400,
     ],
+    'history' => [
+        'enabled' => false,
+        'retention' => [],
+    ],
+    'telemetry' => [
+        'enabled' => false,
+        'node' => null,
+        'retention' => [/* ... */],
+        'in_flight' => [
+            'default_timeout_seconds' => 60,
+            'grace_seconds' => 60,
+        ],
+        'attempts' => [
+            'per_job_limit' => 25,
+            'ttl_seconds' => 604800,
+        ],
+    ],
+    'schedule_history' => [
+        'store' => null,
+        'ttl' => 604800,
+        'limit' => 10,
+    ],
+    'dynamic_cron_allowed_classes' => [],
+    'queue_failover' => [
+        'store' => null,
+        'window_minutes' => 60,
+    ],
+    'chains' => [
+        'store' => null,
+    ],
+    'recorded' => [
+        'store' => null,
+        'ttl' => 86400,
+    ],
+    'starvation' => [
+        'threshold_seconds' => 300,
+    ],
 ];
 ```
 
@@ -474,6 +543,14 @@ classes. PHP deserialization may invoke lifecycle methods such as `__wakeup`
 and `__destruct`, so allow only side-effect-free classes controlled by the
 application.
 
+`redact_payload_keys` masks job argument, failed-job argument, and workflow
+step output and context values before they reach Inertia whenever a key
+contains one of the configured strings, case-insensitively, at any depth. Call
+`DevactionLabs\Zenith\Zenith::redactPayloadUsing(callable $callback)` from your
+own service provider to replace that key-pattern matching entirely with
+application-specific redaction; the callback receives the full payload array
+and its return value is used as-is.
+
 `signals`, `relay`, and `chunks` each choose the cache `store` that backs
 that feature (the default store when `null`) and how long, in seconds, a
 signal, a relayed result, or a buffered chunk is kept before it expires. The
@@ -485,6 +562,146 @@ instead of occupying a worker, must add `new
 method — `RunWorkflowStep` already does this for workflow steps. Give a
 waiting job's class a `retryUntil()` deadline rather than a fixed `$tries`, so
 being released while it waits never exhausts its attempts.
+
+`history.enabled` opt-ins into durable job history: once `true` and migrated,
+`zenith_job_history` stores one row per terminal job attempt (class, queue,
+connection, status, attempts, runtime, tags, a short error summary, and
+pushed/completed/failed timestamps) with no raw payload or exception trace.
+`history.retention` is an ordered list of rules, each with an optional
+`queue`, `class`, and/or `status` filter and a required `days` value, for
+example:
+
+```php
+'history' => [
+    'enabled' => true,
+    'retention' => [
+        ['queue' => 'emails', 'days' => 7],
+        ['status' => 'failed', 'days' => 90],
+        ['days' => 30],
+    ],
+],
+```
+
+`zenith:prune-history` deletes rows older than their matching rule's `days`.
+Rules are evaluated in the listed order and the first one whose filters match
+a row governs it; list a rule with no filters last, since it is a catch-all
+and nothing after it can ever match. Rows matched by no rule are kept
+indefinitely rather than pruned by guesswork.
+
+`telemetry.enabled` opt-ins into the event-driven metrics recorder that
+powers the dashboard's live throughput and percentile charts, per-attempt
+error history, and the in-flight "Executing" view; it adds no queue-event
+listeners and writes nothing to Redis while disabled. `telemetry.node`
+overrides the node identity recorded for every event on a host (the local
+hostname by default). `telemetry.retention` configures the fine (1s),
+standard (1m), and coarse (5m) bucket widths and how long each tier is kept.
+`telemetry.in_flight` bounds how long an "executing" entry survives without a
+terminal event, derived from a job's own `Timeout` attribute plus a grace
+period. `telemetry.attempts` bounds the per-job attempt history shown on job
+and failed-job detail, both by count and by a TTL.
+
+`supervisor_scale_bounds` clamps the minimum and maximum process count
+accepted by the runtime supervisor-scaling control; a supervisor's own
+configured `minProcesses`/`maxProcesses` take precedence when Horizon exposes
+them.
+
+`schedule_history` chooses the cache store, TTL, and per-event run limit for
+the run history recorded on the Schedule page. `dynamic_cron_allowed_classes`
+is a required allowlist of job classes that can be scheduled by name from the
+dynamic-cron dashboard controls; a class not on the list is rejected.
+
+`queue_failover` sets the cache store and lookback window for tracking recent
+`Illuminate\Queue\Events\QueueFailedOver` occurrences, surfaced as the
+Horizon-bypass warning banner.
+
+`chains` and `recorded` choose the cache store (plus, for `recorded`, a TTL)
+backing `#[ChainBy]` ordered-chain enforcement and `#[Recorded]` job-output
+capture, respectively.
+
+`starvation.threshold_seconds` is how long a queue's oldest ready job may age
+before `QueueStarvationAlert` flags that queue as starved on the dashboard and
+queues page; the alert never reprioritizes or moves jobs itself.
+
+## Testing
+
+`Workflow`, `Signal`, and `Relay` each expose a `fake()`, mirroring Laravel's
+`Bus::fake()` ergonomics:
+
+```php
+use DevactionLabs\Zenith\Workflows\RunWorkflowStep;
+use DevactionLabs\Zenith\Workflows\Workflow;
+use DevactionLabs\Zenith\Workflows\WorkflowDefinition;
+use Illuminate\Support\Facades\Bus;
+
+Workflow::fake();
+
+$workflow = WorkflowDefinition::make('onboarding')
+    ->add('provision', ProvisionAccount::class)
+    ->dispatch();
+
+Workflow::assertDispatched('onboarding');
+Bus::assertNotDispatched(RunWorkflowStep::class);
+```
+
+`Workflow::fake()` fakes the bus too, so there is no separate `Bus::fake()`
+call to make. `dispatch()` still persists the real workflow and step rows —
+the step above ends up `WorkflowStatus::Dispatched` — but `RunWorkflowStep` is
+never actually queued. `Workflow::assertDispatched()` takes no argument to
+assert any workflow was dispatched, a string to match a dispatched workflow's
+`name()`, or a closure that receives each dispatched `WorkflowDefinition`:
+
+```php
+Workflow::assertDispatched(
+    fn (WorkflowDefinition $definition) => $definition->name() === 'onboarding'
+        && count($definition->steps()) === 1,
+);
+```
+
+Call `Workflow::fake()` again for a clean slate; it forgets every previously
+recorded dispatch.
+
+`Signal::fake()` and `Relay::fake()` swap the store the feature reads and
+writes for an isolated in-memory one, so a test can send and await signals, or
+record and await relayed results, without configuring a real cache:
+
+```php
+use DevactionLabs\Zenith\Relay\Relay;
+use DevactionLabs\Zenith\Signals\Signal;
+
+Signal::fake();
+Signal::send('approval', ['approved' => true]);
+
+expect(Signal::pull('approval'))->toBe(['approved' => true]);
+
+Relay::fake();
+Relay::record('job-1', ['ok' => true]);
+
+expect(Relay::await('job-1', seconds: 5))->toBe(['ok' => true]);
+```
+
+Calling either again also gives a clean slate.
+
+Faking any of the three stops queued jobs from running, so a workflow
+dispatched under `Workflow::fake()` (or a plain `Bus::fake()`) stops at its
+first claimed step. Zenith's own Pest suite drains one to a terminal status
+in-process instead of through a real queue worker:
+
+```php
+$workflow = drainWorkflow($workflow);
+
+expect($workflow->status)->toBe(WorkflowStatus::Completed);
+```
+
+`drainWorkflow()` repeatedly runs whichever claimed step or compensation the
+workflow is waiting on — exactly as `RunWorkflowStep` or
+`RunWorkflowCompensation` would — until nothing is left to claim. It does not
+retry a failed step: run directly instead of through a queued job, a step
+fails immediately on its first exception, the same as the sync queue driver.
+It is a plain test-support function, defined in
+`tests/Support/WorkflowDrain.php` and wired into `tests/Pest.php` the same way
+`tests/Support/WorkflowTables.php`'s `migrateWorkflowTables()` is; an
+application testing its own workflows can copy the same short helper into its
+own test suite.
 
 ## Development
 

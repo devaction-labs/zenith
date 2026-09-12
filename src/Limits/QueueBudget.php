@@ -9,6 +9,7 @@ use Illuminate\Container\Attributes\Scoped;
 use Illuminate\Contracts\Cache\Lock;
 use Illuminate\Contracts\Cache\LockProvider;
 use Illuminate\Contracts\Cache\Repository;
+use Illuminate\Contracts\Cache\Store;
 use Illuminate\Support\Str;
 use RuntimeException;
 
@@ -25,7 +26,7 @@ use RuntimeException;
 #[Scoped]
 final class QueueBudget
 {
-    /** @var array<string, list<Lock>> */
+    /** @var array<string, list<array{lock: Lock, slot: int}>> */
     private array $heldSlots = [];
 
     public function __construct(
@@ -64,6 +65,15 @@ final class QueueBudget
     }
 
     /**
+     * The number of hits left in the current rate window before $allowed is reached,
+     * without consuming one.
+     */
+    public function remaining(string $name, int $allowed, ?string $partition = null): int
+    {
+        return max(0, $this->limiter->remaining($this->key($name, $partition), $allowed));
+    }
+
+    /**
      * Acquire one of the `$limit` concurrency slots for the name. A slot
      * expires after `$expiresAfter` seconds so a crashed worker cannot hold it
      * forever.
@@ -79,7 +89,8 @@ final class QueueBudget
             $lock = $store->lock($this->slotKey($name, $slot), $expiresAfter, $owner);
 
             if ($lock->get() === true) {
-                $this->heldSlots[$name][] = $lock;
+                $store->put($this->slotKey($name, $slot), true, $expiresAfter);
+                $this->heldSlots[$name][] = ['lock' => $lock, 'slot' => $slot];
 
                 return true;
             }
@@ -95,7 +106,7 @@ final class QueueBudget
     public function releaseSlot(string $name): void
     {
         $held = $this->heldSlots[$name] ?? [];
-        $lock = array_pop($held);
+        $slot = array_pop($held);
 
         if ($held === []) {
             unset($this->heldSlots[$name]);
@@ -103,7 +114,36 @@ final class QueueBudget
             $this->heldSlots[$name] = $held;
         }
 
-        $lock?->release();
+        if ($slot === null) {
+            return;
+        }
+
+        $this->lockProvider()->forget($this->slotKey($name, $slot['slot']));
+        $slot['lock']->release();
+    }
+
+    /**
+     * The number of the name's $limit concurrency slots currently held by any worker.
+     *
+     * The lock itself proves atomicity but some stores, such as the array store, keep
+     * their lock state outside the normal get/put keyspace. The plain marker written
+     * alongside each acquired lock in acquireSlot() is what makes usage inspectable
+     * here regardless of the underlying store.
+     *
+     * @throws RuntimeException
+     */
+    public function slotsInUse(string $name, int $limit): int
+    {
+        $store = $this->lockProvider();
+        $inUse = 0;
+
+        for ($slot = 1; $slot <= $limit; $slot++) {
+            if ($store->get($this->slotKey($name, $slot)) !== null) {
+                $inUse++;
+            }
+        }
+
+        return $inUse;
     }
 
     private function key(string $name, ?string $partition): string
@@ -119,7 +159,7 @@ final class QueueBudget
     /**
      * @throws RuntimeException
      */
-    private function lockProvider(): LockProvider
+    private function lockProvider(): Store&LockProvider
     {
         $store = $this->cache->getStore();
 

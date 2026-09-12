@@ -22,6 +22,7 @@ export type WorkflowStep = {
   finishedAt: number | null;
   nested: boolean;
   childId: string | null;
+  stale: boolean;
 };
 
 export type WorkflowRow = {

@@ -1,3 +1,4 @@
+import { router } from "@inertiajs/react";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vite-plus/test";
 
@@ -139,6 +140,34 @@ describe("FailedJobTable", () => {
     fireEvent.click(screen.getByRole("button", { name: "Sort by Failed ascending" }));
 
     expect(onSort).toHaveBeenCalledWith("failedAt");
+  });
+
+  it("adds a checkbox column and reports toggled row selection without navigating", () => {
+    const onToggle = vi.fn();
+
+    render(
+      <TooltipProvider>
+        <FailedJobTable
+          jobs={jobs}
+          horizonBaseUrl="/horizon"
+          selection={{
+            label: "failed jobs",
+            selectedIds: new Set(["failed-slow"]),
+            onToggle,
+            onSelectIds: vi.fn(),
+            onClear: vi.fn(),
+          }}
+        />
+      </TooltipProvider>,
+    );
+
+    expect(screen.getByRole("checkbox", { name: "Select job SlowJob" })).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "Select job FastJob" })).not.toBeChecked();
+
+    fireEvent.click(screen.getByRole("checkbox", { name: "Select job FastJob" }));
+
+    expect(onToggle).toHaveBeenCalledWith("failed-fast");
+    expect(router.visit).not.toHaveBeenCalled();
   });
 
   it("uses the Failed Jobs navigation icon for its empty state", () => {

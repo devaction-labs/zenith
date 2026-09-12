@@ -47,6 +47,24 @@ final class FetchWorkflowStep implements ShouldQueue
     }
 }
 
+final class SecretReturningWorkflowStep implements ShouldQueue
+{
+    use Queueable;
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @param  array<string, mixed>  $context
+     * @return array<string, mixed>
+     */
+    public function handle(array $payload, array $context): array
+    {
+        return [
+            'apiToken' => 'super-secret-token',
+            'itemCount' => 3,
+        ];
+    }
+}
+
 final class ProcessWorkflowStep implements ShouldQueue
 {
     use Queueable;

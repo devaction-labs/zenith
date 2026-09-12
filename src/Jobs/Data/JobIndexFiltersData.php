@@ -13,11 +13,12 @@ final class JobIndexFiltersData extends Data
         public readonly ?string $queue,
         public readonly ?string $connection,
         public readonly ?string $state,
+        public readonly ?string $tag = null,
     ) {}
 
     public static function none(): self
     {
-        return new self(null, null, null, null);
+        return new self(null, null, null, null, null);
     }
 
     public function hasAny(): bool
@@ -25,7 +26,8 @@ final class JobIndexFiltersData extends Data
         return $this->job !== null
             || $this->queue !== null
             || $this->connection !== null
-            || $this->state !== null;
+            || $this->state !== null
+            || $this->tag !== null;
     }
 
     /** @return array<string, string|null> */
@@ -36,6 +38,7 @@ final class JobIndexFiltersData extends Data
             'queue' => $this->queue,
             'connection' => $this->connection,
             'state' => $this->state,
+            'tag' => $this->tag,
         ];
     }
 }

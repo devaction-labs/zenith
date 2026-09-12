@@ -4,11 +4,47 @@ declare(strict_types=1);
 
 use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Http\Request;
+use Pest\Browser\Api\AwaitableWebpage;
+use Pest\Browser\Api\Webpage;
+use Pest\Browser\Playwright\Page;
+use Pest\Browser\Playwright\Playwright;
 use Symfony\Component\HttpFoundation\Response;
 
 use function DevactionLabs\Zenith\Tests\Support\bindBrowserInfiniteScrollRefreshFixtures;
 use function DevactionLabs\Zenith\Tests\Support\bindBrowserPageFixtures;
 use function DevactionLabs\Zenith\Tests\Support\bindBrowserQueueCompletedSummaryRefreshFixtures;
+
+/**
+ * Runs a page script exactly once, bypassing AwaitableWebpage::__call()'s
+ * retry wrapper.
+ *
+ * `Execution::waitForExpectation()` hard-codes a 1-second sub-timeout per
+ * attempt regardless of the caller's own override, so under Playwright
+ * 1.63+ a script() call whose promise legitimately takes longer than a
+ * second to resolve gets silently re-evaluated from scratch, several times,
+ * on the same live page. That is harmless for a plain element assertion,
+ * but a probe that arms or observes a one-shot server-side fixture (a
+ * single-use failure response, a stateful attempt counter) loses events to
+ * the discarded earlier attempts before its own listener ever attaches.
+ * Building a plain Webpage runs the script exactly once, with the full
+ * timeout applied to itself instead of split across repeated 1-second
+ * attempts.
+ *
+ * `$page` is already the underlying AwaitableWebpage at runtime (it swaps
+ * itself back in for fluent chaining), but PHPStan cannot resolve its
+ * `page` property through the pipe-separated `@mixin Webpage|AwaitableWebpage`,
+ * hence the reflection below instead of `$page->page()`.
+ */
+function runBrowserScriptOnce(object $page, string $script): mixed
+{
+    $rawPage = new ReflectionProperty(AwaitableWebpage::class, 'page')->getValue($page);
+
+    if (! $rawPage instanceof Page) {
+        throw new LogicException('Expected the visited page to resolve to a raw Playwright page.');
+    }
+
+    return Playwright::usingTimeout(15_000, fn () => (new Webpage($rawPage, $rawPage->url()))->script($script));
+}
 
 describe('automatic refresh', function (): void {
     it('intercepts asset-version changes in the rendered interface', function (): void {
@@ -727,7 +763,7 @@ describe('automatic refresh', function (): void {
         $page = visit('/horizon/jobs/pending')
             ->assertPresent('[aria-label="Auto load new entries"]');
 
-        $result = $page->script(<<<'JS'
+        $result = runBrowserScriptOnce($page, <<<'JS'
             () => new Promise((resolve, reject) => {
                 let sawFailedState = false
                 let finished = false
@@ -859,9 +895,10 @@ describe('automatic refresh', function (): void {
     it('keeps the last completed queue count while a refresh is still calculating', function (): void {
         bindBrowserQueueCompletedSummaryRefreshFixtures();
 
-        $page = visit('/horizon/queues/reports');
+        $page = visit('/horizon/queues/reports')
+            ->assertPresent('[aria-label="Auto load new entries"]');
 
-        $result = $page->script(<<<'JS'
+        $result = runBrowserScriptOnce($page, <<<'JS'
             () => new Promise((resolve, reject) => {
                 let sawUnavailableRefresh = false
                 let retainedCountOccurrences = null

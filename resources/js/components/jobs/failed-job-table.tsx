@@ -8,6 +8,7 @@ import {
   type ControlledTableSorting,
 } from "@/components/data-table/table-sorting";
 import { NewEntriesTableRow } from "@/components/data-table/new-entries-alert";
+import { RowSelectionHeaderCell } from "@/components/data-table/row-selection-header";
 import { TableEmpty } from "@/components/data-table/table-empty";
 import { Duration } from "@/components/duration";
 import { FailedJobActionsMenu } from "@/components/jobs/failed-job-actions";
@@ -15,12 +16,20 @@ import { JobTablePrimaryCell } from "@/components/jobs/job-table-primary-cell";
 import { FailedJobsNavigationIcon } from "@/components/navigation-icons";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { show as failedJobShow } from "@/generated/routes/zenith/failed-jobs";
 import { resolveHorizonRoute } from "@/lib/horizon-route";
 import { isInteractiveTarget } from "@/lib/interactive-target";
-import type { JobRow } from "@/types/jobs";
+import type { JobRow, JobTableSelection } from "@/types/jobs";
 
 const dateFormatter = new Intl.DateTimeFormat("sv-SE", {
   year: "numeric",
@@ -67,6 +76,7 @@ export function FailedJobTable({
   emptyDescription,
   sorting,
   bodyRef,
+  selection,
 }: {
   jobs: readonly JobRow[];
   horizonBaseUrl: string;
@@ -78,8 +88,12 @@ export function FailedJobTable({
   emptyDescription?: string;
   sorting?: ControlledTableSorting;
   bodyRef?: Ref<HTMLTableSectionElement>;
+  /** Adds a checkbox column for multi-select bulk actions. Omitted, selection is disabled. */
+  selection?: JobTableSelection;
 }) {
   const hasVisibleJobs = jobs.length > 0;
+  const columnCount = 4 + (selection ? 1 : 0);
+  const selectableIds = selection ? jobs.map((job) => job.id) : [];
 
   if (!available) {
     return (
@@ -100,6 +114,17 @@ export function FailedJobTable({
     <Table>
       <TableHeader className="sticky top-0 z-10">
         <TableRow>
+          {selection ? (
+            <TableHead className="w-10 pr-0">
+              <RowSelectionHeaderCell
+                label={selection.label}
+                loadedIds={selectableIds}
+                selectedCount={selection.selectedIds.size}
+                onSelectIds={selection.onSelectIds}
+                onClear={selection.onClear}
+              />
+            </TableHead>
+          ) : null}
           <SortableTableHead label="Job" {...controlledSortHeader(sorting, "name")} />
           <SortableTableHead
             label="Runtime"
@@ -116,11 +141,11 @@ export function FailedJobTable({
       </TableHeader>
       <TableBody role="presentation">
         {hasNewEntries && onLoadNewEntries ? (
-          <NewEntriesTableRow columns={4} onLoad={onLoadNewEntries} />
+          <NewEntriesTableRow columns={columnCount} onLoad={onLoadNewEntries} />
         ) : null}
         {!hasVisibleJobs ? (
           <TableEmpty
-            columns={4}
+            columns={columnCount}
             title={emptyTitle ?? "No failed jobs"}
             description={emptyDescription ?? "There aren't any failed jobs."}
             icon={FailedJobsNavigationIcon}
@@ -148,6 +173,15 @@ export function FailedJobTable({
               }}
               onMouseEnter={() => router.prefetch(detailUrl)}
             >
+              {selection ? (
+                <TableCell className="pr-0" onClick={(event) => event.stopPropagation()}>
+                  <Checkbox
+                    aria-label={`Select job ${job.shortName}`}
+                    checked={selection.selectedIds.has(job.id)}
+                    onCheckedChange={() => selection.onToggle(job.id)}
+                  />
+                </TableCell>
+              ) : null}
               <JobTablePrimaryCell
                 name={job.shortName}
                 fullName={job.name}

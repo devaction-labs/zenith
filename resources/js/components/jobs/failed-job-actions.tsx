@@ -1,5 +1,5 @@
 import { router } from "@inertiajs/react";
-import { LoaderCircleIcon, RotateCcwIcon, Trash2Icon } from "lucide-react";
+import { LoaderCircleIcon, RotateCcwIcon, SparklesIcon, Trash2Icon } from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { destroy as removeFailedJob } from "@/generated/routes/zenith/failed-jobs";
 import { destroy as clearAllFailedJobs } from "@/generated/routes/zenith/failed-jobs/clear-all";
+import { store as explainFailedJob } from "@/generated/routes/zenith/failed-jobs/explain";
 import { store as retryAllFailedJobs } from "@/generated/routes/zenith/failed-jobs/retry-all";
 import { store as retryFailedJob } from "@/generated/routes/zenith/failed-jobs/retry";
 import { cn } from "@/lib/utils";
@@ -237,16 +238,32 @@ export function FailedJobActionsMenu({
   jobId,
   horizonBaseUrl,
   canRetry,
+  canExplainFailure = false,
 }: {
   jobId: string;
   horizonBaseUrl: string;
   canRetry: boolean;
+  canExplainFailure?: boolean;
 }) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [working, setWorking] = useState(false);
 
   const retry = () => {
     const route = resolveHorizonRoute(retryFailedJob(jobId), horizonBaseUrl);
+
+    router.post(
+      route.url,
+      {},
+      {
+        preserveScroll: true,
+        onStart: () => setWorking(true),
+        onFinish: () => setWorking(false),
+      },
+    );
+  };
+
+  const explainFailure = () => {
+    const route = resolveHorizonRoute(explainFailedJob(jobId), horizonBaseUrl);
 
     router.post(
       route.url,
@@ -286,6 +303,15 @@ export function FailedJobActionsMenu({
               <DropdownMenuItem onSelect={retry}>
                 <RotateCcwIcon className="size-3.5" />
                 Retry
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+            </>
+          ) : null}
+          {canExplainFailure ? (
+            <>
+              <DropdownMenuItem onSelect={explainFailure}>
+                <SparklesIcon className="size-3.5" />
+                Explain this failure
               </DropdownMenuItem>
               <DropdownMenuSeparator />
             </>
