@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-09-12
+
 ### Added
 
 - Pull requests from this repository enable auto-merge with a merge commit as soon as the aggregate `CI` check passes, through an Auto Merge job that uses the organization `GH_PAT` secret so the merge triggers the follow-up workflows. Draft pull requests are skipped.
@@ -176,7 +178,8 @@ First release under the Zenith name. Earlier versions were published as Horizon 
 - Backfill the worker option expected by newer Laravel releases when Horizon 5.46 does not register it, allowing real Horizon workers to boot normally.
 - Calculate dashboard queue runtime and throughput leaders from retained metric snapshots instead of relying on repository methods unavailable in Horizon 5.46.
 
-[Unreleased]: https://github.com/devaction-labs/zenith/compare/0.2.0...HEAD
+[Unreleased]: https://github.com/devaction-labs/zenith/compare/0.3.0...HEAD
+[0.3.0]: https://github.com/devaction-labs/zenith/compare/0.2.0...0.3.0
 [0.2.0]: https://github.com/devaction-labs/zenith/releases/tag/0.2.0
 [0.1.5]: https://github.com/nckrtl/horizon-new-dawn/compare/0.1.4...0.1.5
 [0.1.4]: https://github.com/nckrtl/horizon-new-dawn/compare/0.1.3...0.1.4
