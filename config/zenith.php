@@ -13,6 +13,10 @@ return [
         'key',
         'authorization',
     ],
+    'supervisor_scale_bounds' => [
+        'min' => 1,
+        'max' => 20,
+    ],
     'bulk_operations' => [
         'connection' => null,
         'queue' => null,
@@ -91,4 +95,8 @@ return [
         'limit' => 10,
     ],
     'dynamic_cron_allowed_classes' => [],
+    'queue_failover' => [
+        'store' => null,
+        'window_minutes' => 60,
+    ],
 ];

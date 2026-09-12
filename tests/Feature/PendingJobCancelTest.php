@@ -12,10 +12,12 @@ use Illuminate\Queue\SyncQueue;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Exceptions;
+use Illuminate\Support\Facades\Gate;
 use Laravel\Horizon\Contracts\JobRepository;
 use Laravel\Horizon\Horizon;
 
 use function DevactionLabs\Zenith\Tests\Support\bindBrowserPageFixtures;
+use function DevactionLabs\Zenith\Tests\Support\bulkSnapshotRedis;
 use function DevactionLabs\Zenith\Tests\Support\dashboardExpects;
 use function DevactionLabs\Zenith\Tests\Support\dashboardReturns;
 use function DevactionLabs\Zenith\Tests\Support\horizonJob;
@@ -126,4 +128,32 @@ it('queues cancellation when the requested queue scope exceeds the former ceilin
 
 it('rejects unsupported pending cancellation scopes', function (): void {
     delete('/horizon/jobs/pending/cancel/reserved')->assertStatus(405);
+});
+
+it('queues cancelling an explicit selection of pending job ids', function (): void {
+    Bus::fake();
+    bulkSnapshotRedis();
+    bindPendingCancellationAsyncBulkQueue();
+
+    delete('/horizon/jobs/pending/cancel-selected', ['ids' => ['pending-1', 'pending-2']])
+        ->assertSessionHas('toast.success', 'Cancelling 2 selected jobs was queued.')
+        ->assertRedirect();
+
+    Bus::assertDispatchedTimes(CancelPendingJobsJob::class, 1);
+    Bus::assertDispatched(
+        CancelPendingJobsJob::class,
+        fn (CancelPendingJobsJob $job): bool => $job->scope === PendingJobCancellationScope::Pending
+            && $job->queueName === null,
+    );
+});
+
+it('rejects an empty selection when cancelling selected pending jobs', function (): void {
+    delete('/horizon/jobs/pending/cancel-selected', ['ids' => []])
+        ->assertSessionHasErrors('ids');
+});
+
+it('forbids cancelling selected pending jobs when the cancelJobs gate is denied', function (): void {
+    Gate::define('zenith.cancelJobs', static fn (): bool => false);
+
+    delete('/horizon/jobs/pending/cancel-selected', ['ids' => ['pending-1']])->assertForbidden();
 });

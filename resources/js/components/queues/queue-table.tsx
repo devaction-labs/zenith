@@ -11,6 +11,7 @@ import {
   queueWaitThresholdSortRank,
 } from "@/components/queues/queue-wait-threshold";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
@@ -48,6 +49,7 @@ export function QueueTable({
   horizonBaseUrl,
   queuePausing = true,
   timedQueuePausing = true,
+  bypassProneConnections = [],
   emptyTitle,
   emptyDescription,
 }: {
@@ -55,6 +57,8 @@ export function QueueTable({
   horizonBaseUrl: string;
   queuePausing?: boolean;
   timedQueuePausing?: boolean;
+  /** Connections configured with a driver (failover, deferred, background) that can bypass Horizon. */
+  bypassProneConnections?: string[];
   emptyTitle?: string;
   emptyDescription?: string;
 }) {
@@ -135,6 +139,9 @@ export function QueueTable({
             queueShow(encodeURIComponent(queue.name)),
             horizonBaseUrl,
           ).url;
+          const bypassesHorizon = queue.connections.some((connection) =>
+            bypassProneConnections.includes(connection),
+          );
 
           return (
             <TableRow
@@ -164,6 +171,11 @@ export function QueueTable({
                       connection={queue.pauseTargets.length > 1 ? target.connection : undefined}
                     />
                   ))}
+                  {bypassesHorizon ? (
+                    <Badge variant="warning" title="This queue has a connection that can bypass Horizon.">
+                      Bypasses Horizon
+                    </Badge>
+                  ) : null}
                 </Link>
                 {queue.connections.length > 1 ? (
                   <p className="mt-0.5 text-xs text-muted-foreground">

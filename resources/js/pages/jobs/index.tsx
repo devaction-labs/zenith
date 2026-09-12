@@ -1,6 +1,7 @@
 import { Head, InfiniteScroll, router } from "@inertiajs/react";
-import { useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 
+import { SelectionToolbar } from "@/components/data-table/selection-toolbar";
 import {
   emptyJobFilterValues,
   JobFilters,
@@ -11,10 +12,12 @@ import {
 } from "@/components/jobs/job-filters";
 import { JobTable } from "@/components/jobs/job-table";
 import { JobsPage } from "@/components/jobs/jobs-page";
+import { CancelSelectedPendingJobsButton } from "@/components/jobs/selected-jobs-actions";
 import { index as jobsIndex } from "@/generated/routes/zenith/jobs";
 import { useAutoLoad } from "@/hooks/use-auto-load";
 import { useJobFilterCatalogRefresh } from "@/hooks/use-job-filter-catalog-refresh";
 import { useJobQueryControls } from "@/hooks/use-job-query-controls";
+import { useRowSelection } from "@/hooks/use-row-selection";
 import { useSortableRows, type SortColumn } from "@/hooks/use-sortable-rows";
 import { useAutoLoadPreference } from "@/layouts/horizon-layout";
 import { resolveHorizonRoute } from "@/lib/horizon-route";
@@ -113,6 +116,12 @@ function JobsContent({
     persist: true,
     defaultSort: type === "pending" ? undefined : completedAtDescending,
   });
+  const selection = useRowSelection();
+  const clearSelection = selection.clear;
+
+  useEffect(() => {
+    clearSelection();
+  }, [querySignature, clearSelection]);
   const filterKeys = jobFilterKeys(type);
   const filterValues: JobFilterValues = {
     ...emptyJobFilterValues,
@@ -165,6 +174,15 @@ function JobsContent({
         />
       }
     >
+      <SelectionToolbar count={selection.selectedCount} noun="job" onClear={selection.clear}>
+        {type === "pending" ? (
+          <CancelSelectedPendingJobsButton
+            horizonBaseUrl={horizon.baseUrl}
+            ids={Array.from(selection.selectedIds)}
+            onDone={selection.clear}
+          />
+        ) : null}
+      </SelectionToolbar>
       <InfiniteScroll
         key={`${type}:${querySignature}:${jobs.available}`}
         data="jobs"
@@ -199,6 +217,13 @@ function JobsContent({
             onSort: sortedJobs.toggle,
           }}
           bodyRef={jobItemsRef}
+          selection={{
+            label: `${type} jobs`,
+            selectedIds: selection.selectedIds,
+            onToggle: selection.toggle,
+            onSelectIds: selection.selectIds,
+            onClear: selection.clear,
+          }}
         />
       </InfiniteScroll>
     </JobsPage>

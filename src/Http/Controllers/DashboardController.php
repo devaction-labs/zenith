@@ -8,6 +8,8 @@ use DevactionLabs\Zenith\Dashboard\DashboardData;
 use DevactionLabs\Zenith\Dashboard\Data\DashboardSummaryData;
 use DevactionLabs\Zenith\Dashboard\Data\DashboardSupervisorsData;
 use DevactionLabs\Zenith\Dashboard\Data\DashboardWorkloadData;
+use DevactionLabs\Zenith\Queues\Data\QueueBypassWarningData;
+use DevactionLabs\Zenith\Queues\QueueBypassWarning;
 use DevactionLabs\Zenith\Support\Data\PageMetaData;
 use DevactionLabs\Zenith\Support\NavigationItem;
 use DevactionLabs\Zenith\Telemetry\Data\ThroughputChartData;
@@ -22,7 +24,7 @@ final class DashboardController
 {
     public function __construct(private readonly TelemetryMetricsReader $telemetryMetrics) {}
 
-    public function index(DashboardData $dashboard, Request $request): Response
+    public function index(DashboardData $dashboard, Request $request, QueueBypassWarning $bypassWarning): Response
     {
         $groupBy = $this->groupByFromRequest($request);
         $window = $this->windowFromRequest($request);
@@ -35,6 +37,7 @@ final class DashboardController
             'liveThroughput' => fn (): ThroughputChartData => $this->telemetryMetrics->throughput($window, $groupBy),
             'liveMetricsGroupBy' => $groupBy->value,
             'liveMetricsWindow' => $window->value,
+            'queueBypassWarning' => fn (): QueueBypassWarningData => $bypassWarning->summary(),
         ]);
     }
 

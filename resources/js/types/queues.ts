@@ -1,5 +1,5 @@
 import type { BatchRow } from "@/types/batches";
-import type { HorizonStatus } from "@/types/dashboard";
+import type { HorizonStatus, QueueBypassWarning } from "@/types/dashboard";
 import type { JobRow } from "@/types/jobs";
 import type { MetricPreview } from "@/types/metrics";
 
@@ -135,6 +135,7 @@ type QueuesHorizon = {
 export type QueuesPageProps = {
   horizon: QueuesHorizon;
   queues: QueueList;
+  queueBypassWarning?: QueueBypassWarning;
 };
 
 export type QueueShowPageProps = {

@@ -4,8 +4,10 @@ import { useState } from "react";
 import { AttemptTimeline } from "@/components/jobs/attempt-timeline";
 import { DetailList, DetailListItem } from "@/components/detail-list";
 import { Duration } from "@/components/duration";
+import { JobAttributesPanel } from "@/components/jobs/job-attributes";
 import { JobStatus, type JobStatusValue } from "@/components/jobs/job-status";
 import { PendingJobActionsMenu } from "@/components/jobs/pending-job-actions";
+import { RetryRetainedJobButton } from "@/components/jobs/retained-job-actions";
 import { JobCompositionPanel } from "@/components/jobs/job-composition";
 import { JobTags } from "@/components/jobs/job-tags";
 import { JsonPayload } from "@/components/payload/json-payload";
@@ -188,6 +190,15 @@ function JobShow({ horizon, type, job }: JobDetailPageProps) {
                 />
               </CardAction>
             ) : null}
+            {(type === "completed" || type === "silenced") && job.retryEligible ? (
+              <CardAction className="flex shrink-0 items-center self-center">
+                <RetryRetainedJobButton
+                  type={type}
+                  jobId={job.id}
+                  horizonBaseUrl={horizon.baseUrl}
+                />
+              </CardAction>
+            ) : null}
           </CardHeader>
           <CardContent className="p-0">
             <DetailList>
@@ -213,6 +224,7 @@ function JobShow({ horizon, type, job }: JobDetailPageProps) {
         </Card>
 
         <JobCompositionPanel composition={job.composition} />
+        <JobAttributesPanel attributes={job.attributes} />
         <JobDataTabs payload={job.payload} tags={job.tags} />
         <AttemptTimeline timeline={job.attemptTimeline} />
       </div>

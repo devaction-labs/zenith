@@ -1,5 +1,6 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../../wayfinder'
 import pending from './pending'
+import retry from './retry'
 /**
 * @see \DevactionLabs\Zenith\Http\Controllers\JobController::index
 * @see src/Http/Controllers/JobController.php:18
@@ -127,6 +128,7 @@ const jobs = {
     pending: Object.assign(pending, pending),
     index: Object.assign(index, index),
     show: Object.assign(show, show),
+    retry: Object.assign(retry, retry),
 }
 
 export default jobs

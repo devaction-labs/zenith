@@ -34,10 +34,16 @@ export type SupervisorDetails = {
   warnings: SupervisorWarning[];
 };
 
+export type SupervisorScaleBounds = {
+  min: number;
+  max: number;
+};
+
 export type SupervisorDetailsPageProps = Pick<HorizonPageProps, "horizon"> & {
   supervisorDetails: {
     available: boolean;
     supervisor: SupervisorDetails | null;
     message: string | null;
   };
+  supervisorScaleBounds: SupervisorScaleBounds;
 };

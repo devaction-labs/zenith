@@ -44,6 +44,14 @@ export type JobRow = {
   inspectable?: boolean;
 };
 
+export type JobTableSelection = {
+  label: string;
+  selectedIds: ReadonlySet<string>;
+  onToggle: (id: string) => void;
+  onSelectIds: (ids: readonly string[]) => void;
+  onClear: () => void;
+};
+
 export type JobCollection = {
   data: JobRow[];
   total: number;
@@ -74,6 +82,24 @@ export type AttemptTimeline = {
   message: string | null;
 };
 
+export type JobAttributes = {
+  tries: number | null;
+  backoff: number | number[] | null;
+  timeout: number | null;
+  failOnTimeout: boolean;
+  maxExceptions: number | null;
+  uniqueFor: number | null;
+  debounceFor: number | null;
+  debounceMaxWait: number | null;
+  queue: string | null;
+  connection: string | null;
+  delay: number | null;
+  withoutRelations: boolean;
+  deleteWhenMissingModels: boolean;
+  routedQueue: string | null;
+  routedConnection: string | null;
+};
+
 export type JobDetail = Omit<
   JobRow,
   | "index"
@@ -82,13 +108,13 @@ export type JobDetail = Omit<
   | "retryCompleted"
   | "retryCount"
   | "latestRetryStatus"
-  | "retryEligible"
   | "attemptsComplete"
 > & {
   batchId: string | null;
   payload: Record<string, unknown>;
   attemptTimeline: AttemptTimeline;
   composition?: JobComposition;
+  attributes?: JobAttributes;
 };
 
 export type FailedJobRetry = {

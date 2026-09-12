@@ -259,6 +259,7 @@ final readonly class FailedJobsData
                     : '',
                 attemptTimeline: $detail->attemptTimeline,
                 composition: $detail->composition,
+                attributes: $detail->attributes,
             );
         } catch (Throwable $exception) {
             report($exception);

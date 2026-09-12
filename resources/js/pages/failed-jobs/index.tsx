@@ -1,6 +1,7 @@
 import { Head, InfiniteScroll, router } from "@inertiajs/react";
-import { useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 
+import { SelectionToolbar } from "@/components/data-table/selection-toolbar";
 import { FailedJobTable } from "@/components/jobs/failed-job-table";
 import {
   emptyJobFilterValues,
@@ -11,10 +12,15 @@ import {
   type JobFilterValues,
 } from "@/components/jobs/job-filters";
 import { JobsPage } from "@/components/jobs/jobs-page";
+import {
+  RemoveSelectedFailedJobsButton,
+  RetrySelectedFailedJobsButton,
+} from "@/components/jobs/selected-jobs-actions";
 import { index as failedJobsIndex } from "@/generated/routes/zenith/failed-jobs";
 import { useAutoLoad } from "@/hooks/use-auto-load";
 import { useJobFilterCatalogRefresh } from "@/hooks/use-job-filter-catalog-refresh";
 import { useJobQueryControls } from "@/hooks/use-job-query-controls";
+import { useRowSelection } from "@/hooks/use-row-selection";
 import { useSortableRows, type SortColumn } from "@/hooks/use-sortable-rows";
 import { useAutoLoadPreference } from "@/layouts/horizon-layout";
 import { resolveHorizonRoute } from "@/lib/horizon-route";
@@ -84,6 +90,12 @@ function FailedJobsIndex({
     loadedItemCount: jobs.data.length,
   });
   const sortedJobs = useSortableRows(jobs.data, sortColumns, { persist: true });
+  const selection = useRowSelection();
+  const clearSelection = selection.clear;
+
+  useEffect(() => {
+    clearSelection();
+  }, [querySignature, clearSelection]);
   const filterKeys = jobFilterKeys("failed");
   const filterValues: JobFilterValues = {
     ...emptyJobFilterValues,
@@ -147,6 +159,18 @@ function FailedJobsIndex({
           />
         }
       >
+        <SelectionToolbar count={selection.selectedCount} noun="job" onClear={selection.clear}>
+          <RetrySelectedFailedJobsButton
+            horizonBaseUrl={horizon.baseUrl}
+            ids={Array.from(selection.selectedIds)}
+            onDone={selection.clear}
+          />
+          <RemoveSelectedFailedJobsButton
+            horizonBaseUrl={horizon.baseUrl}
+            ids={Array.from(selection.selectedIds)}
+            onDone={selection.clear}
+          />
+        </SelectionToolbar>
         <InfiniteScroll
           key={`${querySignature}:${jobs.available}`}
           data="jobs"
@@ -172,6 +196,13 @@ function FailedJobsIndex({
               onSort: sortedJobs.toggle,
             }}
             bodyRef={jobItemsRef}
+            selection={{
+              label: "failed jobs",
+              selectedIds: selection.selectedIds,
+              onToggle: selection.toggle,
+              onSelectIds: selection.selectIds,
+              onClear: selection.clear,
+            }}
           />
         </InfiniteScroll>
       </JobsPage>

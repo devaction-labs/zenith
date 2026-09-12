@@ -14,6 +14,35 @@ use Throwable;
 final class QueueRouting
 {
     /**
+     * Resolve the Queue::route() destination registered for a job class, if any.
+     *
+     * Mirrors QueueRoutes::getRoute()'s class/parent/interface/trait matching
+     * without instantiating $class, since callers only have a class name.
+     */
+    public function forClass(string $class): ?QueueClassRouteData
+    {
+        try {
+            $routes = $this->routes();
+
+            if ($routes === null) {
+                return null;
+            }
+
+            $destination = $this->routeFor($class, $routes->all());
+
+            if ($destination === null) {
+                return null;
+            }
+
+            [$connection, $queue] = $this->normalizeDestination($destination);
+
+            return $queue === null ? null : new QueueClassRouteData($class, $queue, $connection);
+        } catch (Throwable) {
+            return null;
+        }
+    }
+
+    /**
      * @param  array<int, string>  $connections
      */
     public function forQueue(string $queue, array $connections): QueueRoutingData
@@ -75,6 +104,41 @@ final class QueueRouting
         }
 
         return [null, null];
+    }
+
+    /**
+     * @param  array<class-string, mixed>  $routes
+     */
+    private function routeFor(string $class, array $routes): mixed
+    {
+        if ($routes === []) {
+            return null;
+        }
+
+        foreach ($this->candidateClasses($class) as $candidate) {
+            if (array_key_exists($candidate, $routes)) {
+                return $routes[$candidate];
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function candidateClasses(string $class): array
+    {
+        if (! class_exists($class) && ! interface_exists($class)) {
+            return [$class];
+        }
+
+        return array_values(array_merge(
+            [$class],
+            class_parents($class) ?: [],
+            class_implements($class) ?: [],
+            class_uses_recursive($class),
+        ));
     }
 
     private function routes(): ?QueueRoutes

@@ -5,6 +5,7 @@ import { DashboardOverview } from "@/components/dashboard/dashboard-overview";
 import { SupervisorsTable } from "@/components/dashboard/supervisors-table";
 import { WorkloadTable } from "@/components/dashboard/workload-table";
 import { Duration } from "@/components/duration";
+import { QueueBypassBanner } from "@/components/queues/queue-bypass-banner";
 import { TelemetryGroupBySelect, TelemetryWindowSelect } from "@/components/telemetry/telemetry-controls";
 import { ThroughputChart } from "@/components/telemetry/throughput-chart";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -36,6 +37,7 @@ function Dashboard({
   liveThroughput,
   liveMetricsGroupBy,
   liveMetricsWindow,
+  queueBypassWarning,
 }: DashboardPageProps) {
   const { autoLoad } = useAutoLoadPreference();
   const {
@@ -77,6 +79,7 @@ function Dashboard({
     <>
       <Head title="Dashboard" />
       <div className="flex flex-col gap-[7px] min-[1140px]:gap-3.5">
+        <QueueBypassBanner warning={queueBypassWarning} />
         <DashboardOverview
           summary={summary}
           links={{

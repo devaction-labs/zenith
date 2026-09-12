@@ -36,8 +36,10 @@ use DevactionLabs\Zenith\Jobs\PendingJobStateIndex;
 use DevactionLabs\Zenith\Jobs\RetainedJobFilterCatalog;
 use DevactionLabs\Zenith\Jobs\RetainedJobIndex;
 use DevactionLabs\Zenith\Jobs\RetainedJobQuery;
+use DevactionLabs\Zenith\Jobs\RetainedJobRetryEligibility;
 use DevactionLabs\Zenith\Queues\ClearQueueMetadata;
 use DevactionLabs\Zenith\Queues\ClearsQueueMetadata;
+use DevactionLabs\Zenith\Queues\RecordQueueFailover;
 use DevactionLabs\Zenith\Schedule\DynamicSchedule;
 use DevactionLabs\Zenith\Schedule\InternalScheduledEvent;
 use DevactionLabs\Zenith\Schedule\ScheduleHistoryRecorder;
@@ -60,6 +62,7 @@ use Illuminate\Contracts\Redis\Factory as RedisFactory;
 use Illuminate\Queue\Events\JobFailed as QueueJobFailed;
 use Illuminate\Queue\Events\JobProcessed as QueueJobProcessed;
 use Illuminate\Queue\Events\JobProcessing as QueueJobProcessing;
+use Illuminate\Queue\Events\QueueFailedOver;
 use Illuminate\Routing\Router;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
@@ -174,6 +177,7 @@ final class ZenithServiceProvider extends ServiceProvider
                 retainedQuery: $this->app->make(RetainedJobQuery::class),
                 filterCatalog: $this->app->make(RetainedJobFilterCatalog::class),
                 attemptHistory: $this->app->make(AttemptHistory::class),
+                retryEligibility: $this->app->make(RetainedJobRetryEligibility::class),
             ),
         );
         $this->app->resolving(
@@ -207,6 +211,8 @@ final class ZenithServiceProvider extends ServiceProvider
      */
     public function boot(AssetPath $assetPath, EventDispatcher $events): void
     {
+        $this->app->make(EventDispatcher::class)->listen(QueueFailedOver::class, RecordQueueFailover::class);
+
         $this->excludeHorizonFromSsr($this->app->make(Gateway::class));
         $this->registerScheduleHistoryListeners($events);
 
