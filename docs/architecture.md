@@ -330,6 +330,16 @@ Oban applies concurrency and rate limits when a worker fetches a job, so a satur
 
 Decision: stay with after-pop gating. Revisit only if Horizon publishes a documented fetch-time extension point, or if release churn measured through the telemetry recorder (issue #14) proves costly enough for a specific workload to justify maintaining a fork.
 
+### Autoscaling signals for external schedulers (issue #39): go, via a CLI export, not a new HTTP endpoint
+
+Oban Pro's Dynamic Scaler scales worker nodes horizontally from queue depth, wait time, and throughput. Horizon's own auto-balancing only scales processes within a node. Exposing those numbers so KEDA or the Kubernetes HPA can scale nodes is worth doing, but Zenith's design goals rule out adding a second general browser-facing API surface, and a scraped HTTP endpoint would be exactly that: a new, generally reachable route outside Horizon's existing read/write contract.
+
+Decision: `php artisan zenith:export-metrics` prints Prometheus text-format samples for queue depth, wait time, and throughput to stdout, reusing the same `QueuesData`/`MetricsRepository` sources the dashboard already reads. It opens no route. Recipes:
+
+- **Textfile collector**: a cron writes the command's output to `node_exporter`'s textfile collector directory; Prometheus scrapes it from there.
+- **Pushgateway**: pipe the output through `curl --data-binary @- http://pushgateway:9091/metrics/job/zenith` on a schedule.
+- **KEDA / HPA**: point a `ScaledObject` or the Prometheus custom-metrics adapter at whichever of the above populates Prometheus; Zenith itself stays unaware of the autoscaler.
+
 ## Development environment
 
 Orchestra Testbench verifies package behavior in isolation. The Workbench application provides deterministic successful and failing jobs for live dashboard development.

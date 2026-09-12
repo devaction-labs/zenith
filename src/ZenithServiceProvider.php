@@ -11,6 +11,7 @@ use DevactionLabs\Zenith\Batches\DatabaseBatchQuery;
 use DevactionLabs\Zenith\BulkOperations\BulkOperationSnapshot;
 use DevactionLabs\Zenith\Chunks\ChunkBuffer;
 use DevactionLabs\Zenith\Console\AssetsCommand;
+use DevactionLabs\Zenith\Console\ExportMetricsCommand;
 use DevactionLabs\Zenith\Console\InstallCommand;
 use DevactionLabs\Zenith\Console\WarmBatchMetadataCommand;
 use DevactionLabs\Zenith\Console\WarmRetainedJobsCommand;
@@ -204,6 +205,7 @@ final class ZenithServiceProvider extends ServiceProvider
         if ($this->app->runningInConsole()) {
             $this->commands([
                 AssetsCommand::class,
+                ExportMetricsCommand::class,
                 InstallCommand::class,
                 WarmBatchMetadataCommand::class,
                 WarmRetainedJobsCommand::class,
