@@ -26,4 +26,8 @@ return [
         'store' => null,
         'ttl' => 86400,
     ],
+    'queue_failover' => [
+        'store' => null,
+        'window_minutes' => 60,
+    ],
 ];

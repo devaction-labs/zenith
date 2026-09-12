@@ -10,9 +10,11 @@ use DevactionLabs\Zenith\Metrics\Data\MetricPreviewData;
 use DevactionLabs\Zenith\Metrics\MetricsData;
 use DevactionLabs\Zenith\Metrics\MetricType;
 use DevactionLabs\Zenith\Queues\Data\QueueActivityPageData;
+use DevactionLabs\Zenith\Queues\Data\QueueBypassWarningData;
 use DevactionLabs\Zenith\Queues\Data\QueueSummaryData;
 use DevactionLabs\Zenith\Queues\QueueActivityData;
 use DevactionLabs\Zenith\Queues\QueueActivityTab;
+use DevactionLabs\Zenith\Queues\QueueBypassWarning;
 use DevactionLabs\Zenith\Queues\QueuesData;
 use DevactionLabs\Zenith\Queues\QueueSummary;
 use DevactionLabs\Zenith\Support\Data\PageMetaData;
@@ -24,11 +26,12 @@ use Inertia\Response;
 
 final class QueueController
 {
-    public function index(QueuesData $queues): Response
+    public function index(QueuesData $queues, QueueBypassWarning $bypassWarning): Response
     {
         return Inertia::render('Queues/Index', [
             'meta' => new PageMetaData('Queues', NavigationItem::Queues),
             'queues' => $queues->all(),
+            'queueBypassWarning' => fn (): QueueBypassWarningData => $bypassWarning->summary(),
         ]);
     }
 

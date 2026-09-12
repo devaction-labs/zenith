@@ -4,6 +4,7 @@ import { DashboardOverview } from "@/components/dashboard/dashboard-overview";
 import { SupervisorsTable } from "@/components/dashboard/supervisors-table";
 import { WorkloadTable } from "@/components/dashboard/workload-table";
 import { Duration } from "@/components/duration";
+import { QueueBypassBanner } from "@/components/queues/queue-bypass-banner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Statistic,
@@ -22,7 +23,13 @@ import { useAutoLoadPreference } from "@/layouts/horizon-layout";
 import { resolveHorizonRoute } from "@/lib/horizon-route";
 import type { DashboardPageProps } from "@/types/dashboard";
 
-function Dashboard({ horizon, summary, workload, supervisors }: DashboardPageProps) {
+function Dashboard({
+  horizon,
+  summary,
+  workload,
+  supervisors,
+  queueBypassWarning,
+}: DashboardPageProps) {
   const { autoLoad } = useAutoLoadPreference();
   const {
     hasPendingTransitions,
@@ -48,6 +55,7 @@ function Dashboard({ horizon, summary, workload, supervisors }: DashboardPagePro
     <>
       <Head title="Dashboard" />
       <div className="flex flex-col gap-[7px] min-[1140px]:gap-3.5">
+        <QueueBypassBanner warning={queueBypassWarning} />
         <DashboardOverview
           summary={summary}
           links={{

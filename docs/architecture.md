@@ -213,6 +213,8 @@ timeout instead of imposing a package-level override.
 
 Repository failures are caught at data boundaries and converted into explicit unavailable states. List previews omit sensitive payload and exception data. Detail pages expose normalized fields deliberately, never raw repository objects or Redis internals.
 
+Horizon, and therefore Zenith, only see jobs that reach a queue connection Horizon actually supervises. Laravel 13's `failover` driver can silently move a job onto its `database` or `sync` fallback connection when the primary is unreachable, and the `deferred` and `background` connections are designed to run outside Horizon entirely. Jobs that take any of these paths are invisible to both: Horizon never reserves them, so they never appear in retained pending, completed, or failed history. `QueueFailoverActivity` narrows this blind spot to visibility, not coverage: it listens for `Illuminate\Queue\Events\QueueFailedOver` and keeps a short, cache-backed window of recent occurrences (`zenith.queue_failover`), and `QueueBypassWarning` cross-references `config('queue.connections')` for connections configured with a bypass-prone driver. Both feed a dashboard and queues-page banner that tells an operator to look outside Zenith, but the package cannot recover or display the jobs themselves.
+
 ## Frontend isolation
 
 `HandleInertiaRequests` sets `zenith::app` as the root view only for package routes. This avoids changing the host application's own Inertia middleware or root template.

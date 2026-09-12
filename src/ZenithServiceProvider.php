@@ -36,6 +36,7 @@ use DevactionLabs\Zenith\Jobs\RetainedJobQuery;
 use DevactionLabs\Zenith\Jobs\RetainedJobRetryEligibility;
 use DevactionLabs\Zenith\Queues\ClearQueueMetadata;
 use DevactionLabs\Zenith\Queues\ClearsQueueMetadata;
+use DevactionLabs\Zenith\Queues\RecordQueueFailover;
 use DevactionLabs\Zenith\Schedule\DynamicSchedule;
 use DevactionLabs\Zenith\Schedule\InternalScheduledEvent;
 use DevactionLabs\Zenith\Support\FrameworkCapabilities;
@@ -45,8 +46,10 @@ use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Contracts\Bus\Dispatcher;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Illuminate\Contracts\Container\BindingResolutionException;
+use Illuminate\Contracts\Events\Dispatcher as EventDispatcher;
 use Illuminate\Contracts\Foundation\CachesRoutes;
 use Illuminate\Contracts\Redis\Factory as RedisFactory;
+use Illuminate\Queue\Events\QueueFailedOver;
 use Illuminate\Routing\Router;
 use Illuminate\Support\ServiceProvider;
 use Inertia\Inertia;
@@ -190,6 +193,8 @@ final class ZenithServiceProvider extends ServiceProvider
      */
     public function boot(AssetPath $assetPath): void
     {
+        $this->app->make(EventDispatcher::class)->listen(QueueFailedOver::class, RecordQueueFailover::class);
+
         $this->excludeHorizonFromSsr($this->app->make(Gateway::class));
 
         $this->loadMigrationsFrom(dirname(__DIR__).'/database/migrations');

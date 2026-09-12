@@ -7,7 +7,7 @@ import retryFailed from './retry-failed'
 import batches from './batches'
 /**
 * @see \DevactionLabs\Zenith\Http\Controllers\QueueController::index
-* @see src/Http/Controllers/QueueController.php:27
+* @see src/Http/Controllers/QueueController.php:29
 * @route '/horizon/queues'
 */
 export const index = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -22,7 +22,7 @@ index.definition = {
 
 /**
 * @see \DevactionLabs\Zenith\Http\Controllers\QueueController::index
-* @see src/Http/Controllers/QueueController.php:27
+* @see src/Http/Controllers/QueueController.php:29
 * @route '/horizon/queues'
 */
 index.url = (options?: RouteQueryOptions) => {
@@ -31,7 +31,7 @@ index.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \DevactionLabs\Zenith\Http\Controllers\QueueController::index
-* @see src/Http/Controllers/QueueController.php:27
+* @see src/Http/Controllers/QueueController.php:29
 * @route '/horizon/queues'
 */
 index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -41,7 +41,7 @@ index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 
 /**
 * @see \DevactionLabs\Zenith\Http\Controllers\QueueController::index
-* @see src/Http/Controllers/QueueController.php:27
+* @see src/Http/Controllers/QueueController.php:29
 * @route '/horizon/queues'
 */
 index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -51,7 +51,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
 /**
 * @see \DevactionLabs\Zenith\Http\Controllers\QueueController::show
-* @see src/Http/Controllers/QueueController.php:35
+* @see src/Http/Controllers/QueueController.php:38
 * @route '/horizon/queues/{queue}'
 */
 export const show = (args: { queue: string | number } | [queue: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -66,7 +66,7 @@ show.definition = {
 
 /**
 * @see \DevactionLabs\Zenith\Http\Controllers\QueueController::show
-* @see src/Http/Controllers/QueueController.php:35
+* @see src/Http/Controllers/QueueController.php:38
 * @route '/horizon/queues/{queue}'
 */
 show.url = (args: { queue: string | number } | [queue: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -93,7 +93,7 @@ show.url = (args: { queue: string | number } | [queue: string | number ] | strin
 
 /**
 * @see \DevactionLabs\Zenith\Http\Controllers\QueueController::show
-* @see src/Http/Controllers/QueueController.php:35
+* @see src/Http/Controllers/QueueController.php:38
 * @route '/horizon/queues/{queue}'
 */
 show.get = (args: { queue: string | number } | [queue: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -103,7 +103,7 @@ show.get = (args: { queue: string | number } | [queue: string | number ] | strin
 
 /**
 * @see \DevactionLabs\Zenith\Http\Controllers\QueueController::show
-* @see src/Http/Controllers/QueueController.php:35
+* @see src/Http/Controllers/QueueController.php:38
 * @route '/horizon/queues/{queue}'
 */
 show.head = (args: { queue: string | number } | [queue: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'head'> => ({

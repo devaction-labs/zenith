@@ -8,6 +8,7 @@ import {
   QueueFilters,
   type QueueFilterValues,
 } from "@/components/queues/queue-filters";
+import { QueueBypassBanner } from "@/components/queues/queue-bypass-banner";
 import { QueueTable } from "@/components/queues/queue-table";
 import { QueuesActions } from "@/components/queues/queues-actions";
 import { ListPageHeader } from "@/components/shell/list-page-header";
@@ -23,7 +24,7 @@ import { usePageRefresh } from "@/hooks/use-dashboard-refresh";
 import { useAutoLoadPreference } from "@/layouts/horizon-layout";
 import type { QueuesPageProps } from "@/types/queues";
 
-function QueuesIndex({ horizon, queues }: QueuesPageProps) {
+function QueuesIndex({ horizon, queues, queueBypassWarning }: QueuesPageProps) {
   const { autoLoad } = useAutoLoadPreference();
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState<QueueFilterValues>(emptyQueueFilterValues);
@@ -54,6 +55,7 @@ function QueuesIndex({ horizon, queues }: QueuesPageProps) {
   return (
     <>
       <Head title="Queues" />
+      <QueueBypassBanner warning={queueBypassWarning} className="mb-[7px] min-[1140px]:mb-3.5" />
       <Card>
         <ListPageHeader
           title="Queues"
@@ -108,6 +110,7 @@ function QueuesIndex({ horizon, queues }: QueuesPageProps) {
             horizonBaseUrl={horizon.baseUrl}
             queuePausing={horizon.capabilities?.queuePausing ?? false}
             timedQueuePausing={horizon.capabilities?.timedQueuePausing ?? false}
+            bypassProneConnections={queueBypassWarning?.bypassProneConnections ?? []}
             emptyTitle={hasQuery ? "No matching queues" : undefined}
             emptyDescription={
               hasQuery ? "No supervised queues match your search and filters." : undefined
