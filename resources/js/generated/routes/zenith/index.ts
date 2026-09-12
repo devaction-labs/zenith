@@ -9,6 +9,8 @@ import queues from './queues'
 import jobs from './jobs'
 import failedJobs from './failed-jobs'
 import audit from './audit'
+import schedule from './schedule'
+import workflows from './workflows'
 /**
 * @see \DevactionLabs\Zenith\Http\Controllers\DashboardController::dashboard
 * @see src/Http/Controllers/DashboardController.php:18
@@ -64,6 +66,8 @@ const zenith = {
     jobs: Object.assign(jobs, jobs),
     failedJobs: Object.assign(failedJobs, failedJobs),
     audit: Object.assign(audit, audit),
+    schedule: Object.assign(schedule, schedule),
+    workflows: Object.assign(workflows, workflows),
 }
 
 export default zenith

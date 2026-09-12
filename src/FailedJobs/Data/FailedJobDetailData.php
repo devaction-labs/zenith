@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace DevactionLabs\Zenith\FailedJobs\Data;
 
+use DevactionLabs\Zenith\Jobs\Data\JobCompositionData;
 use Spatie\LaravelData\Data;
 
 final class FailedJobDetailData extends Data
@@ -38,5 +39,6 @@ final class FailedJobDetailData extends Data
         public readonly array $payload,
         public readonly array $context,
         public readonly string $exception,
+        public readonly JobCompositionData $composition = new JobCompositionData(false, false, []),
     ) {}
 }

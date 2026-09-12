@@ -30,20 +30,23 @@ Compared with Horizon's bundled interface, Zenith adds:
 - queue management, including timed or indefinite pauses, Laravel 13.25 global pause/resume of every queue on every connection, clearing one or all queues, and retrying failures for a specific queue;
 - individual and bulk cancellation of eligible pending jobs, while protecting batched jobs so they are cancelled through their batch;
 - bulk and scoped failure recovery, with controls to retry or remove one failed job, retry or clear all failures, and retry failures by queue, monitored tag, or batch;
-- batch management, including cancelling active batches, retrying failed batch jobs, clearing retained failures, and clearing finished batches.
+- batch management, including cancelling active batches, retrying failed batch jobs, clearing retained failures, and clearing finished batches;
+- unique and encrypted job contracts plus downstream Bus chain steps on job detail;
+- a Schedule page for Laravel scheduler events, with next-run times, overlap flags, and on-demand runs, alongside runtime-editable dynamic cron rows;
+- durable workflow DAGs (`WorkflowDefinition`) with named steps, dependencies validated before dispatch, cascade outputs, nested sub-workflows, compensation steps, per-step retry and backoff, and cancel/retry from the dashboard;
+- Signals and Relay, which release the current queue job while waiting for an external decision or a relayed result instead of blocking a worker, and Chunks, which batch items atomically until a size or time threshold is reached (these run as Horizon jobs or cache/database state; they do not replace Horizon workers);
+- Backfills that queue each page as its own retryable job when built from an invokable class name (a closure-based backfill still runs its pages in-process);
+- queue budgets (`QueueBudget`, `EnforceQueueBudget`) that enforce rate limits and concurrency slots atomically across workers.
 
 ## Roadmap
 
-Zenith is working toward parity with [Oban Pro and Oban Web](https://oban.pro): live metrics, durable workflows, dynamic crons, and cluster-wide concurrency control, built on Horizon and Laravel 13 primitives. Planned work is tracked as [GitHub issues](https://github.com/devaction-labs/zenith/issues) in four milestones; [#44](https://github.com/devaction-labs/zenith/issues/44) is the overview.
+Zenith is working toward parity with [Oban Pro and Oban Web](https://oban.pro): live metrics, a workflow graph, and further engine capabilities, built on Horizon and Laravel 13 primitives. Planned work is tracked as [GitHub issues](https://github.com/devaction-labs/zenith/issues) in milestones; [#44](https://github.com/devaction-labs/zenith/issues/44) is the overview.
 
 | Milestone | Focus |
 | --- | --- |
-| [P0 · Correctness](https://github.com/devaction-labs/zenith/milestone/1) | Finish and harden the experimental orchestration modules (workflows, signals, relay, chunks, backfills, queue budgets, dynamic crons). |
 | [P1 · Telemetry](https://github.com/devaction-labs/zenith/milestone/2) | Event-driven telemetry: live throughput, wait and runtime percentiles, attempt history, and durable job history. |
-| [P2 · Dashboard parity](https://github.com/devaction-labs/zenith/milestone/3) | Workflow graph, cron history and runtime editing, runtime scaling, multi-select bulk actions, and payload redaction. |
+| [P2 · Dashboard parity](https://github.com/devaction-labs/zenith/milestone/3) | Workflow graph, cron history, runtime scaling, multi-select bulk actions, and payload redaction. |
 | [P3 · Engine](https://github.com/devaction-labs/zenith/milestone/4) | Global limits and partitions, ordered chains, recorded output, a transactional outbox, and a workflow lifeline. |
-
-The orchestration modules live on the `feat/orchestration` branch and will reach `main` once their P0 issues close.
 
 ## Renamed from Horizon New Dawn
 
@@ -454,6 +457,18 @@ return [
         'connection' => null,
         'queue' => null,
     ],
+    'signals' => [
+        'store' => null,
+        'ttl' => 86400,
+    ],
+    'relay' => [
+        'store' => null,
+        'ttl' => 3600,
+    ],
+    'chunks' => [
+        'store' => null,
+        'ttl' => 86400,
+    ],
 ];
 ```
 
@@ -468,6 +483,18 @@ Laravel's serialized queue context and never instantiates arbitrary payload
 classes. PHP deserialization may invoke lifecycle methods such as `__wakeup`
 and `__destruct`, so allow only side-effect-free classes controlled by the
 application.
+
+`signals`, `relay`, and `chunks` each choose the cache `store` that backs
+that feature (the default store when `null`) and how long, in seconds, a
+signal, a relayed result, or a buffered chunk is kept before it expires. The
+chosen store must support atomic locks (Redis, database, memcached, and array
+qualify; file and cookie stores do not). A job that calls `Signal::await()` or
+`Relay::await()` and wants to be released and redelivered while it waits,
+instead of occupying a worker, must add `new
+\DevactionLabs\Zenith\Signals\ReleaseWhileWaiting` to its `middleware()`
+method — `RunWorkflowStep` already does this for workflow steps. Give a
+waiting job's class a `retryUntil()` deadline rather than a fixed `$tries`, so
+being released while it waits never exhausts its attempts.
 
 ## Development
 

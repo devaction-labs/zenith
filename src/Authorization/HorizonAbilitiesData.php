@@ -16,6 +16,8 @@ final class HorizonAbilitiesData extends Data
         public readonly bool $manageInstances,
         public readonly bool $manageMonitoring,
         public readonly bool $manageBatches,
+        public readonly bool $manageSchedule,
+        public readonly bool $manageWorkflows,
     ) {}
 
     public static function allowAll(): self
@@ -28,6 +30,8 @@ final class HorizonAbilitiesData extends Data
             manageInstances: true,
             manageMonitoring: true,
             manageBatches: true,
+            manageSchedule: true,
+            manageWorkflows: true,
         );
     }
 }

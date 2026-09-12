@@ -13,6 +13,8 @@ enum HorizonAbility: string
     case ManageInstances = 'manageInstances';
     case ManageMonitoring = 'manageMonitoring';
     case ManageBatches = 'manageBatches';
+    case ManageSchedule = 'manageSchedule';
+    case ManageWorkflows = 'manageWorkflows';
 
     public function gate(): string
     {

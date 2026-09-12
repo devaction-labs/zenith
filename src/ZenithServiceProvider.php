@@ -9,6 +9,7 @@ use DevactionLabs\Zenith\Batches\DatabaseBatchCapability;
 use DevactionLabs\Zenith\Batches\DatabaseBatchMetadataSynchronizer;
 use DevactionLabs\Zenith\Batches\DatabaseBatchQuery;
 use DevactionLabs\Zenith\BulkOperations\BulkOperationSnapshot;
+use DevactionLabs\Zenith\Chunks\ChunkBuffer;
 use DevactionLabs\Zenith\Console\AssetsCommand;
 use DevactionLabs\Zenith\Console\InstallCommand;
 use DevactionLabs\Zenith\Console\WarmBatchMetadataCommand;
@@ -34,9 +35,12 @@ use DevactionLabs\Zenith\Jobs\RetainedJobIndex;
 use DevactionLabs\Zenith\Jobs\RetainedJobQuery;
 use DevactionLabs\Zenith\Queues\ClearQueueMetadata;
 use DevactionLabs\Zenith\Queues\ClearsQueueMetadata;
+use DevactionLabs\Zenith\Schedule\DynamicSchedule;
+use DevactionLabs\Zenith\Schedule\InternalScheduledEvent;
 use DevactionLabs\Zenith\Support\FrameworkCapabilities;
 use DevactionLabs\Zenith\Support\HorizonRuntime;
 use DevactionLabs\Zenith\Support\HorizonWorkCommandCompatibility;
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Contracts\Bus\Dispatcher;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Illuminate\Contracts\Container\BindingResolutionException;
@@ -86,6 +90,10 @@ final class ZenithServiceProvider extends ServiceProvider
         'failed/*',
         'audit',
         'audit/*',
+        'schedule',
+        'schedule/*',
+        'workflows',
+        'workflows/*',
     ];
 
     public function register(): void
@@ -201,6 +209,22 @@ final class ZenithServiceProvider extends ServiceProvider
                 WarmRetainedJobsCommand::class,
             ]);
         }
+
+        $this->callAfterResolving(Schedule::class, $this->registerScheduledEvents(...));
+    }
+
+    private function registerScheduledEvents(Schedule $schedule): void
+    {
+        $schedule->call(static fn (DynamicSchedule $crons): int => $crons->tick())
+            ->everyMinute()
+            ->name(InternalScheduledEvent::DynamicCrons->value)
+            ->withoutOverlapping(10);
+
+        $schedule->call(static function (ChunkBuffer $chunks): void {
+            $chunks->flushDue();
+        })
+            ->everyMinute()
+            ->name(InternalScheduledEvent::ChunkFlush->value);
     }
 
     private function excludeHorizonFromSsr(Gateway $gateway): void

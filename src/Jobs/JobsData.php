@@ -381,6 +381,7 @@ final readonly class JobsData
             failedAt: $row->failedAt,
             runtime: $row->runtime,
             payload: $this->safePayload($payload, $decodedCommand),
+            composition: JobComposition::fromPayload($payload, $decodedCommand),
         );
     }
 

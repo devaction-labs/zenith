@@ -51,6 +51,12 @@ export type JobCollection = {
   message: string | null;
 };
 
+export type JobComposition = {
+  unique: boolean;
+  encrypted: boolean;
+  chain: Array<{ class: string }>;
+};
+
 export type JobDetail = Omit<
   JobRow,
   | "index"
@@ -64,6 +70,7 @@ export type JobDetail = Omit<
 > & {
   batchId: string | null;
   payload: Record<string, unknown>;
+  composition?: JobComposition;
 };
 
 export type FailedJobRetry = {

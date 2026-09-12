@@ -9,6 +9,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Added
 
 - Pull requests from this repository enable auto-merge with a merge commit as soon as the aggregate `CI` check passes, through an Auto Merge job that uses the organization `GH_PAT` secret so the merge triggers the follow-up workflows. Draft pull requests are skipped.
+- Job composition on job detail: unique and encrypted contracts plus downstream Bus chain steps from the retained payload.
+- Durable workflow DAGs (`WorkflowDefinition`) with named steps, dependencies validated at definition time (unknown names, self-dependencies, and cycles are rejected before anything is persisted), cascade outputs, nested sub-workflows, and compensation steps that undo completed work in reverse order when a later step fails. A step that throws is retried with its own queue attributes (`#[Tries]`, `#[Backoff]`, `#[Timeout]`) before the workflow fails; fan-in dispatch is claimed atomically so a step with several dependencies runs exactly once. Unique workflows can run again once a previous run has finished. The Workflows page shows nested children, and cancel/retry work from the dashboard.
+- Signals and Relay: `Signal::await()` and `Relay::await()` release the current queue job while waiting instead of blocking a worker, and redeliver it later; declare a `retryUntil()` deadline on jobs that wait so releases never exhaust a fixed `$tries`. Outside a queued job, `Relay::await()` really waits for the result — over Redis `BLPOP` when available, otherwise polling with backoff — and propagates the relayed job's failure.
+- Chunks: `ChunkBuffer` batches items atomically under a cache lock and flushes a chunk once it reaches its size or its timeout elapses, whichever comes first.
+- Backfills: `Backfill::make()` accepts an invokable class name and queues each page as its own job, so a page failure can be retried without re-running earlier pages. A backfill built from a closure still runs its pages in-process, because Laravel's sync-queue serialization cannot carry a closure's captured state across jobs.
+- Queue budgets: `QueueBudget` and `EnforceQueueBudget` now enforce rate limits and concurrency slots with Laravel's atomic cache locks, so the limit holds under concurrent workers and a throttled job's slot is released even when it throws.
+- Dynamic cron rows are now executed: `DynamicSchedule::tick()` dispatches each due, unpaused row at most once per minute, and the Schedule page lists them next to Laravel's own scheduler events as runtime-editable.
 
 ## [0.2.0] - 2026-09-12
 

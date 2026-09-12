@@ -49,6 +49,12 @@ describe('Zenith routes', function (): void {
             'zenith.failed-jobs.destroy' => ['DELETE', 'horizon/failed/{job}'],
             'zenith.failed-jobs.retry.store' => ['POST', 'horizon/failed/{job}/retry'],
             'zenith.audit.index' => ['GET', 'horizon/audit'],
+            'zenith.schedule.index' => ['GET', 'horizon/schedule'],
+            'zenith.schedule.run.store' => ['POST', 'horizon/schedule/{event}/run'],
+            'zenith.workflows.index' => ['GET', 'horizon/workflows'],
+            'zenith.workflows.show' => ['GET', 'horizon/workflows/{workflow}'],
+            'zenith.workflows.cancel.store' => ['POST', 'horizon/workflows/{workflow}/cancel'],
+            'zenith.workflows.retry.store' => ['POST', 'horizon/workflows/{workflow}/retry'],
         ];
 
         foreach ($expected as $name => [$method, $uri]) {

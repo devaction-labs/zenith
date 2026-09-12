@@ -45,6 +45,8 @@ final readonly class HorizonAbilityAuthorizer
             manageInstances: $this->allows(HorizonAbility::ManageInstances),
             manageMonitoring: $this->allows(HorizonAbility::ManageMonitoring),
             manageBatches: $this->allows(HorizonAbility::ManageBatches),
+            manageSchedule: $this->allows(HorizonAbility::ManageSchedule),
+            manageWorkflows: $this->allows(HorizonAbility::ManageWorkflows),
         );
     }
 }

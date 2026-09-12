@@ -34,8 +34,13 @@ use DevactionLabs\Zenith\Http\Controllers\QueueFailedJobRetryController;
 use DevactionLabs\Zenith\Http\Controllers\QueuePauseAllController;
 use DevactionLabs\Zenith\Http\Controllers\QueuePauseController;
 use DevactionLabs\Zenith\Http\Controllers\RunningInstanceController;
+use DevactionLabs\Zenith\Http\Controllers\ScheduleController;
+use DevactionLabs\Zenith\Http\Controllers\ScheduleRunController;
 use DevactionLabs\Zenith\Http\Controllers\SupervisorController;
 use DevactionLabs\Zenith\Http\Controllers\SupervisorPauseController;
+use DevactionLabs\Zenith\Http\Controllers\WorkflowCancelController;
+use DevactionLabs\Zenith\Http\Controllers\WorkflowController;
+use DevactionLabs\Zenith\Http\Controllers\WorkflowRetryController;
 use DevactionLabs\Zenith\Http\Middleware\AuthorizeHorizonAbility;
 use DevactionLabs\Zenith\Http\Middleware\EnsureQueuePausingAllIsSupported;
 use DevactionLabs\Zenith\Http\Middleware\EnsureQueuePausingIsSupported;
@@ -187,3 +192,15 @@ Route::post('/failed/{job}/retry', [FailedJobRetryController::class, 'store'])
     ->middleware(horizonAbility('retryJobs'))
     ->name('failed-jobs.retry.store');
 Route::get('/audit', [AuditController::class, 'index'])->name('audit.index');
+Route::get('/schedule', [ScheduleController::class, 'index'])->name('schedule.index');
+Route::post('/schedule/{event}/run', [ScheduleRunController::class, 'store'])
+    ->middleware(horizonAbility('manageSchedule'))
+    ->name('schedule.run.store');
+Route::get('/workflows', [WorkflowController::class, 'index'])->name('workflows.index');
+Route::get('/workflows/{workflow}', [WorkflowController::class, 'show'])->name('workflows.show');
+Route::post('/workflows/{workflow}/cancel', [WorkflowCancelController::class, 'store'])
+    ->middleware(horizonAbility('manageWorkflows'))
+    ->name('workflows.cancel.store');
+Route::post('/workflows/{workflow}/retry', [WorkflowRetryController::class, 'store'])
+    ->middleware(horizonAbility('manageWorkflows'))
+    ->name('workflows.retry.store');

@@ -1,0 +1,1 @@
+var e={pending:`secondary`,dispatched:`delayed`,running:`processing`,retrying:`retry`,completed:`success`,failed:`destructive`,cancelled:`outline`,compensating:`warning`,compensated:`secondary`,compensation_failed:`destructive`};function t(t){return e[t]??`default`}export{t};

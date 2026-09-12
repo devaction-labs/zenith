@@ -10,4 +10,16 @@ return [
         'connection' => null,
         'queue' => null,
     ],
+    'signals' => [
+        'store' => null,
+        'ttl' => 86400,
+    ],
+    'relay' => [
+        'store' => null,
+        'ttl' => 3600,
+    ],
+    'chunks' => [
+        'store' => null,
+        'ttl' => 86400,
+    ],
 ];

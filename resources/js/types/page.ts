@@ -11,7 +11,9 @@ export type HorizonNavigation =
   | "completed"
   | "silenced"
   | "failed"
-  | "audit";
+  | "audit"
+  | "schedule"
+  | "workflows";
 
 export type NavigationCounts = {
   instances: number | null;
@@ -48,6 +50,8 @@ export type HorizonPageProps = {
       manageInstances: boolean;
       manageMonitoring: boolean;
       manageBatches: boolean;
+      manageSchedule?: boolean;
+      manageWorkflows?: boolean;
     };
   };
   flash?: {

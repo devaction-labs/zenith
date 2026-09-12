@@ -10,6 +10,8 @@ const allowAll = {
   manageInstances: true,
   manageMonitoring: true,
   manageBatches: true,
+  manageSchedule: true,
+  manageWorkflows: true,
 };
 
 export function useHorizonAbilities() {
