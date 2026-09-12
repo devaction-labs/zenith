@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace DevactionLabs\Zenith\Workflows;
 
+use DevactionLabs\Zenith\Workflows\Concerns\TransitionsConditionally;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
@@ -27,6 +28,8 @@ use Illuminate\Support\Carbon;
  */
 final class WorkflowStep extends Model
 {
+    use TransitionsConditionally;
+
     protected $table = 'zenith_workflow_steps';
 
     protected $fillable = [
@@ -64,6 +67,27 @@ final class WorkflowStep extends Model
     public function workflow(): BelongsTo
     {
         return $this->belongsTo(Workflow::class, 'workflow_id');
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function outputValues(): array
+    {
+        $output = $this->output;
+        $values = [];
+
+        if (! is_array($output)) {
+            return $values;
+        }
+
+        foreach ($output as $key => $value) {
+            if (is_string($key)) {
+                $values[$key] = $value;
+            }
+        }
+
+        return $values;
     }
 
     /**

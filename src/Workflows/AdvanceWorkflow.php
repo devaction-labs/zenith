@@ -7,6 +7,8 @@ namespace DevactionLabs\Zenith\Workflows;
 use Illuminate\Contracts\Bus\Dispatcher;
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Support\Facades\Date;
+use Illuminate\Support\Str;
+use RuntimeException;
 use Throwable;
 
 final readonly class AdvanceWorkflow
@@ -16,68 +18,90 @@ final readonly class AdvanceWorkflow
         private Dispatcher $bus,
     ) {}
 
+    /**
+     * Claim and queue every pending step whose dependencies have completed. A step is
+     * claimed with a conditional update, so it is queued once even when several workers
+     * see its dependencies finish at the same time.
+     */
     public function dispatchReady(Workflow $workflow): void
     {
         $workflow->load('steps');
 
+        if ($workflow->status !== WorkflowStatus::Running) {
+            return;
+        }
+
         foreach ($workflow->steps as $step) {
-            if ($step->status !== WorkflowStatus::Pending->value) {
+            if ($step->status !== WorkflowStatus::Pending->value || ! $this->dependenciesComplete($workflow, $step)) {
                 continue;
             }
 
-            if (! $this->dependenciesComplete($workflow, $step)) {
-                continue;
-            }
+            $token = Str::uuid()->toString();
 
-            $this->queue($workflow, $step);
+            $claimed = $step->transition([WorkflowStatus::Pending], [
+                'status' => WorkflowStatus::Dispatched->value,
+                'job_uuid' => $token,
+            ]);
+
+            if ($claimed) {
+                $this->bus->dispatch(new RunWorkflowStep($workflow->id, $step->name, $token));
+            }
         }
     }
 
-    public function run(string $workflowId, string $stepName): void
+    /**
+     * Run a claimed step. Deliveries for a step that is no longer claimed by the given
+     * token, or that already finished, are ignored.
+     */
+    public function run(string $workflowId, string $stepName, string $token): void
     {
         $workflow = Workflow::query()->with('steps')->find($workflowId);
 
-        if ($workflow === null || $workflow->status->finished()) {
+        if (! $workflow instanceof Workflow || $workflow->status !== WorkflowStatus::Running) {
             return;
         }
 
         $step = $workflow->steps->firstWhere('name', $stepName);
 
-        if (! $step instanceof WorkflowStep || $step->status === WorkflowStatus::Cancelled->value) {
+        if (! $step instanceof WorkflowStep || $step->job_uuid !== $token) {
             return;
         }
 
-        $step->forceFill([
+        $started = $step->transition([WorkflowStatus::Dispatched, WorkflowStatus::Running], [
             'status' => WorkflowStatus::Running->value,
             'attempts' => $step->attempts + 1,
-        ])->save();
+        ]);
+
+        if (! $started) {
+            return;
+        }
 
         try {
-            $payload = $this->payload($workflow, $step);
-            $instance = $this->container->make($step->job_class);
-            $output = $instance->handle($payload, $workflow->context ?? []);
-
-            $step->forceFill([
-                'status' => WorkflowStatus::Completed->value,
-                'output' => is_array($output) ? $output : ['value' => $output],
-                'error' => null,
-                'finished_at' => Date::now(),
-            ])->save();
+            $output = $this->execute($workflow, $step);
         } catch (Throwable $exception) {
-            $step->forceFill([
+            $failed = $step->transition([WorkflowStatus::Running], [
                 'status' => WorkflowStatus::Failed->value,
                 'error' => $exception->getMessage(),
                 'finished_at' => Date::now(),
-            ])->save();
+            ]);
 
-            $this->fail($workflow, $step);
+            if ($failed) {
+                $this->fail($workflow);
+            }
 
             return;
         }
 
-        $workflow->refresh()->load('steps');
-        $this->finishIfDone($workflow);
-        $this->dispatchReady($workflow);
+        $completed = $step->transition([WorkflowStatus::Running], [
+            'status' => WorkflowStatus::Completed->value,
+            'output' => $output,
+            'error' => null,
+            'finished_at' => Date::now(),
+        ]);
+
+        if ($completed) {
+            $this->advance($workflow);
+        }
     }
 
     public function retry(Workflow $workflow, string $stepName): void
@@ -106,18 +130,31 @@ final readonly class AdvanceWorkflow
             'finished_at' => null,
         ])->save();
 
-        $this->dispatchReady($workflow->fresh(['steps']) ?? $workflow);
+        $this->dispatchReady($workflow);
     }
 
-    private function queue(Workflow $workflow, WorkflowStep $step): void
+    /**
+     * @return array<array-key, mixed>
+     */
+    private function execute(Workflow $workflow, WorkflowStep $step): array
     {
-        $job = new RunWorkflowStep($workflow->id, $step->name);
+        $instance = $this->container->make($step->job_class);
 
-        $step->forceFill([
-            'status' => WorkflowStatus::Dispatched->value,
-        ])->save();
+        if (! is_object($instance) || ! method_exists($instance, 'handle')) {
+            throw new RuntimeException("Workflow step class [{$step->job_class}] has no handle method.");
+        }
 
-        $this->bus->dispatch($job);
+        $output = $instance->handle($this->payload($workflow, $step), $workflow->context ?? []);
+
+        return is_array($output) ? $output : ['value' => $output];
+    }
+
+    private function advance(Workflow $workflow): void
+    {
+        $workflow->refresh();
+
+        $this->finishIfDone($workflow);
+        $this->dispatchReady($workflow);
     }
 
     /**
@@ -133,10 +170,9 @@ final readonly class AdvanceWorkflow
 
         foreach ($step->dependencies() as $dependency) {
             $dependencyStep = $workflow->steps->firstWhere('name', $dependency);
-            $output = $dependencyStep instanceof WorkflowStep ? $dependencyStep->output : [];
 
-            if (is_array($output)) {
-                $payload = [...$output, ...$payload];
+            if ($dependencyStep instanceof WorkflowStep) {
+                $payload = [...$dependencyStep->outputValues(), ...$payload];
             }
         }
 
@@ -156,20 +192,19 @@ final readonly class AdvanceWorkflow
         return true;
     }
 
-    private function fail(Workflow $workflow, WorkflowStep $failed): void
+    private function fail(Workflow $workflow): void
     {
-        $workflow->forceFill([
+        $stopped = $workflow->transition([WorkflowStatus::Running], [
             'status' => WorkflowStatus::Failed,
             'finished_at' => Date::now(),
-        ])->save();
+        ]);
+
+        if (! $stopped) {
+            return;
+        }
 
         $workflow->steps()
-            ->where('name', '!=', $failed->name)
-            ->whereNotIn('status', [
-                WorkflowStatus::Completed->value,
-                WorkflowStatus::Failed->value,
-                WorkflowStatus::Cancelled->value,
-            ])
+            ->whereIn('status', WorkflowStatus::activeStepValues())
             ->update([
                 'status' => WorkflowStatus::Cancelled->value,
                 'finished_at' => Date::now(),
@@ -179,25 +214,17 @@ final readonly class AdvanceWorkflow
     private function finishIfDone(Workflow $workflow): void
     {
         $unfinished = $workflow->steps->contains(
-            fn (WorkflowStep $step): bool => ! in_array($step->status, [
-                WorkflowStatus::Completed->value,
-                WorkflowStatus::Failed->value,
-                WorkflowStatus::Cancelled->value,
-            ], true),
+            static fn (WorkflowStep $step): bool => $step->status !== WorkflowStatus::Completed->value,
         );
 
         if ($unfinished) {
             return;
         }
 
-        $failed = $workflow->steps->contains(
-            fn (WorkflowStep $step): bool => $step->status === WorkflowStatus::Failed->value,
-        );
-
-        $workflow->forceFill([
-            'status' => $failed ? WorkflowStatus::Failed : WorkflowStatus::Completed,
+        $workflow->transition([WorkflowStatus::Running], [
+            'status' => WorkflowStatus::Completed,
             'finished_at' => Date::now(),
-        ])->save();
+        ]);
     }
 
     /**

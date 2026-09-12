@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace DevactionLabs\Zenith\Workflows;
 
+use DevactionLabs\Zenith\Workflows\Concerns\TransitionsConditionally;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
@@ -24,6 +25,8 @@ use Illuminate\Support\Str;
  */
 final class Workflow extends Model
 {
+    use TransitionsConditionally;
+
     public $incrementing = false;
 
     protected $keyType = 'string';

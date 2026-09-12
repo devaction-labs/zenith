@@ -24,6 +24,18 @@ enum WorkflowStatus: string
         ));
     }
 
+    /**
+     * @return list<string>
+     */
+    public static function activeStepValues(): array
+    {
+        return [
+            self::Pending->value,
+            self::Dispatched->value,
+            self::Running->value,
+        ];
+    }
+
     public function finished(): bool
     {
         return match ($this) {
