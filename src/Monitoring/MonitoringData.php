@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Monitoring;
+namespace DevactionLabs\Zenith\Monitoring;
 
-use DevactionLabs\HorizonNewDawn\Jobs\Data\JobIndexFiltersData;
-use DevactionLabs\HorizonNewDawn\Jobs\Data\JobPageData;
-use DevactionLabs\HorizonNewDawn\Jobs\JobsData;
-use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobQuery;
-use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobType;
-use DevactionLabs\HorizonNewDawn\Monitoring\Data\MonitoredTagData;
-use DevactionLabs\HorizonNewDawn\Monitoring\Data\MonitoringPageData;
-use DevactionLabs\HorizonNewDawn\Monitoring\Data\MonitoringTagSummaryData;
+use DevactionLabs\Zenith\Jobs\Data\JobIndexFiltersData;
+use DevactionLabs\Zenith\Jobs\Data\JobPageData;
+use DevactionLabs\Zenith\Jobs\JobsData;
+use DevactionLabs\Zenith\Jobs\RetainedJobQuery;
+use DevactionLabs\Zenith\Jobs\RetainedJobType;
+use DevactionLabs\Zenith\Monitoring\Data\MonitoredTagData;
+use DevactionLabs\Zenith\Monitoring\Data\MonitoringPageData;
+use DevactionLabs\Zenith\Monitoring\Data\MonitoringTagSummaryData;
 use Laravel\Horizon\Contracts\JobRepository;
 use Laravel\Horizon\Contracts\TagRepository;
 use Throwable;

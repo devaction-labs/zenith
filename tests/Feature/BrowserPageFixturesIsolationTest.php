@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-use DevactionLabs\HorizonNewDawn\BulkOperations\BulkOperationDispatcher;
-use DevactionLabs\HorizonNewDawn\BulkOperations\Jobs\CancelPendingJobsJob;
-use DevactionLabs\HorizonNewDawn\Dashboard\DashboardData;
-use DevactionLabs\HorizonNewDawn\Jobs\PendingJobCancellationScope;
+use DevactionLabs\Zenith\BulkOperations\BulkOperationDispatcher;
+use DevactionLabs\Zenith\BulkOperations\Jobs\CancelPendingJobsJob;
+use DevactionLabs\Zenith\Dashboard\DashboardData;
+use DevactionLabs\Zenith\Jobs\PendingJobCancellationScope;
 use Illuminate\Contracts\Redis\Factory as RedisFactory;
 use Illuminate\Redis\RedisManager;
 use Illuminate\Support\Facades\Bus;
 use Laravel\Horizon\Contracts\MasterSupervisorRepository;
 use Laravel\Horizon\Contracts\SupervisorRepository;
 
-use function DevactionLabs\HorizonNewDawn\Tests\Support\bindBrowserPageFixtures;
+use function DevactionLabs\Zenith\Tests\Support\bindBrowserPageFixtures;
 
 /**
  * Browser suites must not depend on a live Horizon Redis (CI main tests job has none).

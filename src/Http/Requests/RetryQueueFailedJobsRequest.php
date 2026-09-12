@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Http\Requests;
+namespace DevactionLabs\Zenith\Http\Requests;
 
-use DevactionLabs\HorizonNewDawn\Queues\Data\QueueTargetData;
+use DevactionLabs\Zenith\Queues\Data\QueueTargetData;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 

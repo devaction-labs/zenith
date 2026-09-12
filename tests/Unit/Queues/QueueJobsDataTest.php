@@ -3,25 +3,25 @@
 declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
-use DevactionLabs\HorizonNewDawn\FailedJobs\FailedJobRetryEligibility;
-use DevactionLabs\HorizonNewDawn\FailedJobs\FailedJobsData;
-use DevactionLabs\HorizonNewDawn\Jobs\JobsData;
-use DevactionLabs\HorizonNewDawn\Queues\Data\QueueRetainedJobsData;
-use DevactionLabs\HorizonNewDawn\Queues\QueueActivityTab;
-use DevactionLabs\HorizonNewDawn\Queues\QueueJobsData;
-use DevactionLabs\HorizonNewDawn\Support\PollInterval;
-use DevactionLabs\HorizonNewDawn\Tests\Support\HorizonJob;
+use DevactionLabs\Zenith\FailedJobs\FailedJobRetryEligibility;
+use DevactionLabs\Zenith\FailedJobs\FailedJobsData;
+use DevactionLabs\Zenith\Jobs\JobsData;
+use DevactionLabs\Zenith\Queues\Data\QueueRetainedJobsData;
+use DevactionLabs\Zenith\Queues\QueueActivityTab;
+use DevactionLabs\Zenith\Queues\QueueJobsData;
+use DevactionLabs\Zenith\Support\PollInterval;
+use DevactionLabs\Zenith\Tests\Support\HorizonJob;
 use Illuminate\Cache\CacheManager;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Laravel\Horizon\Contracts\JobRepository;
 use Laravel\Horizon\Contracts\TagRepository;
 
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardExpects;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturnsFor;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardThrowsFor;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\horizonJob;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\Zenith\Tests\Support\dashboardExpects;
+use function DevactionLabs\Zenith\Tests\Support\dashboardReturnsFor;
+use function DevactionLabs\Zenith\Tests\Support\dashboardThrowsFor;
+use function DevactionLabs\Zenith\Tests\Support\horizonJob;
+use function DevactionLabs\Zenith\Tests\Support\mockDashboardContract;
 
 function retainedQueueJobsData(JobRepository $repository): QueueJobsData
 {
@@ -51,7 +51,7 @@ function retainedQueueJob(int $index, string $queue, string $status = 'pending')
 
 beforeEach(function (): void {
     app(CacheFactory::class)->store()->clear();
-    config()->set('horizon-new-dawn.poll_interval', 0);
+    config()->set('zenith.poll_interval', 0);
     config()->set('horizon.prefix', 'queue-tests:');
     config()->set('horizon.trim.completed', 60);
     config()->set('horizon.trim.failed', 10080);
@@ -229,7 +229,7 @@ it('advances by raw page boundaries when Horizon returns reindexed survivor curs
 });
 
 it('summarizes retained totals and rolling periods and caches for the polling interval', function (): void {
-    config()->set('horizon-new-dawn.poll_interval', 5000);
+    config()->set('zenith.poll_interval', 5000);
     $repository = mockDashboardContract(JobRepository::class);
     dashboardReturnsFor($repository, 'countPending', [], 1);
     dashboardReturnsFor($repository, 'getPending', ['-1'], collect([
@@ -301,7 +301,7 @@ it('uses the configured or default poll interval for its summary cache ttl', fun
     int $expectedCacheSeconds,
 ): void {
     config()->set(
-        'horizon-new-dawn',
+        'zenith',
         $pollInterval === null ? [] : ['poll_interval' => $pollInterval],
     );
 
@@ -352,7 +352,7 @@ it('keeps retained index freshness positive when UI polling is disabled or subse
     int $pollInterval,
     int $expectedCacheSeconds,
 ): void {
-    config()->set('horizon-new-dawn.poll_interval', $pollInterval);
+    config()->set('zenith.poll_interval', $pollInterval);
 
     expect(PollInterval::retainedCacheSeconds())->toBe($expectedCacheSeconds);
 })->with([
@@ -367,11 +367,11 @@ it('replaces unserializable legacy job summary objects with scalar cache payload
 
     config()->set('cache.stores.array.serialize', true);
     config()->set('cache.serializable_classes', false);
-    config()->set('horizon-new-dawn.poll_interval', 5_000);
+    config()->set('zenith.poll_interval', 5_000);
     app(CacheManager::class)->purge();
 
     $cache = app(CacheFactory::class)->store();
-    $cacheKey = 'horizon-new-dawn:queue-jobs:'.hash(
+    $cacheKey = 'zenith:queue-jobs:'.hash(
         'sha256',
         "queue-tests:\0reports",
     );
@@ -479,7 +479,7 @@ it('bypasses summary caching when automatic polling is disabled', function (): v
 });
 
 it('bypasses retained job summary caching for subsecond poll intervals', function (): void {
-    config()->set('horizon-new-dawn.poll_interval', 999);
+    config()->set('zenith.poll_interval', 999);
 
     $repository = mockDashboardContract(JobRepository::class);
 

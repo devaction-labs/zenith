@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Audit;
+namespace DevactionLabs\Zenith\Audit;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;

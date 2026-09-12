@@ -24,7 +24,7 @@
             })();
         </script>
 
-        @inject('assets', 'DevactionLabs\HorizonNewDawn\Assets\AssetManifest')
+        @inject('assets', 'DevactionLabs\Zenith\Assets\AssetManifest')
         <link rel="icon" href="{{ $assets->favicon() }}" type="image/svg+xml" sizes="any" data-horizon-favicon>
         {!! $assets->tags() !!}
 

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Http\Middleware;
+namespace DevactionLabs\Zenith\Http\Middleware;
 
 use Closure;
-use DevactionLabs\HorizonNewDawn\Audit\HorizonAuditRecorder;
+use DevactionLabs\Zenith\Audit\HorizonAuditRecorder;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -29,7 +29,7 @@ final readonly class RecordHorizonMutation
         $route = $request->route();
         $name = $route?->getName();
 
-        if (! is_string($name) || ! str_starts_with($name, 'horizon-new-dawn.')) {
+        if (! is_string($name) || ! str_starts_with($name, 'zenith.')) {
             return;
         }
 

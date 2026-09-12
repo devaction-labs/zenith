@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Instances\Actions;
+namespace DevactionLabs\Zenith\Instances\Actions;
 
-use DevactionLabs\HorizonNewDawn\Instances\LocalInstanceName;
+use DevactionLabs\Zenith\Instances\LocalInstanceName;
 use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Illuminate\Support\InteractsWithTime;
 use Laravel\Horizon\Contracts\HorizonCommandQueue;

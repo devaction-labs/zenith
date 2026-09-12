@@ -3,8 +3,8 @@
 declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
-use DevactionLabs\HorizonNewDawn\Queues\QueueWaitThreshold;
-use DevactionLabs\HorizonNewDawn\Queues\QueueWaitThresholdStatus;
+use DevactionLabs\Zenith\Queues\QueueWaitThreshold;
+use DevactionLabs\Zenith\Queues\QueueWaitThresholdStatus;
 use Illuminate\Contracts\Config\Repository;
 
 beforeEach(function (): void {

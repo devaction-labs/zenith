@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\BulkOperations\Jobs;
+namespace DevactionLabs\Zenith\BulkOperations\Jobs;
 
-use DevactionLabs\HorizonNewDawn\Batches\Actions\ClearBatchFailedJobs;
-use DevactionLabs\HorizonNewDawn\BulkOperations\BulkOperationJob;
+use DevactionLabs\Zenith\Batches\Actions\ClearBatchFailedJobs;
+use DevactionLabs\Zenith\BulkOperations\BulkOperationJob;
 
 final class ClearBatchFailedJobsJob extends BulkOperationJob
 {
@@ -26,6 +26,6 @@ final class ClearBatchFailedJobsJob extends BulkOperationJob
     /** @return list<string> */
     public function tags(): array
     {
-        return ['horizon-new-dawn', 'bulk:clear-batch-failed-jobs', 'batch:'.$this->batchId];
+        return ['zenith', 'bulk:clear-batch-failed-jobs', 'batch:'.$this->batchId];
     }
 }

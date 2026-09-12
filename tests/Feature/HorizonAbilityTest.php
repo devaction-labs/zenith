@@ -21,13 +21,13 @@ afterEach(function (): void {
 
 it('forbids queue pauses when the pauseQueues gate is denied', function (): void {
     requireQueuePausing();
-    Gate::define('horizon-new-dawn.pauseQueues', static fn (): bool => false);
+    Gate::define('zenith.pauseQueues', static fn (): bool => false);
 
     post('/horizon/queues/redis/reports/pause')->assertForbidden();
 });
 
 it('forbids failed-job retries when the retryJobs gate is denied', function (): void {
-    Gate::define('horizon-new-dawn.retryJobs', static fn (): bool => false);
+    Gate::define('zenith.retryJobs', static fn (): bool => false);
 
     post('/horizon/failed/job-1/retry')->assertForbidden();
 });

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Batches;
+namespace DevactionLabs\Zenith\Batches;
 
-use DevactionLabs\HorizonNewDawn\Batches\Data\BatchClearCountsData;
-use DevactionLabs\HorizonNewDawn\Jobs\JobsData;
+use DevactionLabs\Zenith\Batches\Data\BatchClearCountsData;
+use DevactionLabs\Zenith\Jobs\JobsData;
 use Illuminate\Bus\Batch;
 use Illuminate\Bus\BatchRepository;
 use JsonException;

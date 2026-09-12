@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use DevactionLabs\HorizonNewDawn\Queues\QueueRouting;
+use DevactionLabs\Zenith\Queues\QueueRouting;
 use Illuminate\Queue\QueueRoutes;
 
 it('lists class routes that target a queue and reports forwards', function (): void {

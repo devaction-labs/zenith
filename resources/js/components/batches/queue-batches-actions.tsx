@@ -14,7 +14,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
-import { store as retryQueueBatches } from "@/generated/routes/horizon-new-dawn/queues/batches/retry-failed";
+import { store as retryQueueBatches } from "@/generated/routes/zenith/queues/batches/retry-failed";
 import { resolveHorizonRoute } from "@/lib/horizon-route";
 
 export function QueueBatchesActions({

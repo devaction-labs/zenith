@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Http\Controllers;
+namespace DevactionLabs\Zenith\Http\Controllers;
 
-use DevactionLabs\HorizonNewDawn\Monitoring\Actions\MonitorTag;
-use DevactionLabs\HorizonNewDawn\Monitoring\Actions\StopMonitoringTag;
+use DevactionLabs\Zenith\Monitoring\Actions\MonitorTag;
+use DevactionLabs\Zenith\Monitoring\Actions\StopMonitoringTag;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Jobs;
+namespace DevactionLabs\Zenith\Jobs;
 
-use DevactionLabs\HorizonNewDawn\Jobs\Data\JobIndexFiltersData;
+use DevactionLabs\Zenith\Jobs\Data\JobIndexFiltersData;
 use Illuminate\Support\Collection;
 use InvalidArgumentException;
 use Laravel\Horizon\Contracts\JobRepository;

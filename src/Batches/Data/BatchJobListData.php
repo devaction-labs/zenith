@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Batches\Data;
+namespace DevactionLabs\Zenith\Batches\Data;
 
-use DevactionLabs\HorizonNewDawn\Jobs\Data\JobRowData;
+use DevactionLabs\Zenith\Jobs\Data\JobRowData;
 use Spatie\LaravelData\Data;
 
 final class BatchJobListData extends Data

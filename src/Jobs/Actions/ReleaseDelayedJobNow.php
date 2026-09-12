@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Jobs\Actions;
+namespace DevactionLabs\Zenith\Jobs\Actions;
 
-use DevactionLabs\HorizonNewDawn\Jobs\ReleaseDelayedJobNowResult;
-use DevactionLabs\HorizonNewDawn\Support\RedisQueueName;
-use DevactionLabs\HorizonNewDawn\Support\RedisScript;
+use DevactionLabs\Zenith\Jobs\ReleaseDelayedJobNowResult;
+use DevactionLabs\Zenith\Support\RedisQueueName;
+use DevactionLabs\Zenith\Support\RedisScript;
 use Illuminate\Queue\QueueManager;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Date;
@@ -130,11 +130,11 @@ final readonly class ReleaseDelayedJobNow
                 return null;
             }
 
-            $metadata = is_array($decoded['horizonNewDawn'] ?? null)
-                ? $decoded['horizonNewDawn']
+            $metadata = is_array($decoded['zenith'] ?? null)
+                ? $decoded['zenith']
                 : [];
             $metadata['madeAvailableAt'] = $timestamp;
-            $decoded['horizonNewDawn'] = $metadata;
+            $decoded['zenith'] = $metadata;
 
             return json_encode($decoded, JSON_THROW_ON_ERROR);
         } catch (JsonException) {

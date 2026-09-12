@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\BulkOperations;
+namespace DevactionLabs\Zenith\BulkOperations;
 
 use Illuminate\Contracts\Redis\Factory as RedisFactory;
 use Illuminate\Redis\Connections\Connection;
@@ -253,7 +253,7 @@ final class BulkOperationSnapshot
             throw new InvalidArgumentException('Invalid bulk operation id.');
         }
 
-        return "\x1fhorizon-new-dawn:v1:bulk-op:{$operationId}";
+        return "\x1fzenith:v1:bulk-op:{$operationId}";
     }
 
     private function connection(): Connection

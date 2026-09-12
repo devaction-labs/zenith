@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Http\Controllers;
+namespace DevactionLabs\Zenith\Http\Controllers;
 
-use DevactionLabs\HorizonNewDawn\Jobs\Actions\CancelPendingJob;
-use DevactionLabs\HorizonNewDawn\Jobs\PendingJobCancellationResult;
+use DevactionLabs\Zenith\Jobs\Actions\CancelPendingJob;
+use DevactionLabs\Zenith\Jobs\PendingJobCancellationResult;
 use Illuminate\Http\RedirectResponse;
 use Throwable;
 
@@ -16,7 +16,7 @@ final class PendingJobController
         try {
             return match ($cancel->handle($job)) {
                 PendingJobCancellationResult::Cancelled => to_route(
-                    'horizon-new-dawn.jobs.index',
+                    'zenith.jobs.index',
                     ['type' => 'pending'],
                 )->with('toast.success', 'Job cancelled.'),
                 PendingJobCancellationResult::Batched => back()->with(

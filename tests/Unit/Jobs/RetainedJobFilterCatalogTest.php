@@ -2,21 +2,21 @@
 
 declare(strict_types=1);
 
-use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobFilterCatalog;
-use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobIndex;
-use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobType;
+use DevactionLabs\Zenith\Jobs\RetainedJobFilterCatalog;
+use DevactionLabs\Zenith\Jobs\RetainedJobIndex;
+use DevactionLabs\Zenith\Jobs\RetainedJobType;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Illuminate\Contracts\Redis\Factory as RedisFactory;
 use Laravel\Horizon\Contracts\JobRepository;
 
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardExpects;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\Zenith\Tests\Support\dashboardExpects;
+use function DevactionLabs\Zenith\Tests\Support\mockDashboardContract;
 
 it('shares each retained job filter catalog for one configured poll interval', function (
     RetainedJobType $type,
 ): void {
-    config()->set('horizon-new-dawn.poll_interval', 5000);
+    config()->set('zenith.poll_interval', 5000);
 
     $payload = [
         'available' => true,
@@ -35,7 +35,7 @@ it('shares each retained job filter catalog for one configured poll interval', f
         $store,
         'remember',
         [
-            "horizon-new-dawn:retained-job-filter-catalog:v1:{$type->value}",
+            "zenith:retained-job-filter-catalog:v1:{$type->value}",
             5,
             Mockery::on(static fn (mixed $value): bool => $value instanceof Closure),
         ],

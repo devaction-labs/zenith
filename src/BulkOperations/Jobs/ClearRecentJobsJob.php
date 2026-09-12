@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\BulkOperations\Jobs;
+namespace DevactionLabs\Zenith\BulkOperations\Jobs;
 
-use DevactionLabs\HorizonNewDawn\BulkOperations\BulkOperationJob;
-use DevactionLabs\HorizonNewDawn\Monitoring\Actions\ClearRecentJobs;
+use DevactionLabs\Zenith\BulkOperations\BulkOperationJob;
+use DevactionLabs\Zenith\Monitoring\Actions\ClearRecentJobs;
 
 final class ClearRecentJobsJob extends BulkOperationJob
 {
@@ -34,7 +34,7 @@ final class ClearRecentJobsJob extends BulkOperationJob
     /** @return list<string> */
     public function tags(): array
     {
-        $tags = ['horizon-new-dawn', 'bulk:clear-recent-jobs', 'tag:'.$this->tag];
+        $tags = ['zenith', 'bulk:clear-recent-jobs', 'tag:'.$this->tag];
 
         if ($this->operationId !== null) {
             $tags[] = 'operation:'.$this->operationId;

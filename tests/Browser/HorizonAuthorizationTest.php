@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use function DevactionLabs\HorizonNewDawn\Tests\Support\bindBrowserPageFixtures;
+use function DevactionLabs\Zenith\Tests\Support\bindBrowserPageFixtures;
 
 it('renders mutation controls for an authorized Horizon operator', function (): void {
     bindBrowserPageFixtures();

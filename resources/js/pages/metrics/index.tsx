@@ -8,7 +8,7 @@ import {
 } from "@/components/metrics/metrics-filters";
 import { MetricsTable } from "@/components/metrics/metrics-table";
 import { TabbedResultsCard, type TabbedResultsTab } from "@/components/tabbed-results-card";
-import { index as metricsIndex } from "@/generated/routes/horizon-new-dawn/metrics";
+import { index as metricsIndex } from "@/generated/routes/zenith/metrics";
 import { useActiveTabQuery } from "@/hooks/use-active-tab-query";
 import { usePageRefresh } from "@/hooks/use-dashboard-refresh";
 import { useAutoLoadPreference } from "@/layouts/horizon-layout";

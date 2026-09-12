@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Http\Controllers;
+namespace DevactionLabs\Zenith\Http\Controllers;
 
-use DevactionLabs\HorizonNewDawn\Dashboard\DashboardData;
-use DevactionLabs\HorizonNewDawn\Dashboard\Data\DashboardSummaryData;
-use DevactionLabs\HorizonNewDawn\Dashboard\Data\DashboardSupervisorsData;
-use DevactionLabs\HorizonNewDawn\Dashboard\Data\DashboardWorkloadData;
-use DevactionLabs\HorizonNewDawn\Support\Data\PageMetaData;
-use DevactionLabs\HorizonNewDawn\Support\NavigationItem;
+use DevactionLabs\Zenith\Dashboard\DashboardData;
+use DevactionLabs\Zenith\Dashboard\Data\DashboardSummaryData;
+use DevactionLabs\Zenith\Dashboard\Data\DashboardSupervisorsData;
+use DevactionLabs\Zenith\Dashboard\Data\DashboardWorkloadData;
+use DevactionLabs\Zenith\Support\Data\PageMetaData;
+use DevactionLabs\Zenith\Support\NavigationItem;
 use Inertia\Inertia;
 use Inertia\Response;
 

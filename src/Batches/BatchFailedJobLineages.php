@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Batches;
+namespace DevactionLabs\Zenith\Batches;
 
-use DevactionLabs\HorizonNewDawn\Jobs\Data\JobRowData;
-use DevactionLabs\HorizonNewDawn\Jobs\JobsData;
+use DevactionLabs\Zenith\Jobs\Data\JobRowData;
+use DevactionLabs\Zenith\Jobs\JobsData;
 use JsonException;
 
 final readonly class BatchFailedJobLineages

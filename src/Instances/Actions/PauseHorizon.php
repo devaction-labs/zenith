@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Instances\Actions;
+namespace DevactionLabs\Zenith\Instances\Actions;
 
-use DevactionLabs\HorizonNewDawn\Instances\LocalInstanceName;
+use DevactionLabs\Zenith\Instances\LocalInstanceName;
 use Laravel\Horizon\Contracts\HorizonCommandQueue;
 use Laravel\Horizon\Contracts\MasterSupervisorRepository;
 use Laravel\Horizon\MasterSupervisor;

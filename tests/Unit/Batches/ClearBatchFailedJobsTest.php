@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-use DevactionLabs\HorizonNewDawn\Batches\Actions\ClearBatchFailedJobs;
-use DevactionLabs\HorizonNewDawn\FailedJobs\Actions\RemoveFailedJob;
+use DevactionLabs\Zenith\Batches\Actions\ClearBatchFailedJobs;
+use DevactionLabs\Zenith\FailedJobs\Actions\RemoveFailedJob;
 use Illuminate\Bus\BatchRepository;
 use Illuminate\Queue\Failed\FailedJobProviderInterface;
 use Laravel\Horizon\Contracts\JobRepository;
 
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardNeverReceives;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturnsFor;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\horizonBatch;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\Zenith\Tests\Support\dashboardNeverReceives;
+use function DevactionLabs\Zenith\Tests\Support\dashboardReturnsFor;
+use function DevactionLabs\Zenith\Tests\Support\horizonBatch;
+use function DevactionLabs\Zenith\Tests\Support\mockDashboardContract;
 
 it('clears each valid failed job belonging to the selected batch once', function (): void {
     $batch = horizonBatch(

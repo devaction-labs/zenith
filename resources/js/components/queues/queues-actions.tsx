@@ -14,11 +14,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
-import { destroy as clearAllQueues } from "@/generated/routes/horizon-new-dawn/queues/clear-all";
+import { destroy as clearAllQueues } from "@/generated/routes/zenith/queues/clear-all";
 import {
   destroy as resumeAllQueues,
   store as pauseAllQueues,
-} from "@/generated/routes/horizon-new-dawn/queues/pause-all";
+} from "@/generated/routes/zenith/queues/pause-all";
 import { useHorizonAbilities } from "@/hooks/use-horizon-abilities";
 import { resolveHorizonRoute } from "@/lib/horizon-route";
 

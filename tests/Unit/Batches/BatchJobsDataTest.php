@@ -3,24 +3,24 @@
 declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
-use DevactionLabs\HorizonNewDawn\Batches\BatchJobsData;
-use DevactionLabs\HorizonNewDawn\Batches\DatabaseBatchMetadata;
-use DevactionLabs\HorizonNewDawn\Jobs\JobsData;
-use DevactionLabs\HorizonNewDawn\Jobs\PendingJobEntryScanner;
-use DevactionLabs\HorizonNewDawn\Tests\Support\HorizonJob;
+use DevactionLabs\Zenith\Batches\BatchJobsData;
+use DevactionLabs\Zenith\Batches\DatabaseBatchMetadata;
+use DevactionLabs\Zenith\Jobs\JobsData;
+use DevactionLabs\Zenith\Jobs\PendingJobEntryScanner;
+use DevactionLabs\Zenith\Tests\Support\HorizonJob;
 use Illuminate\Bus\Batch;
 use Illuminate\Bus\BatchRepository;
 use Illuminate\Contracts\Queue\Factory as QueueFactory;
 use Illuminate\Support\Collection;
 use Laravel\Horizon\Contracts\JobRepository;
 
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardNeverReceives;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturnsFor;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturnsUsing;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardThrows;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\horizonBatch;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\horizonJob;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\Zenith\Tests\Support\dashboardNeverReceives;
+use function DevactionLabs\Zenith\Tests\Support\dashboardReturnsFor;
+use function DevactionLabs\Zenith\Tests\Support\dashboardReturnsUsing;
+use function DevactionLabs\Zenith\Tests\Support\dashboardThrows;
+use function DevactionLabs\Zenith\Tests\Support\horizonBatch;
+use function DevactionLabs\Zenith\Tests\Support\horizonJob;
+use function DevactionLabs\Zenith\Tests\Support\mockDashboardContract;
 
 describe('BatchJobsData', function (): void {
     it('returns authoritative retained pending completed and failed batch jobs', function (): void {

@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Http\Controllers;
+namespace DevactionLabs\Zenith\Http\Controllers;
 
-use DevactionLabs\HorizonNewDawn\Batches\BatchClearScope;
-use DevactionLabs\HorizonNewDawn\Batches\ClearableBatches;
-use DevactionLabs\HorizonNewDawn\BulkOperations\BulkOperationDispatcher;
-use DevactionLabs\HorizonNewDawn\BulkOperations\Jobs\ClearBatchesJob;
+use DevactionLabs\Zenith\Batches\BatchClearScope;
+use DevactionLabs\Zenith\Batches\ClearableBatches;
+use DevactionLabs\Zenith\BulkOperations\BulkOperationDispatcher;
+use DevactionLabs\Zenith\BulkOperations\Jobs\ClearBatchesJob;
 use Illuminate\Http\RedirectResponse;
 use Throwable;
 

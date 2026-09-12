@@ -2,22 +2,22 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Tests\Support;
+namespace DevactionLabs\Zenith\Tests\Support;
 
 use Closure;
-use DevactionLabs\HorizonNewDawn\FailedJobs\FailedJobRetryEligibility;
-use DevactionLabs\HorizonNewDawn\FailedJobs\FailedJobsData;
-use DevactionLabs\HorizonNewDawn\Jobs\JobsData;
-use DevactionLabs\HorizonNewDawn\Jobs\PendingJobStateIndex;
-use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobFilterCatalog;
-use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobIndex;
-use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobQuery;
-use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobType;
-use DevactionLabs\HorizonNewDawn\Metrics\SnapshotJobsPerMinute;
-use DevactionLabs\HorizonNewDawn\Queues\QueueActivityData;
-use DevactionLabs\HorizonNewDawn\Queues\QueueBatchesData;
-use DevactionLabs\HorizonNewDawn\Queues\QueueJobsData;
-use DevactionLabs\HorizonNewDawn\Queues\QueueSummary;
+use DevactionLabs\Zenith\FailedJobs\FailedJobRetryEligibility;
+use DevactionLabs\Zenith\FailedJobs\FailedJobsData;
+use DevactionLabs\Zenith\Jobs\JobsData;
+use DevactionLabs\Zenith\Jobs\PendingJobStateIndex;
+use DevactionLabs\Zenith\Jobs\RetainedJobFilterCatalog;
+use DevactionLabs\Zenith\Jobs\RetainedJobIndex;
+use DevactionLabs\Zenith\Jobs\RetainedJobQuery;
+use DevactionLabs\Zenith\Jobs\RetainedJobType;
+use DevactionLabs\Zenith\Metrics\SnapshotJobsPerMinute;
+use DevactionLabs\Zenith\Queues\QueueActivityData;
+use DevactionLabs\Zenith\Queues\QueueBatchesData;
+use DevactionLabs\Zenith\Queues\QueueJobsData;
+use DevactionLabs\Zenith\Queues\QueueSummary;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Illuminate\Contracts\Queue\Factory as QueueFactory;
 use Illuminate\Contracts\Redis\Factory as RedisFactory;

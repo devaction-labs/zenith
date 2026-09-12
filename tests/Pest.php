@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-use DevactionLabs\HorizonNewDawn\Support\FrameworkCapabilities;
-use DevactionLabs\HorizonNewDawn\Tests\BrowserTestCase;
-use DevactionLabs\HorizonNewDawn\Tests\TestCase;
+use DevactionLabs\Zenith\Support\FrameworkCapabilities;
+use DevactionLabs\Zenith\Tests\BrowserTestCase;
+use DevactionLabs\Zenith\Tests\TestCase;
 use Illuminate\Cache\CacheManager;
 use PHPUnit\Framework\SkippedWithMessageException;
 

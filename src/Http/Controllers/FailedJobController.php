@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Http\Controllers;
+namespace DevactionLabs\Zenith\Http\Controllers;
 
-use DevactionLabs\HorizonNewDawn\FailedJobs\Actions\RemoveFailedJob;
-use DevactionLabs\HorizonNewDawn\FailedJobs\FailedJobsData;
-use DevactionLabs\HorizonNewDawn\Http\Requests\JobIndexRequest;
-use DevactionLabs\HorizonNewDawn\Support\Data\PageMetaData;
-use DevactionLabs\HorizonNewDawn\Support\NavigationItem;
-use DevactionLabs\HorizonNewDawn\Support\Scrolling\HorizonScrollMetadata;
+use DevactionLabs\Zenith\FailedJobs\Actions\RemoveFailedJob;
+use DevactionLabs\Zenith\FailedJobs\FailedJobsData;
+use DevactionLabs\Zenith\Http\Requests\JobIndexRequest;
+use DevactionLabs\Zenith\Support\Data\PageMetaData;
+use DevactionLabs\Zenith\Support\NavigationItem;
+use DevactionLabs\Zenith\Support\Scrolling\HorizonScrollMetadata;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -91,7 +91,7 @@ final class FailedJobController
         try {
             $remove->handle($job);
 
-            return to_route('horizon-new-dawn.failed-jobs.index')
+            return to_route('zenith.failed-jobs.index')
                 ->with('toast.success', "Removed failed job {$job}.");
         } catch (Throwable $exception) {
             report($exception);

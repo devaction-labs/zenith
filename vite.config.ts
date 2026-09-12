@@ -15,7 +15,7 @@ export default defineConfig({
   fmt: {
     ignorePatterns: ["resources/js/generated"],
   },
-  // Relative base keeps CSS/font/chunk URLs valid after publish under vendor/horizon-new-dawn/build.
+  // Relative base keeps CSS/font/chunk URLs valid after publish under vendor/zenith/build.
   base: "./",
   plugins: [
     laravel({

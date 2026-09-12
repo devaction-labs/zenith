@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Batches;
+namespace DevactionLabs\Zenith\Batches;
 
-use DevactionLabs\HorizonNewDawn\Support\PollInterval;
+use DevactionLabs\Zenith\Support\PollInterval;
 use Illuminate\Bus\Batch;
 use Illuminate\Bus\BatchRepository;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
@@ -12,7 +12,7 @@ use Throwable;
 
 final readonly class BatchRepositoryOverview
 {
-    private const string CACHE_KEY = 'horizon-new-dawn:batch-repository-overview:v1';
+    private const string CACHE_KEY = 'zenith:batch-repository-overview:v1';
 
     private const int PAGE_SIZE = 100;
 

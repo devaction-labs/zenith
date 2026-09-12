@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-use DevactionLabs\HorizonNewDawn\Assets\AssetPath;
-use DevactionLabs\HorizonNewDawn\HorizonNewDawnServiceProvider;
-use DevactionLabs\HorizonNewDawn\Http\Middleware\HandleInertiaRequests;
+use DevactionLabs\Zenith\Assets\AssetPath;
+use DevactionLabs\Zenith\Http\Middleware\HandleInertiaRequests;
+use DevactionLabs\Zenith\ZenithServiceProvider;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
@@ -17,8 +17,8 @@ use Inertia\Ssr\Response as SsrResponse;
 use function Pest\Laravel\get;
 
 describe('Inertia isolation', function (): void {
-    it('applies package Inertia middleware only to New Dawn page routes', function (): void {
-        $pageRoute = Route::getRoutes()->getByName('horizon-new-dawn.dashboard');
+    it('applies package Inertia middleware only to Zenith page routes', function (): void {
+        $pageRoute = Route::getRoutes()->getByName('zenith.dashboard');
         $fallbackRoute = Route::getRoutes()->getByName('horizon.index');
         $apiRoute = Route::getRoutes()->getByName('horizon.stats.index');
 
@@ -30,7 +30,7 @@ describe('Inertia isolation', function (): void {
             ->and($apiRoute?->gatherMiddleware())->not->toContain(HandleInertiaRequests::class);
     });
 
-    it('does not share New Dawn runtime data with host Inertia routes', function (): void {
+    it('does not share Zenith runtime data with host Inertia routes', function (): void {
         Route::get('/host-inertia', fn () => Inertia::render('Host'));
 
         get('/host-inertia', ['X-Inertia' => 'true'])
@@ -46,7 +46,7 @@ describe('Inertia isolation', function (): void {
         config()->set('inertia.ssr.enabled', true);
         config()->set('inertia.ssr.ensure_bundle_exists', false);
 
-        (new HorizonNewDawnServiceProvider(app()))->boot(app(AssetPath::class));
+        (new ZenithServiceProvider(app()))->boot(app(AssetPath::class));
 
         Http::fake([
             '*' => Http::response([
@@ -82,7 +82,7 @@ describe('Inertia isolation', function (): void {
         config()->set('inertia.ssr.enabled', true);
         config()->set('inertia.ssr.ensure_bundle_exists', false);
 
-        (new HorizonNewDawnServiceProvider(app()))->boot(app(AssetPath::class));
+        (new ZenithServiceProvider(app()))->boot(app(AssetPath::class));
 
         Http::fake([
             '*' => Http::response([
@@ -124,20 +124,20 @@ describe('Inertia isolation', function (): void {
 
         app()->instance(Gateway::class, $gateway);
 
-        (new HorizonNewDawnServiceProvider(app()))->boot(app(AssetPath::class));
+        (new ZenithServiceProvider(app()))->boot(app(AssetPath::class));
 
         expect(app(Gateway::class))->toBe($gateway);
     });
 
     it('adds the host Vite CSP nonce to both package scripts', function (): void {
-        Vite::useCspNonce('new-dawn-csp-nonce');
+        Vite::useCspNonce('zenith-csp-nonce');
 
         Route::get(
-            '/new-dawn-csp',
-            fn () => Inertia::render('Test')->rootView('horizon-new-dawn::app'),
+            '/zenith-csp',
+            fn () => Inertia::render('Test')->rootView('zenith::app'),
         );
 
-        $content = get('/new-dawn-csp')
+        $content = get('/zenith-csp')
             ->assertOk()
             ->getContent();
 
@@ -145,26 +145,26 @@ describe('Inertia isolation', function (): void {
             throw new RuntimeException('The CSP test response content could not be read.');
         }
 
-        expect($content)->toContain('<script nonce="new-dawn-csp-nonce">')
-            ->and($content)->toContain('<meta name="csp-nonce" content="new-dawn-csp-nonce">')
+        expect($content)->toContain('<script nonce="zenith-csp-nonce">')
+            ->and($content)->toContain('<meta name="csp-nonce" content="zenith-csp-nonce">')
             ->and($content)->toContain('type="module"')
-            ->and($content)->toContain('/vendor/horizon-new-dawn/build/assets/')
+            ->and($content)->toContain('/vendor/zenith/build/assets/')
             ->and($content)->toContain('data-horizon-favicon')
-            ->and($content)->toContain('nonce="new-dawn-csp-nonce"')
+            ->and($content)->toContain('nonce="zenith-csp-nonce"')
             // Theme bootstrap plus package Vite tags (module, styles, preloads).
-            ->and(substr_count($content, 'nonce="new-dawn-csp-nonce"'))->toBeGreaterThanOrEqual(2)
+            ->and(substr_count($content, 'nonce="zenith-csp-nonce"'))->toBeGreaterThanOrEqual(2)
             ->and(preg_match(
-                '/<script[^>]*type="module"[^>]*nonce="new-dawn-csp-nonce"|<script[^>]*nonce="new-dawn-csp-nonce"[^>]*type="module"/',
+                '/<script[^>]*type="module"[^>]*nonce="zenith-csp-nonce"|<script[^>]*nonce="zenith-csp-nonce"[^>]*type="module"/',
                 $content,
             ))->toBe(1)
-            ->and($content)->not->toContain('/vendor/horizon-new-dawn/build/favicon.svg');
+            ->and($content)->not->toContain('/vendor/zenith/build/favicon.svg');
     });
 
-    it('versions New Dawn requests from the published package asset manifest', function (): void {
+    it('versions Zenith requests from the published package asset manifest', function (): void {
         $filesystem = app(Filesystem::class);
         $originalPublicPath = public_path();
-        $publicPath = sys_get_temp_dir().'/horizon-new-dawn-version-test-'.uniqid('', true);
-        $buildDirectory = $publicPath.'/vendor/horizon-new-dawn/build';
+        $publicPath = sys_get_temp_dir().'/zenith-version-test-'.uniqid('', true);
+        $buildDirectory = $publicPath.'/vendor/zenith/build';
         $manifestPath = $buildDirectory.'/manifest.json';
 
         $filesystem->ensureDirectoryExists($buildDirectory);

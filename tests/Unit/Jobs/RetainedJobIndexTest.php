@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobFilterCatalog;
-use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobIndex;
-use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobIndexWarming;
-use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobType;
+use DevactionLabs\Zenith\Jobs\RetainedJobFilterCatalog;
+use DevactionLabs\Zenith\Jobs\RetainedJobIndex;
+use DevactionLabs\Zenith\Jobs\RetainedJobIndexWarming;
+use DevactionLabs\Zenith\Jobs\RetainedJobType;
 use Illuminate\Contracts\Redis\Factory as RedisFactory;
 use Illuminate\Redis\Connections\PredisConnection;
 use Illuminate\Support\Collection;
@@ -13,11 +13,11 @@ use Laravel\Horizon\Contracts\JobRepository;
 use Mockery\MockInterface;
 use Predis\Client;
 
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardExpects;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturnsFor;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturnsUsing;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\horizonJob;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\Zenith\Tests\Support\dashboardExpects;
+use function DevactionLabs\Zenith\Tests\Support\dashboardReturnsFor;
+use function DevactionLabs\Zenith\Tests\Support\dashboardReturnsUsing;
+use function DevactionLabs\Zenith\Tests\Support\horizonJob;
+use function DevactionLabs\Zenith\Tests\Support\mockDashboardContract;
 
 final class RetainedJobIndexRedisClient extends Client
 {

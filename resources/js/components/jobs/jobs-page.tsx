@@ -8,8 +8,8 @@ import {
   type TabbedResultsTab,
 } from "@/components/tabbed-results-card";
 import { TabsContent } from "@/components/ui/tabs";
-import { index as failedJobsIndex } from "@/generated/routes/horizon-new-dawn/failed-jobs";
-import { index as jobsIndex } from "@/generated/routes/horizon-new-dawn/jobs";
+import { index as failedJobsIndex } from "@/generated/routes/zenith/failed-jobs";
+import { index as jobsIndex } from "@/generated/routes/zenith/jobs";
 import { useResolvedNavigationCounts } from "@/hooks/use-navigation-counts";
 import { resolveHorizonRoute } from "@/lib/horizon-route";
 import type { FailedJobsPageProps, JobListType, JobsPageProps } from "@/types/jobs";

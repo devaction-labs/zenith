@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-use DevactionLabs\HorizonNewDawn\Metrics\MetricsData;
-use DevactionLabs\HorizonNewDawn\Support\HorizonRuntime;
+use DevactionLabs\Zenith\Metrics\MetricsData;
+use DevactionLabs\Zenith\Support\HorizonRuntime;
 use Inertia\Testing\AssertableInertia;
 use Laravel\Horizon\Contracts\MasterSupervisorRepository;
 use Laravel\Horizon\Contracts\MetricsRepository;
 use Laravel\Horizon\Horizon;
 
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturns;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturnsFor;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\Zenith\Tests\Support\dashboardReturns;
+use function DevactionLabs\Zenith\Tests\Support\dashboardReturnsFor;
+use function DevactionLabs\Zenith\Tests\Support\mockDashboardContract;
 use function Pest\Laravel\get;
 
 beforeEach(function (): void {

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-use DevactionLabs\HorizonNewDawn\FailedJobs\Actions\RetryFailedJob;
-use DevactionLabs\HorizonNewDawn\FailedJobs\FailedJobRetryEligibility;
-use DevactionLabs\HorizonNewDawn\FailedJobs\FailedJobRetryLock;
+use DevactionLabs\Zenith\FailedJobs\Actions\RetryFailedJob;
+use DevactionLabs\Zenith\FailedJobs\FailedJobRetryEligibility;
+use DevactionLabs\Zenith\FailedJobs\FailedJobRetryLock;
 use Illuminate\Contracts\Bus\Dispatcher;
 use Illuminate\Contracts\Redis\Factory as RedisFactory;
 use Illuminate\Redis\Connections\Connection;
@@ -12,12 +12,12 @@ use Illuminate\Support\Facades\Bus;
 use Laravel\Horizon\Contracts\JobRepository;
 use Laravel\Horizon\Jobs\RetryFailedJob as HorizonRetryFailedJob;
 
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardExpects;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardNeverReceives;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturns;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturnsFor;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\horizonJob;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\Zenith\Tests\Support\dashboardExpects;
+use function DevactionLabs\Zenith\Tests\Support\dashboardNeverReceives;
+use function DevactionLabs\Zenith\Tests\Support\dashboardReturns;
+use function DevactionLabs\Zenith\Tests\Support\dashboardReturnsFor;
+use function DevactionLabs\Zenith\Tests\Support\horizonJob;
+use function DevactionLabs\Zenith\Tests\Support\mockDashboardContract;
 
 function failedJobRetryLock(
     FailedJobRetryLockRedisConnection $connection,

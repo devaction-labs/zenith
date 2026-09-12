@@ -19,12 +19,12 @@ import type { RouteDefinition } from "@/generated/wayfinder";
 import {
   destroy as continueHorizon,
   store as pauseHorizon,
-} from "@/generated/routes/horizon-new-dawn/instances/pause";
-import { store as terminateHorizon } from "@/generated/routes/horizon-new-dawn/instances/terminate";
+} from "@/generated/routes/zenith/instances/pause";
+import { store as terminateHorizon } from "@/generated/routes/zenith/instances/terminate";
 import {
   destroy as continueSupervisor,
   store as pauseSupervisor,
-} from "@/generated/routes/horizon-new-dawn/supervisors/pause";
+} from "@/generated/routes/zenith/supervisors/pause";
 import { resolveHorizonRoute } from "@/lib/horizon-route";
 import type { HorizonDisplayStatus, HorizonTransitionStatus } from "@/types/dashboard";
 

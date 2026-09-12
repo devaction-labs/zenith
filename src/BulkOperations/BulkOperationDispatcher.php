@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\BulkOperations;
+namespace DevactionLabs\Zenith\BulkOperations;
 
 use Illuminate\Contracts\Bus\Dispatcher;
 use Illuminate\Queue\NullQueue;
@@ -23,7 +23,7 @@ final readonly class BulkOperationDispatcher
 
         if ($queue instanceof SyncQueue || $queue instanceof NullQueue) {
             throw new RuntimeException(
-                'Horizon New Dawn bulk operations require an asynchronous queue connection.',
+                'Zenith bulk operations require an asynchronous queue connection.',
             );
         }
 

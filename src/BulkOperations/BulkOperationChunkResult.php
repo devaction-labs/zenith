@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\BulkOperations;
+namespace DevactionLabs\Zenith\BulkOperations;
 
 final readonly class BulkOperationChunkResult
 {

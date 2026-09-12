@@ -14,8 +14,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
-import { destroy as cancelPendingJob } from "@/generated/routes/horizon-new-dawn/jobs/pending";
-import { store as releaseDelayedJob } from "@/generated/routes/horizon-new-dawn/jobs/pending/release";
+import { destroy as cancelPendingJob } from "@/generated/routes/zenith/jobs/pending";
+import { store as releaseDelayedJob } from "@/generated/routes/zenith/jobs/pending/release";
 import { resolveHorizonRoute } from "@/lib/horizon-route";
 
 export function PendingJobActionsMenu({

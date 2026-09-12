@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-use DevactionLabs\HorizonNewDawn\Batches\BatchCreatedRange;
-use DevactionLabs\HorizonNewDawn\Batches\BatchesData;
-use DevactionLabs\HorizonNewDawn\Batches\BatchJobsData;
-use DevactionLabs\HorizonNewDawn\Batches\BatchSort;
-use DevactionLabs\HorizonNewDawn\Batches\BatchSortDirection;
-use DevactionLabs\HorizonNewDawn\Batches\BatchStatus;
-use DevactionLabs\HorizonNewDawn\Batches\Data\BatchIndexFiltersData;
-use DevactionLabs\HorizonNewDawn\Batches\DatabaseBatchCapability;
-use DevactionLabs\HorizonNewDawn\Batches\DatabaseBatchMetadataSynchronizer;
-use DevactionLabs\HorizonNewDawn\Batches\DatabaseBatchQuery;
-use DevactionLabs\HorizonNewDawn\Jobs\JobsData;
-use DevactionLabs\HorizonNewDawn\Queues\QueueBatchesData;
+use DevactionLabs\Zenith\Batches\BatchCreatedRange;
+use DevactionLabs\Zenith\Batches\BatchesData;
+use DevactionLabs\Zenith\Batches\BatchJobsData;
+use DevactionLabs\Zenith\Batches\BatchSort;
+use DevactionLabs\Zenith\Batches\BatchSortDirection;
+use DevactionLabs\Zenith\Batches\BatchStatus;
+use DevactionLabs\Zenith\Batches\Data\BatchIndexFiltersData;
+use DevactionLabs\Zenith\Batches\DatabaseBatchCapability;
+use DevactionLabs\Zenith\Batches\DatabaseBatchMetadataSynchronizer;
+use DevactionLabs\Zenith\Batches\DatabaseBatchQuery;
+use DevactionLabs\Zenith\Jobs\JobsData;
+use DevactionLabs\Zenith\Queues\QueueBatchesData;
 use Illuminate\Bus\BatchFactory;
 use Illuminate\Bus\DatabaseBatchRepository;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
@@ -23,7 +23,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Laravel\Horizon\Contracts\JobRepository;
 
-use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\Zenith\Tests\Support\mockDashboardContract;
 
 beforeEach(function (): void {
     Date::setTestNow('2026-07-26 12:00:00');
@@ -33,7 +33,7 @@ beforeEach(function (): void {
     config()->set('queue.connections.redis.queue', 'default');
     config()->set('queue.connections.sqs.queue', 'inferred-sqs');
 
-    Schema::dropIfExists('horizon_new_dawn_batch_metadata');
+    Schema::dropIfExists('zenith_batch_metadata');
     Schema::dropIfExists('job_batches');
 
     Schema::create('job_batches', function (Blueprint $table): void {
@@ -49,7 +49,7 @@ beforeEach(function (): void {
         $table->integer('finished_at')->nullable();
     });
 
-    $migration = require __DIR__.'/../../../database/migrations/2026_07_26_000000_create_horizon_new_dawn_batch_metadata_table.php';
+    $migration = require __DIR__.'/../../../database/migrations/2026_07_26_000000_create_zenith_batch_metadata_table.php';
     $migration->up();
 
     foreach (range(1, 101) as $index) {
@@ -74,7 +74,7 @@ beforeEach(function (): void {
 
 afterEach(function (): void {
     Date::setTestNow();
-    Schema::dropIfExists('horizon_new_dawn_batch_metadata');
+    Schema::dropIfExists('zenith_batch_metadata');
     Schema::dropIfExists('job_batches');
 });
 
@@ -121,7 +121,7 @@ it('filters all retained rows before pagination and includes first-observed infe
 });
 
 it('keeps source-column queries exact while destination filters wait for the metadata migration', function (): void {
-    Schema::drop('horizon_new_dawn_batch_metadata');
+    Schema::drop('zenith_batch_metadata');
 
     $query = databaseBatchQuery();
     $filters = databaseBatchQueryFilters(
@@ -142,12 +142,12 @@ it('keeps source-column queries exact while destination filters wait for the met
             null,
         ))->toThrow(
             RuntimeException::class,
-            'Run the Horizon New Dawn batch metadata migration',
+            'Run the Zenith batch metadata migration',
         );
 });
 
 it('streams database clear candidates in bounded chunks without the metadata migration', function (): void {
-    Schema::drop('horizon_new_dawn_batch_metadata');
+    Schema::drop('zenith_batch_metadata');
 
     foreach (range(102, 1101) as $index) {
         databaseBatchQueryInsertBatch(
@@ -444,7 +444,7 @@ it('previews dashboard active batches by progress descending with id tie-break',
 
 it('previews queue summary active batches by progress descending rather than newest first', function (): void {
     app('db')->table('job_batches')->delete();
-    app('db')->table('horizon_new_dawn_batch_metadata')->delete();
+    app('db')->table('zenith_batch_metadata')->delete();
 
     foreach ([
         [

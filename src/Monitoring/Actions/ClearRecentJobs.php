@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Monitoring\Actions;
+namespace DevactionLabs\Zenith\Monitoring\Actions;
 
-use DevactionLabs\HorizonNewDawn\BulkOperations\BulkOperationChunkResult;
-use DevactionLabs\HorizonNewDawn\BulkOperations\BulkOperationSnapshot;
-use DevactionLabs\HorizonNewDawn\Monitoring\MonitoringTagGuard;
+use DevactionLabs\Zenith\BulkOperations\BulkOperationChunkResult;
+use DevactionLabs\Zenith\BulkOperations\BulkOperationSnapshot;
+use DevactionLabs\Zenith\Monitoring\MonitoringTagGuard;
 use Illuminate\Contracts\Redis\Factory as RedisFactory;
 use Laravel\Horizon\Contracts\TagRepository;
 use Throwable;

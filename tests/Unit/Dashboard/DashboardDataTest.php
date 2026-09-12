@@ -3,16 +3,16 @@
 declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
-use DevactionLabs\HorizonNewDawn\Batches\BatchRepositoryOverview;
-use DevactionLabs\HorizonNewDawn\Batches\DatabaseBatchCapability;
-use DevactionLabs\HorizonNewDawn\Dashboard\DashboardBatchSummary;
-use DevactionLabs\HorizonNewDawn\Dashboard\DashboardData;
-use DevactionLabs\HorizonNewDawn\Dashboard\DashboardPendingState;
-use DevactionLabs\HorizonNewDawn\Dashboard\HorizonStatus;
-use DevactionLabs\HorizonNewDawn\Metrics\SnapshotJobsPerMinute;
-use DevactionLabs\HorizonNewDawn\Queues\QueuePauseMetadata;
-use DevactionLabs\HorizonNewDawn\Queues\QueuePauseStatus;
-use DevactionLabs\HorizonNewDawn\Queues\QueueWaitThreshold;
+use DevactionLabs\Zenith\Batches\BatchRepositoryOverview;
+use DevactionLabs\Zenith\Batches\DatabaseBatchCapability;
+use DevactionLabs\Zenith\Dashboard\DashboardBatchSummary;
+use DevactionLabs\Zenith\Dashboard\DashboardData;
+use DevactionLabs\Zenith\Dashboard\DashboardPendingState;
+use DevactionLabs\Zenith\Dashboard\HorizonStatus;
+use DevactionLabs\Zenith\Metrics\SnapshotJobsPerMinute;
+use DevactionLabs\Zenith\Queues\QueuePauseMetadata;
+use DevactionLabs\Zenith\Queues\QueuePauseStatus;
+use DevactionLabs\Zenith\Queues\QueueWaitThreshold;
 use Illuminate\Bus\BatchRepository;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Illuminate\Contracts\Queue\Factory as QueueFactory;
@@ -27,13 +27,13 @@ use Laravel\Horizon\Contracts\SupervisorRepository;
 use Laravel\Horizon\MasterSupervisor;
 use Laravel\Horizon\WaitTimeCalculator;
 
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturns;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturnsFor;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturnsUsing;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardThrows;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardThrowsFor;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\horizonBatch;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\Zenith\Tests\Support\dashboardReturns;
+use function DevactionLabs\Zenith\Tests\Support\dashboardReturnsFor;
+use function DevactionLabs\Zenith\Tests\Support\dashboardReturnsUsing;
+use function DevactionLabs\Zenith\Tests\Support\dashboardThrows;
+use function DevactionLabs\Zenith\Tests\Support\dashboardThrowsFor;
+use function DevactionLabs\Zenith\Tests\Support\horizonBatch;
+use function DevactionLabs\Zenith\Tests\Support\mockDashboardContract;
 
 afterEach(function (): void {
     CarbonImmutable::setTestNow();
@@ -45,7 +45,7 @@ function summaryDashboardData(array $masters): DashboardData
 {
     CarbonImmutable::setTestNow('2026-07-18 12:00:00 UTC');
     config()->set('queue.batching.database', null);
-    config()->set('horizon-new-dawn.poll_interval', 0);
+    config()->set('zenith.poll_interval', 0);
 
     $jobs = mockDashboardContract(JobRepository::class);
     dashboardReturns($jobs, 'countFailed', 23);

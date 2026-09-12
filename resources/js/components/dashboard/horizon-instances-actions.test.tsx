@@ -22,7 +22,7 @@ vi.mock("@/components/ui/toast", () => ({
   },
 }));
 
-vi.mock("@/generated/routes/horizon-new-dawn/instances/pause", () => ({
+vi.mock("@/generated/routes/zenith/instances/pause", () => ({
   store: (instance: string) => ({
     url: "/horizon/instances/" + instance + "/pause",
     method: "post",
@@ -33,14 +33,14 @@ vi.mock("@/generated/routes/horizon-new-dawn/instances/pause", () => ({
   }),
 }));
 
-vi.mock("@/generated/routes/horizon-new-dawn/instances/terminate", () => ({
+vi.mock("@/generated/routes/zenith/instances/terminate", () => ({
   store: () => ({
     url: "/horizon/instances/terminate",
     method: "post",
   }),
 }));
 
-vi.mock("@/generated/routes/horizon-new-dawn/supervisors/pause", () => ({
+vi.mock("@/generated/routes/zenith/supervisors/pause", () => ({
   store: (supervisor: string) => ({
     url: "/horizon/supervisors/" + supervisor + "/pause",
     method: "post",

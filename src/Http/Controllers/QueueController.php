@@ -2,22 +2,22 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Http\Controllers;
+namespace DevactionLabs\Zenith\Http\Controllers;
 
 use Closure;
-use DevactionLabs\HorizonNewDawn\Batches\DatabaseBatchCapability;
-use DevactionLabs\HorizonNewDawn\Metrics\Data\MetricPreviewData;
-use DevactionLabs\HorizonNewDawn\Metrics\MetricsData;
-use DevactionLabs\HorizonNewDawn\Metrics\MetricType;
-use DevactionLabs\HorizonNewDawn\Queues\Data\QueueActivityPageData;
-use DevactionLabs\HorizonNewDawn\Queues\Data\QueueSummaryData;
-use DevactionLabs\HorizonNewDawn\Queues\QueueActivityData;
-use DevactionLabs\HorizonNewDawn\Queues\QueueActivityTab;
-use DevactionLabs\HorizonNewDawn\Queues\QueuesData;
-use DevactionLabs\HorizonNewDawn\Queues\QueueSummary;
-use DevactionLabs\HorizonNewDawn\Support\Data\PageMetaData;
-use DevactionLabs\HorizonNewDawn\Support\NavigationItem;
-use DevactionLabs\HorizonNewDawn\Support\Scrolling\HorizonScrollMetadata;
+use DevactionLabs\Zenith\Batches\DatabaseBatchCapability;
+use DevactionLabs\Zenith\Metrics\Data\MetricPreviewData;
+use DevactionLabs\Zenith\Metrics\MetricsData;
+use DevactionLabs\Zenith\Metrics\MetricType;
+use DevactionLabs\Zenith\Queues\Data\QueueActivityPageData;
+use DevactionLabs\Zenith\Queues\Data\QueueSummaryData;
+use DevactionLabs\Zenith\Queues\QueueActivityData;
+use DevactionLabs\Zenith\Queues\QueueActivityTab;
+use DevactionLabs\Zenith\Queues\QueuesData;
+use DevactionLabs\Zenith\Queues\QueueSummary;
+use DevactionLabs\Zenith\Support\Data\PageMetaData;
+use DevactionLabs\Zenith\Support\NavigationItem;
+use DevactionLabs\Zenith\Support\Scrolling\HorizonScrollMetadata;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;

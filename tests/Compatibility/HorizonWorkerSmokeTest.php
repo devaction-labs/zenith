@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-use DevactionLabs\HorizonNewDawn\BulkOperations\Jobs\ClearFailedJobsJob;
-use DevactionLabs\HorizonNewDawn\Jobs\Data\JobIndexFiltersData;
-use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobQuery;
-use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobType;
+use DevactionLabs\Zenith\BulkOperations\Jobs\ClearFailedJobsJob;
+use DevactionLabs\Zenith\Jobs\Data\JobIndexFiltersData;
+use DevactionLabs\Zenith\Jobs\RetainedJobQuery;
+use DevactionLabs\Zenith\Jobs\RetainedJobType;
 use Illuminate\Contracts\Redis\Factory as RedisFactory;
 use Laravel\Horizon\Contracts\JobRepository;
 use Laravel\Horizon\Horizon;
@@ -105,7 +105,7 @@ function compatibilityEnvironment(): array
         throw new RuntimeException('Set HORIZON_COMPATIBILITY_REDIS_DB to an isolated Redis database.');
     }
 
-    $prefix = 'horizon_new_dawn_compatibility_'.bin2hex(random_bytes(6)).'_';
+    $prefix = 'zenith_compatibility_'.bin2hex(random_bytes(6)).'_';
 
     return [
         'APP_ENV' => 'local',

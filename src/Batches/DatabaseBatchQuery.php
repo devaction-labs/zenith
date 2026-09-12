@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Batches;
+namespace DevactionLabs\Zenith\Batches;
 
-use DevactionLabs\HorizonNewDawn\Batches\Data\BatchFilterCatalogData;
-use DevactionLabs\HorizonNewDawn\Batches\Data\BatchIndexFiltersData;
-use DevactionLabs\HorizonNewDawn\Batches\Data\BatchPageData;
-use DevactionLabs\HorizonNewDawn\Batches\Data\BatchRowData;
-use DevactionLabs\HorizonNewDawn\Batches\Data\BatchStatusCountsData;
-use DevactionLabs\HorizonNewDawn\Dashboard\Data\DashboardBatchPreviewData;
-use DevactionLabs\HorizonNewDawn\Queues\Data\QueueRetainedBatchesData;
+use DevactionLabs\Zenith\Batches\Data\BatchFilterCatalogData;
+use DevactionLabs\Zenith\Batches\Data\BatchIndexFiltersData;
+use DevactionLabs\Zenith\Batches\Data\BatchPageData;
+use DevactionLabs\Zenith\Batches\Data\BatchRowData;
+use DevactionLabs\Zenith\Batches\Data\BatchStatusCountsData;
+use DevactionLabs\Zenith\Dashboard\Data\DashboardBatchPreviewData;
+use DevactionLabs\Zenith\Queues\Data\QueueRetainedBatchesData;
 use Illuminate\Database\Query\Builder;
 use JsonException;
 use RuntimeException;

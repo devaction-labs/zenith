@@ -2,20 +2,20 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Queues;
+namespace DevactionLabs\Zenith\Queues;
 
 use Carbon\CarbonImmutable;
 use Closure;
-use DevactionLabs\HorizonNewDawn\FailedJobs\FailedJobsData;
-use DevactionLabs\HorizonNewDawn\Jobs\Data\JobIndexFiltersData;
-use DevactionLabs\HorizonNewDawn\Jobs\Data\JobRowData;
-use DevactionLabs\HorizonNewDawn\Jobs\JobsData;
-use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobIndexWarming;
-use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobQuery;
-use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobType;
-use DevactionLabs\HorizonNewDawn\Queues\Data\QueueActivityPageData;
-use DevactionLabs\HorizonNewDawn\Queues\Data\QueueRetainedJobsData;
-use DevactionLabs\HorizonNewDawn\Support\PollInterval;
+use DevactionLabs\Zenith\FailedJobs\FailedJobsData;
+use DevactionLabs\Zenith\Jobs\Data\JobIndexFiltersData;
+use DevactionLabs\Zenith\Jobs\Data\JobRowData;
+use DevactionLabs\Zenith\Jobs\JobsData;
+use DevactionLabs\Zenith\Jobs\RetainedJobIndexWarming;
+use DevactionLabs\Zenith\Jobs\RetainedJobQuery;
+use DevactionLabs\Zenith\Jobs\RetainedJobType;
+use DevactionLabs\Zenith\Queues\Data\QueueActivityPageData;
+use DevactionLabs\Zenith\Queues\Data\QueueRetainedJobsData;
+use DevactionLabs\Zenith\Support\PollInterval;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Illuminate\Support\Collection;
 use Laravel\Horizon\Contracts\JobRepository;
@@ -959,7 +959,7 @@ final readonly class QueueJobsData
         $prefix = config('horizon.prefix', 'horizon:');
         $prefix = is_string($prefix) ? $prefix : 'horizon:';
 
-        return 'horizon-new-dawn:queue-jobs:'.hash('sha256', $prefix."\0".$queue);
+        return 'zenith:queue-jobs:'.hash('sha256', $prefix."\0".$queue);
     }
 
     private function activityCacheKey(
@@ -970,7 +970,7 @@ final readonly class QueueJobsData
         $prefix = config('horizon.prefix', 'horizon:');
         $prefix = is_string($prefix) ? $prefix : 'horizon:';
 
-        return 'horizon-new-dawn:queue-activity:'.hash(
+        return 'zenith:queue-activity:'.hash(
             'sha256',
             implode("\0", [
                 $prefix,
@@ -987,7 +987,7 @@ final readonly class QueueJobsData
         $prefix = config('horizon.prefix', 'horizon:');
         $prefix = is_string($prefix) ? $prefix : 'horizon:';
 
-        return 'horizon-new-dawn:retained-reconciliation:'.hash(
+        return 'zenith:retained-reconciliation:'.hash(
             'sha256',
             $prefix."\0".$type->value,
         );

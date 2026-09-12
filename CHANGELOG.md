@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to Horizon New Dawn will be documented in this file.
+All notable changes to Zenith will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
@@ -14,11 +14,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
-- Rebranded the fork to DevAction Labs (`devaction-labs/horizon-new-dawn`, `DevactionLabs\HorizonNewDawn`).
+- Rebranded the fork to DevAction Labs (`devaction-labs/zenith`, `DevactionLabs\Zenith`).
 - Added Laravel 13.25 global queue pause and resume (`Queue::pauseAll()` / `resumeAll()`), gated when the framework methods are missing, with a shell banner and Queues actions that leave individually paused queues paused after a global resume.
 - Warned at install time when Redis Cluster connections are configured.
-- Added optional per-action Gates (`horizon-new-dawn.pauseQueues`, `clearQueues`, `retryJobs`, `cancelJobs`, `manageInstances`, `manageMonitoring`, `manageBatches`) on top of Horizon auth. Undefined gates remain allowed for anyone Horizon already admitted.
-- Recorded successful mutations to the application log and `horizon_new_dawn_audit_events`, with an Audit page.
+- Added optional per-action Gates (`zenith.pauseQueues`, `clearQueues`, `retryJobs`, `cancelJobs`, `manageInstances`, `manageMonitoring`, `manageBatches`) on top of Horizon auth. Undefined gates remain allowed for anyone Horizon already admitted.
+- Recorded successful mutations to the application log and `zenith_audit_events`, with an Audit page.
 - Surfaced Laravel `Queue::route()` class routes and `Queue::forward()` destinations on queue detail.
 - Added retained-source search on monitored-tag job lists (completed and failed).
 - Copied Horizon source sets into hash-tagged keys on Redis Cluster so retained-job indexes no longer issue CROSSSLOT `ZDIFFSTORE` commands.
@@ -39,7 +39,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Added a request-reconciled Redis job index for case-insensitive partial-class or exact retained-ID search and exact job class, queue, connection, pending-state, and failed-tag queries without a background indexing process or persistent search-specific index.
 - Bound job-class catalog pipelines, intent-loaded exact-filter options, and partial-search fan-out; repair exact job, queue, connection, and pending-target partitions; and report overly broad catalogs or searches instead of exhausting a PHP worker or silently truncating results.
 - Added client-side job sorting across every row currently loaded by infinite scrolling.
-- Added an optional `horizon-new-dawn:warm-retained-jobs` Artisan command to prebuild retained-job Redis indexes during production adoption.
+- Added an optional `zenith:warm-retained-jobs` Artisan command to prebuild retained-job Redis indexes during production adoption.
 - Added database-backed full-source batch search, status and creation filters, status counts, and stable server-side sorting before 50-row pagination.
 - Added an optional batch destination metadata migration and warm command for exact queue and connection attribution.
 - Added real-service retained-job compatibility coverage for standalone Redis 6.2 and 7 and Valkey 8 with PhpRedis, Predis 3, and a dedicated Predis 2 run.
@@ -85,7 +85,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Trim expired Horizon source references before retained-index synchronization so expired job hashes cannot cause a permanent rebuild loop.
 - Fence filtered retained-index reads across concurrent synchronization and keep facet catalog reads non-mutating.
 - Snapshot mutable ready, reserved, and delayed queue structures atomically while applying pending-state filters, renew the short-lived snapshot during chunked reads, and fail closed if it expires.
-- Classify jobs explicitly made available by New Dawn as Ready in both filters and displayed state while retaining Released for naturally elapsed schedules.
+- Classify jobs explicitly made available by Zenith as Ready in both filters and displayed state while retaining Released for naturally elapsed schedules.
 - Apply queue-activity job sorting to every currently loaded row, and expose local batch-detail job sorting only when the full non-paginated list is available.
 - Scan only the two Redis hash fields needed to determine bulk failed-job retryability instead of hydrating full payload, exception, and context records.
 - Keep global failed-job retry and clear actions available regardless of Horizon's unfiltered retained count, dispatching them as bounded asynchronous bulk operations instead of rejecting large scopes before dispatch.
@@ -151,9 +151,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Backfill the worker option expected by newer Laravel releases when Horizon 5.46 does not register it, allowing real Horizon workers to boot normally.
 - Calculate dashboard queue runtime and throughput leaders from retained metric snapshots instead of relying on repository methods unavailable in Horizon 5.46.
 
-[Unreleased]: https://github.com/devaction-labs/horizon-new-dawn/compare/0.1.5...HEAD
-[0.1.5]: https://github.com/devaction-labs/horizon-new-dawn/compare/0.1.4...0.1.5
-[0.1.4]: https://github.com/devaction-labs/horizon-new-dawn/compare/0.1.3...0.1.4
-[0.1.3]: https://github.com/devaction-labs/horizon-new-dawn/compare/0.1.2...0.1.3
-[0.1.2]: https://github.com/devaction-labs/horizon-new-dawn/compare/0.1.1...0.1.2
-[0.1.1]: https://github.com/devaction-labs/horizon-new-dawn/compare/0.1.0...0.1.1
+[Unreleased]: https://github.com/devaction-labs/zenith/compare/0.1.5...HEAD
+[0.1.5]: https://github.com/devaction-labs/zenith/compare/0.1.4...0.1.5
+[0.1.4]: https://github.com/devaction-labs/zenith/compare/0.1.3...0.1.4
+[0.1.3]: https://github.com/devaction-labs/zenith/compare/0.1.2...0.1.3
+[0.1.2]: https://github.com/devaction-labs/zenith/compare/0.1.1...0.1.2
+[0.1.1]: https://github.com/devaction-labs/zenith/compare/0.1.0...0.1.1

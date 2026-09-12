@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-use DevactionLabs\HorizonNewDawn\BulkOperations\BulkOperationMissingStateException;
-use DevactionLabs\HorizonNewDawn\BulkOperations\BulkOperationSnapshot;
+use DevactionLabs\Zenith\BulkOperations\BulkOperationMissingStateException;
+use DevactionLabs\Zenith\BulkOperations\BulkOperationSnapshot;
 
-use function DevactionLabs\HorizonNewDawn\Tests\Support\bulkSnapshot;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\bulkSnapshotRedis;
+use function DevactionLabs\Zenith\Tests\Support\bulkSnapshot;
+use function DevactionLabs\Zenith\Tests\Support\bulkSnapshotRedis;
 
 it('copies a point-in-time sorted set without serializing members into PHP', function (): void {
     $redis = bulkSnapshotRedis();
@@ -112,8 +112,8 @@ it('renews temporary keys while active and removes them at completion', function
 
     $operationId = bulkSnapshot()->createFromSortedSet('failed_jobs');
     $keys = [
-        "\x1fhorizon-new-dawn:v1:bulk-op:{$operationId}:targets",
-        "\x1fhorizon-new-dawn:v1:bulk-op:{$operationId}:meta",
+        "\x1fzenith:v1:bulk-op:{$operationId}:targets",
+        "\x1fzenith:v1:bulk-op:{$operationId}:meta",
     ];
 
     foreach ($keys as $key) {

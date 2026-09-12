@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Http\Middleware;
+namespace DevactionLabs\Zenith\Http\Middleware;
 
 use Closure;
-use DevactionLabs\HorizonNewDawn\Authorization\HorizonAbility;
-use DevactionLabs\HorizonNewDawn\Authorization\HorizonAbilityAuthorizer;
+use DevactionLabs\Zenith\Authorization\HorizonAbility;
+use DevactionLabs\Zenith\Authorization\HorizonAbilityAuthorizer;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 

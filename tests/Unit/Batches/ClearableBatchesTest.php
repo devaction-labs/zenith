@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
-use DevactionLabs\HorizonNewDawn\Batches\BatchClearScope;
-use DevactionLabs\HorizonNewDawn\Batches\ClearableBatches;
-use DevactionLabs\HorizonNewDawn\Jobs\JobsData;
+use DevactionLabs\Zenith\Batches\BatchClearScope;
+use DevactionLabs\Zenith\Batches\ClearableBatches;
+use DevactionLabs\Zenith\Jobs\JobsData;
 use Illuminate\Bus\BatchRepository;
 use Illuminate\Support\Collection;
 use Laravel\Horizon\Contracts\JobRepository;
 
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturns;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturnsFor;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturnsUsing;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\horizonBatch;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\horizonJob;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\Zenith\Tests\Support\dashboardReturns;
+use function DevactionLabs\Zenith\Tests\Support\dashboardReturnsFor;
+use function DevactionLabs\Zenith\Tests\Support\dashboardReturnsUsing;
+use function DevactionLabs\Zenith\Tests\Support\horizonBatch;
+use function DevactionLabs\Zenith\Tests\Support\horizonJob;
+use function DevactionLabs\Zenith\Tests\Support\mockDashboardContract;
 
 function clearableBatches(BatchRepository $batches, JobRepository $jobs): ClearableBatches
 {
@@ -49,7 +49,7 @@ it('keeps later active retry batches out of clearable ids despite stale earlier 
 
 it('classifies every retained batch across repository pages', function (): void {
     // Former public default was 1000 retained batches; scans must continue onto the next page.
-    config()->set('horizon-new-dawn.retained_batch_scan_limit', 1000);
+    config()->set('zenith.retained_batch_scan_limit', 1000);
 
     $calls = 0;
     $batches = mockDashboardContract(BatchRepository::class);

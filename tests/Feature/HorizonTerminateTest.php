@@ -16,10 +16,10 @@ use Laravel\Horizon\SupervisorCommands\Pause;
 use Laravel\Horizon\SupervisorCommands\Terminate;
 use Mockery\MockInterface;
 
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardNeverReceives;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturnsFor;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardThrowsFor;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\Zenith\Tests\Support\dashboardNeverReceives;
+use function DevactionLabs\Zenith\Tests\Support\dashboardReturnsFor;
+use function DevactionLabs\Zenith\Tests\Support\dashboardThrowsFor;
+use function DevactionLabs\Zenith\Tests\Support\mockDashboardContract;
 use function Pest\Laravel\deleteJson;
 use function Pest\Laravel\post;
 use function Pest\Laravel\postJson;

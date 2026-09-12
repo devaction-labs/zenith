@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use DevactionLabs\HorizonNewDawn\Support\Scrolling\HorizonScrollMetadata;
+use DevactionLabs\Zenith\Support\Scrolling\HorizonScrollMetadata;
 
 describe('HorizonScrollMetadata', function (): void {
     it('adapts Horizon indexes to Inertia scroll metadata', function (): void {

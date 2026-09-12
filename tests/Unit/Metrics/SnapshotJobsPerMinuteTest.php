@@ -3,14 +3,14 @@
 declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
-use DevactionLabs\HorizonNewDawn\Metrics\SnapshotJobsPerMinute;
+use DevactionLabs\Zenith\Metrics\SnapshotJobsPerMinute;
 use Illuminate\Contracts\Redis\Factory as RedisFactory;
 use Illuminate\Redis\Connections\Connection;
 
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturns;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturnsFor;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardThrows;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\Zenith\Tests\Support\dashboardReturns;
+use function DevactionLabs\Zenith\Tests\Support\dashboardReturnsFor;
+use function DevactionLabs\Zenith\Tests\Support\dashboardThrows;
+use function DevactionLabs\Zenith\Tests\Support\mockDashboardContract;
 
 afterEach(function (): void {
     CarbonImmutable::setTestNow();

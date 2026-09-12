@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Http\Controllers;
+namespace DevactionLabs\Zenith\Http\Controllers;
 
-use DevactionLabs\HorizonNewDawn\Http\Requests\PauseQueueRequest;
-use DevactionLabs\HorizonNewDawn\Http\Requests\ResumeQueueRequest;
-use DevactionLabs\HorizonNewDawn\Queues\Actions\PauseQueue;
-use DevactionLabs\HorizonNewDawn\Queues\Actions\ResumeQueue;
-use DevactionLabs\HorizonNewDawn\Support\FrameworkCapabilities;
+use DevactionLabs\Zenith\Http\Requests\PauseQueueRequest;
+use DevactionLabs\Zenith\Http\Requests\ResumeQueueRequest;
+use DevactionLabs\Zenith\Queues\Actions\PauseQueue;
+use DevactionLabs\Zenith\Queues\Actions\ResumeQueue;
+use DevactionLabs\Zenith\Support\FrameworkCapabilities;
 use Illuminate\Http\RedirectResponse;
 use Throwable;
 

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Jobs\Data;
+namespace DevactionLabs\Zenith\Jobs\Data;
 
 final readonly class CancelPendingJobsChunkResultData
 {

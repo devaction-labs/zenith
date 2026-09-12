@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-use DevactionLabs\HorizonNewDawn\BulkOperations\BulkOperationSnapshot;
-use DevactionLabs\HorizonNewDawn\FailedJobs\Actions\RetryFailedJob;
-use DevactionLabs\HorizonNewDawn\FailedJobs\FailedJobRetryEligibility;
-use DevactionLabs\HorizonNewDawn\Monitoring\Actions\ClearRecentJobs;
-use DevactionLabs\HorizonNewDawn\Monitoring\Actions\MonitorTag;
-use DevactionLabs\HorizonNewDawn\Monitoring\Actions\RetryFailedJobs;
-use DevactionLabs\HorizonNewDawn\Monitoring\Actions\StopMonitoringTag;
-use DevactionLabs\HorizonNewDawn\Monitoring\MonitoringTagGuard;
+use DevactionLabs\Zenith\BulkOperations\BulkOperationSnapshot;
+use DevactionLabs\Zenith\FailedJobs\Actions\RetryFailedJob;
+use DevactionLabs\Zenith\FailedJobs\FailedJobRetryEligibility;
+use DevactionLabs\Zenith\Monitoring\Actions\ClearRecentJobs;
+use DevactionLabs\Zenith\Monitoring\Actions\MonitorTag;
+use DevactionLabs\Zenith\Monitoring\Actions\RetryFailedJobs;
+use DevactionLabs\Zenith\Monitoring\Actions\StopMonitoringTag;
+use DevactionLabs\Zenith\Monitoring\MonitoringTagGuard;
 use Illuminate\Contracts\Bus\Dispatcher;
 use Illuminate\Contracts\Redis\Factory as RedisFactory;
 use Illuminate\Support\Collection;
@@ -20,11 +20,11 @@ use Laravel\Horizon\Jobs\MonitorTag as HorizonMonitorTag;
 use Laravel\Horizon\Jobs\RetryFailedJob as HorizonRetryFailedJob;
 use Laravel\Horizon\Jobs\StopMonitoringTag as HorizonStopMonitoringTag;
 
-use function DevactionLabs\HorizonNewDawn\Tests\Support\bulkSnapshotRedis;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturns;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturnsUsing;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\horizonJob;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\Zenith\Tests\Support\bulkSnapshotRedis;
+use function DevactionLabs\Zenith\Tests\Support\dashboardReturns;
+use function DevactionLabs\Zenith\Tests\Support\dashboardReturnsUsing;
+use function DevactionLabs\Zenith\Tests\Support\horizonJob;
+use function DevactionLabs\Zenith\Tests\Support\mockDashboardContract;
 
 it('dispatches supported Horizon monitor-tag jobs', function (): void {
     Bus::fake();

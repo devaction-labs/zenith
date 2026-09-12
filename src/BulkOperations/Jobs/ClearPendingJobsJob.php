@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\BulkOperations\Jobs;
+namespace DevactionLabs\Zenith\BulkOperations\Jobs;
 
-use DevactionLabs\HorizonNewDawn\BulkOperations\BulkOperationJob;
-use DevactionLabs\HorizonNewDawn\Jobs\Actions\ClearPendingJobs;
+use DevactionLabs\Zenith\BulkOperations\BulkOperationJob;
+use DevactionLabs\Zenith\Jobs\Actions\ClearPendingJobs;
 
 final class ClearPendingJobsJob extends BulkOperationJob
 {
@@ -21,6 +21,6 @@ final class ClearPendingJobsJob extends BulkOperationJob
     /** @return list<string> */
     public function tags(): array
     {
-        return ['horizon-new-dawn', 'bulk:clear-pending-jobs'];
+        return ['zenith', 'bulk:clear-pending-jobs'];
     }
 }

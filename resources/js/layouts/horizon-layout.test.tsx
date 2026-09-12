@@ -230,7 +230,7 @@ describe("HorizonLayout", () => {
       "!h-full",
     );
     expect(brand.closest('[data-slot="sidebar-header"]')).not.toHaveClass("border-b");
-    expect(screen.queryByText("New Dawn")).not.toBeInTheDocument();
+    expect(screen.queryByText("Zenith")).not.toBeInTheDocument();
   });
 
   it("does not animate the auto-load icon", () => {

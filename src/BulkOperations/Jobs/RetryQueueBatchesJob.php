@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\BulkOperations\Jobs;
+namespace DevactionLabs\Zenith\BulkOperations\Jobs;
 
-use DevactionLabs\HorizonNewDawn\Batches\Actions\RetryQueueBatches;
-use DevactionLabs\HorizonNewDawn\BulkOperations\BulkOperationJob;
+use DevactionLabs\Zenith\Batches\Actions\RetryQueueBatches;
+use DevactionLabs\Zenith\BulkOperations\BulkOperationJob;
 
 final class RetryQueueBatchesJob extends BulkOperationJob
 {
@@ -34,7 +34,7 @@ final class RetryQueueBatchesJob extends BulkOperationJob
     /** @return list<string> */
     public function tags(): array
     {
-        $tags = ['horizon-new-dawn', 'bulk:retry-queue-batches', 'queue:'.$this->queueName];
+        $tags = ['zenith', 'bulk:retry-queue-batches', 'queue:'.$this->queueName];
 
         if ($this->operationId !== null) {
             $tags[] = 'operation:'.$this->operationId;

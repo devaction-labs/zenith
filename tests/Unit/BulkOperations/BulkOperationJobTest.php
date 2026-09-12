@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-use DevactionLabs\HorizonNewDawn\BulkOperations\Jobs\ClearFailedJobsJob;
+use DevactionLabs\Zenith\BulkOperations\Jobs\ClearFailedJobsJob;
 use Illuminate\Support\Facades\Log;
 
 it('inherits the Horizon worker timeout', function (): void {
-    config()->set('horizon-new-dawn.bulk_operations.timeout', 180);
+    config()->set('zenith.bulk_operations.timeout', 180);
 
     $jobClass = ClearFailedJobsJob::class;
 
@@ -14,14 +14,14 @@ it('inherits the Horizon worker timeout', function (): void {
 });
 
 it('logs structured feedback when a bulk operation fails after dispatch', function (): void {
-    config()->set('horizon-new-dawn.bulk_operations.connection', 'operations');
-    config()->set('horizon-new-dawn.bulk_operations.queue', 'horizon-maintenance');
+    config()->set('zenith.bulk_operations.connection', 'operations');
+    config()->set('zenith.bulk_operations.queue', 'horizon-maintenance');
 
     $exception = new RuntimeException('Redis is unavailable.');
 
     Log::shouldReceive('error')
         ->once()
-        ->with('Horizon New Dawn bulk operation failed.', [
+        ->with('Zenith bulk operation failed.', [
             'job' => ClearFailedJobsJob::class,
             'connection' => 'operations',
             'queue' => 'horizon-maintenance',

@@ -6,7 +6,7 @@ import { TableEmpty } from "@/components/data-table/table-empty";
 import { MetricsNavigationIcon } from "@/components/navigation-icons";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
-import { show as metricShow } from "@/generated/routes/horizon-new-dawn/metrics";
+import { show as metricShow } from "@/generated/routes/zenith/metrics";
 import { useSortableRows, type SortColumn } from "@/hooks/use-sortable-rows";
 import { resolveHorizonRoute } from "@/lib/horizon-route";
 import { isInteractiveTarget } from "@/lib/interactive-target";

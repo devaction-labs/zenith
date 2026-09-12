@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Supervisors;
+namespace DevactionLabs\Zenith\Supervisors;
 
-use DevactionLabs\HorizonNewDawn\Instances\LocalInstanceName;
+use DevactionLabs\Zenith\Instances\LocalInstanceName;
 use Illuminate\Support\Str;
 
 final class LocalSupervisor

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Batches;
+namespace DevactionLabs\Zenith\Batches;
 
-use DevactionLabs\HorizonNewDawn\Batches\Data\BatchQueryCapabilityData;
+use DevactionLabs\Zenith\Batches\Data\BatchQueryCapabilityData;
 use Illuminate\Bus\BatchRepository;
 use Illuminate\Bus\DatabaseBatchRepository;
 use Illuminate\Database\Connection;
@@ -13,7 +13,7 @@ use Throwable;
 
 final readonly class DatabaseBatchCapability
 {
-    public const string METADATA_TABLE = 'horizon_new_dawn_batch_metadata';
+    public const string METADATA_TABLE = 'zenith_batch_metadata';
 
     private const array SUPPORTED_DRIVERS = [
         'mariadb',
@@ -105,7 +105,7 @@ final readonly class DatabaseBatchCapability
 
         return match ($this->schemaState()) {
             'supported' => null,
-            'metadata-missing' => 'Run the Horizon New Dawn batch metadata migration to enable queue and connection attribution.',
+            'metadata-missing' => 'Run the Zenith batch metadata migration to enable queue and connection attribution.',
             'driver-unsupported' => 'The configured batch database driver is not supported for queue and connection attribution.',
             'source-missing' => 'The configured Laravel batch table is unavailable.',
             default => 'The configured batch database could not be inspected.',

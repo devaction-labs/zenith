@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-use DevactionLabs\HorizonNewDawn\BulkOperations\BulkOperationSnapshot;
-use DevactionLabs\HorizonNewDawn\BulkOperations\Jobs\RetryAllFailedJobsJob;
-use DevactionLabs\HorizonNewDawn\FailedJobs\Actions\RetryAllFailedJobs;
-use DevactionLabs\HorizonNewDawn\FailedJobs\Actions\RetryFailedJob;
-use DevactionLabs\HorizonNewDawn\FailedJobs\FailedJobRetryEligibility;
-use DevactionLabs\HorizonNewDawn\Tests\Support\BulkOperationSnapshotRedisConnection;
+use DevactionLabs\Zenith\BulkOperations\BulkOperationSnapshot;
+use DevactionLabs\Zenith\BulkOperations\Jobs\RetryAllFailedJobsJob;
+use DevactionLabs\Zenith\FailedJobs\Actions\RetryAllFailedJobs;
+use DevactionLabs\Zenith\FailedJobs\Actions\RetryFailedJob;
+use DevactionLabs\Zenith\FailedJobs\FailedJobRetryEligibility;
+use DevactionLabs\Zenith\Tests\Support\BulkOperationSnapshotRedisConnection;
 use Illuminate\Contracts\Bus\Dispatcher;
 use Illuminate\Contracts\Redis\Factory as RedisFactory;
 use Illuminate\Support\Collection;
@@ -16,10 +16,10 @@ use Illuminate\Support\Facades\Log;
 use Laravel\Horizon\Contracts\JobRepository;
 use Laravel\Horizon\Jobs\RetryFailedJob as HorizonRetryFailedJob;
 
-use function DevactionLabs\HorizonNewDawn\Tests\Support\bulkSnapshotRedis;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturnsUsing;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\horizonJob;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\Zenith\Tests\Support\bulkSnapshotRedis;
+use function DevactionLabs\Zenith\Tests\Support\dashboardReturnsUsing;
+use function DevactionLabs\Zenith\Tests\Support\horizonJob;
+use function DevactionLabs\Zenith\Tests\Support\mockDashboardContract;
 
 function chunkedRetryAction(
     JobRepository $repository,
@@ -193,7 +193,7 @@ it('retries unacknowledged targets after a mutation throws mid-chunk', function 
         static fn (string $key): bool => str_ends_with($key, ':meta'),
     ));
     expect($operationKeys)->toHaveCount(1);
-    $operationId = substr($operationKeys[0], strlen("\x1fhorizon-new-dawn:v1:bulk-op:"), 32);
+    $operationId = substr($operationKeys[0], strlen("\x1fzenith:v1:bulk-op:"), 32);
 
     // Score order peels highest-magnitude negative first: failed-4, failed-3,
     // failed-2 throws after two successes. Resume must still process failed-2+.
@@ -244,7 +244,7 @@ it('does not reschedule after a crash between successful dispatch and acknowledg
         static fn (string $key): bool => str_ends_with($key, ':meta'),
     ));
     expect($operationKeys)->toHaveCount(1);
-    $operationId = substr($operationKeys[0], strlen("\x1fhorizon-new-dawn:v1:bulk-op:"), 32);
+    $operationId = substr($operationKeys[0], strlen("\x1fzenith:v1:bulk-op:"), 32);
 
     expect(app(BulkOperationSnapshot::class)->hasMore($operationId))->toBeTrue()
         ->and(app(BulkOperationSnapshot::class)->nextChunk($operationId))->toBe(['failed-0']);
@@ -254,8 +254,8 @@ it('does not reschedule after a crash between successful dispatch and acknowledg
     expect($resume->complete)->toBeTrue()
         ->and($resume->totalAffected)->toBe(1)
         ->and($dispatches)->toBe(1)
-        ->and($redis->exists("\x1fhorizon-new-dawn:v1:bulk-op:{$operationId}:meta"))->toBe(0)
-        ->and($redis->exists("\x1fhorizon-new-dawn:v1:bulk-op:{$operationId}:targets"))->toBe(0);
+        ->and($redis->exists("\x1fzenith:v1:bulk-op:{$operationId}:meta"))->toBe(0)
+        ->and($redis->exists("\x1fzenith:v1:bulk-op:{$operationId}:targets"))->toBe(0);
 });
 
 it('retries only failures from the requested connection and queue while chunking', function (): void {
@@ -287,8 +287,8 @@ it('retries only failures from the requested connection and queue while chunking
 });
 
 it('dispatches a continuation job with only bounded scalar state on the bulk queue', function (): void {
-    config()->set('horizon-new-dawn.bulk_operations.connection', 'operations');
-    config()->set('horizon-new-dawn.bulk_operations.queue', 'horizon-maintenance');
+    config()->set('zenith.bulk_operations.connection', 'operations');
+    config()->set('zenith.bulk_operations.queue', 'horizon-maintenance');
 
     Bus::fake();
 

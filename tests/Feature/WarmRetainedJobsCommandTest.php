@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobIndex;
+use DevactionLabs\Zenith\Jobs\RetainedJobIndex;
 use Illuminate\Contracts\Redis\Factory as RedisFactory;
 use Illuminate\Redis\Connections\PredisConnection;
 use Illuminate\Support\Facades\Artisan;
@@ -10,10 +10,10 @@ use Illuminate\Testing\PendingCommand;
 use Laravel\Horizon\Contracts\JobRepository;
 use Predis\Client;
 
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardExpects;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardNeverReceives;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturnsFor;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\Zenith\Tests\Support\dashboardExpects;
+use function DevactionLabs\Zenith\Tests\Support\dashboardNeverReceives;
+use function DevactionLabs\Zenith\Tests\Support\dashboardReturnsFor;
+use function DevactionLabs\Zenith\Tests\Support\mockDashboardContract;
 use function Pest\Laravel\artisan;
 
 it('warms every retained job type explicitly', function (): void {
@@ -22,7 +22,7 @@ it('warms every retained job type explicitly', function (): void {
         retainedJobIndexForCommandTests(new WarmRetainedJobsRedisClient),
     );
 
-    $command = artisan('horizon-new-dawn:warm-retained-jobs');
+    $command = artisan('zenith:warm-retained-jobs');
 
     if (! $command instanceof PendingCommand) {
         throw new RuntimeException('The warm retained jobs command did not return a pending command.');
@@ -39,7 +39,7 @@ it('warms every retained job type explicitly', function (): void {
 });
 
 it('registers the warm retained jobs command with Artisan', function (): void {
-    expect(Artisan::all())->toHaveKey('horizon-new-dawn:warm-retained-jobs');
+    expect(Artisan::all())->toHaveKey('zenith:warm-retained-jobs');
 });
 
 it('fails when the retained job index namespace is already claimed', function (): void {
@@ -49,7 +49,7 @@ it('fails when the retained job index namespace is already claimed', function ()
     $client->strings[$ownerKey] = 'someone-else';
     app()->instance(RetainedJobIndex::class, $index);
 
-    expect(fn (): int => Artisan::call('horizon-new-dawn:warm-retained-jobs'))
+    expect(fn (): int => Artisan::call('zenith:warm-retained-jobs'))
         ->toThrow(RuntimeException::class, 'The retained job index Redis namespace is already in use.');
 });
 

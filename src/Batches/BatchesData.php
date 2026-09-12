@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Batches;
+namespace DevactionLabs\Zenith\Batches;
 
 use DateTimeInterface;
-use DevactionLabs\HorizonNewDawn\Batches\Data\BatchDetailData;
-use DevactionLabs\HorizonNewDawn\Batches\Data\BatchIndexFiltersData;
-use DevactionLabs\HorizonNewDawn\Batches\Data\BatchPageData;
-use DevactionLabs\HorizonNewDawn\Batches\Data\BatchRowData;
-use DevactionLabs\HorizonNewDawn\Batches\Data\BatchStatusCountsData;
+use DevactionLabs\Zenith\Batches\Data\BatchDetailData;
+use DevactionLabs\Zenith\Batches\Data\BatchIndexFiltersData;
+use DevactionLabs\Zenith\Batches\Data\BatchPageData;
+use DevactionLabs\Zenith\Batches\Data\BatchRowData;
+use DevactionLabs\Zenith\Batches\Data\BatchStatusCountsData;
 use Illuminate\Bus\Batch;
 use Illuminate\Bus\BatchRepository;
 use RuntimeException;

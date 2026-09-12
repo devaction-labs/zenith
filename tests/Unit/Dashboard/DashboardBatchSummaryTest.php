@@ -2,20 +2,20 @@
 
 declare(strict_types=1);
 
-use DevactionLabs\HorizonNewDawn\Dashboard\DashboardBatchSummary;
+use DevactionLabs\Zenith\Dashboard\DashboardBatchSummary;
 use Illuminate\Bus\BatchFactory;
 use Illuminate\Bus\BatchRepository;
 use Illuminate\Bus\DatabaseBatchRepository;
 use Illuminate\Support\Facades\Schema;
 
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturnsUsing;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\horizonBatch;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\Zenith\Tests\Support\dashboardReturnsUsing;
+use function DevactionLabs\Zenith\Tests\Support\horizonBatch;
+use function DevactionLabs\Zenith\Tests\Support\mockDashboardContract;
 
 it('counts and previews active batches from repository pages', function (): void {
     config()->set('queue.batching.database', null);
     config()->set('queue.batching.table', 'job_batches');
-    config()->set('horizon-new-dawn.poll_interval', 0);
+    config()->set('zenith.poll_interval', 0);
 
     $activeNewest = horizonBatch('batch-6', name: 'Newest', totalJobs: 4, pendingJobs: 2);
     $failedOnly = horizonBatch('batch-5', totalJobs: 4, pendingJobs: 1, failedJobs: 1);
@@ -49,7 +49,7 @@ it('counts and previews active batches from repository pages', function (): void
 
 it('counts every active batch across repository pages', function (): void {
     config()->set('queue.batching.database', null);
-    config()->set('horizon-new-dawn.poll_interval', 0);
+    config()->set('zenith.poll_interval', 0);
 
     $activeNewest = horizonBatch('batch-3', name: 'Newest', totalJobs: 4, pendingJobs: 2);
     $finished = horizonBatch('batch-2', totalJobs: 4, pendingJobs: 0, finishedAt: 1_784_281_200);
@@ -80,8 +80,8 @@ it('counts every active batch across repository pages', function (): void {
 it('reports batches unavailable without scanning when the database batch table is missing', function (): void {
     config()->set('queue.batching.database', null);
     config()->set('queue.batching.table', 'job_batches');
-    config()->set('horizon-new-dawn.poll_interval', 0);
-    Schema::dropIfExists('horizon_new_dawn_batch_metadata');
+    config()->set('zenith.poll_interval', 0);
+    Schema::dropIfExists('zenith_batch_metadata');
     Schema::dropIfExists('job_batches');
 
     $repository = new DatabaseBatchRepository(

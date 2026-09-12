@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Http\Controllers;
+namespace DevactionLabs\Zenith\Http\Controllers;
 
-use DevactionLabs\HorizonNewDawn\BulkOperations\BulkOperationDispatcher;
-use DevactionLabs\HorizonNewDawn\BulkOperations\Jobs\CancelPendingJobsJob;
-use DevactionLabs\HorizonNewDawn\Jobs\PendingJobCancellationScope;
+use DevactionLabs\Zenith\BulkOperations\BulkOperationDispatcher;
+use DevactionLabs\Zenith\BulkOperations\Jobs\CancelPendingJobsJob;
+use DevactionLabs\Zenith\Jobs\PendingJobCancellationScope;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Throwable;

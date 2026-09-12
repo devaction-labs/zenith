@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use DevactionLabs\HorizonNewDawn\Batches\DatabaseBatchCapability;
+use DevactionLabs\Zenith\Batches\DatabaseBatchCapability;
 use Illuminate\Bus\BatchFactory;
 use Illuminate\Bus\BatchRepository;
 use Illuminate\Bus\DatabaseBatchRepository;
@@ -11,18 +11,18 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Schema\Builder;
 use Illuminate\Support\Facades\Schema;
 
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardExpects;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\Zenith\Tests\Support\dashboardExpects;
+use function DevactionLabs\Zenith\Tests\Support\mockDashboardContract;
 
 beforeEach(function (): void {
     config()->set('queue.batching.database', null);
     config()->set('queue.batching.table', 'job_batches');
-    Schema::dropIfExists('horizon_new_dawn_batch_metadata');
+    Schema::dropIfExists('zenith_batch_metadata');
     Schema::dropIfExists('job_batches');
 });
 
 afterEach(function (): void {
-    Schema::dropIfExists('horizon_new_dawn_batch_metadata');
+    Schema::dropIfExists('zenith_batch_metadata');
     Schema::dropIfExists('job_batches');
 });
 
@@ -77,7 +77,7 @@ it('keeps non-database repositories available without a relational batch table',
 it('marks an unsupported SQL driver unavailable when the configured batch table is missing', function (): void {
     $schema = mockDashboardContract(Builder::class);
     dashboardExpects($schema, 'hasTable', ['job_batches'], value: false);
-    dashboardExpects($schema, 'hasTable', ['horizon_new_dawn_batch_metadata'], times: 'never');
+    dashboardExpects($schema, 'hasTable', ['zenith_batch_metadata'], times: 'never');
     $connection = mockDashboardContract(Connection::class);
     dashboardExpects($connection, 'getDriverName', times: 'never');
     dashboardExpects($connection, 'getSchemaBuilder', value: $schema);
@@ -97,7 +97,7 @@ it('marks an unsupported SQL driver unavailable when the configured batch table 
 it('keeps an unsupported SQL driver available when the configured batch table exists', function (): void {
     $schema = mockDashboardContract(Builder::class);
     dashboardExpects($schema, 'hasTable', ['job_batches'], value: true);
-    dashboardExpects($schema, 'hasTable', ['horizon_new_dawn_batch_metadata'], times: 'never');
+    dashboardExpects($schema, 'hasTable', ['zenith_batch_metadata'], times: 'never');
     $connection = mockDashboardContract(Connection::class);
     dashboardExpects($connection, 'getDriverName', value: 'sqlsrv');
     dashboardExpects($connection, 'getSchemaBuilder', value: $schema);

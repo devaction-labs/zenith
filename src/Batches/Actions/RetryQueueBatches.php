@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Batches\Actions;
+namespace DevactionLabs\Zenith\Batches\Actions;
 
-use DevactionLabs\HorizonNewDawn\Batches\BatchesData;
-use DevactionLabs\HorizonNewDawn\Batches\DatabaseBatchQuery;
-use DevactionLabs\HorizonNewDawn\Batches\RetainedBatchScanner;
-use DevactionLabs\HorizonNewDawn\BulkOperations\BulkOperationChunkResult;
-use DevactionLabs\HorizonNewDawn\BulkOperations\BulkOperationSnapshot;
-use DevactionLabs\HorizonNewDawn\FailedJobs\Actions\RetryFailedJob;
+use DevactionLabs\Zenith\Batches\BatchesData;
+use DevactionLabs\Zenith\Batches\DatabaseBatchQuery;
+use DevactionLabs\Zenith\Batches\RetainedBatchScanner;
+use DevactionLabs\Zenith\BulkOperations\BulkOperationChunkResult;
+use DevactionLabs\Zenith\BulkOperations\BulkOperationSnapshot;
+use DevactionLabs\Zenith\FailedJobs\Actions\RetryFailedJob;
 use Illuminate\Bus\BatchRepository;
 use Laravel\Horizon\Contracts\JobRepository;
 use Throwable;

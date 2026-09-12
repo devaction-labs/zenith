@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Http\Controllers;
+namespace DevactionLabs\Zenith\Http\Controllers;
 
-use DevactionLabs\HorizonNewDawn\Http\Requests\JobIndexRequest;
-use DevactionLabs\HorizonNewDawn\Jobs\JobListType;
-use DevactionLabs\HorizonNewDawn\Jobs\JobsData;
-use DevactionLabs\HorizonNewDawn\Queues\QueuesData;
-use DevactionLabs\HorizonNewDawn\Support\Data\PageMetaData;
-use DevactionLabs\HorizonNewDawn\Support\Scrolling\HorizonScrollMetadata;
+use DevactionLabs\Zenith\Http\Requests\JobIndexRequest;
+use DevactionLabs\Zenith\Jobs\JobListType;
+use DevactionLabs\Zenith\Jobs\JobsData;
+use DevactionLabs\Zenith\Queues\QueuesData;
+use DevactionLabs\Zenith\Support\Data\PageMetaData;
+use DevactionLabs\Zenith\Support\Scrolling\HorizonScrollMetadata;
 use Inertia\Inertia;
 use Inertia\Response;
 

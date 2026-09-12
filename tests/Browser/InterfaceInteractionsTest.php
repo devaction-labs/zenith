@@ -4,16 +4,16 @@ declare(strict_types=1);
 
 require_once __DIR__.'/../Support/RetainedJobBrowserFixtures.php';
 
-use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobType;
+use DevactionLabs\Zenith\Jobs\RetainedJobType;
 use Pest\Browser\Api\AwaitableWebpage;
 use Pest\Browser\Api\Webpage;
 
-use function DevactionLabs\HorizonNewDawn\Tests\Support\bindBrowserFailedJobBulkLimitFixtures;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\bindBrowserFailedJobIdentifierOverflowFixtures;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\bindBrowserPageFixtures;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\bindBrowserProcessTransitionFixtures;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\bindBrowserSupervisorScalingFixtures;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\bindRetainedJobBrowserFixtures;
+use function DevactionLabs\Zenith\Tests\Support\bindBrowserFailedJobBulkLimitFixtures;
+use function DevactionLabs\Zenith\Tests\Support\bindBrowserFailedJobIdentifierOverflowFixtures;
+use function DevactionLabs\Zenith\Tests\Support\bindBrowserPageFixtures;
+use function DevactionLabs\Zenith\Tests\Support\bindBrowserProcessTransitionFixtures;
+use function DevactionLabs\Zenith\Tests\Support\bindBrowserSupervisorScalingFixtures;
+use function DevactionLabs\Zenith\Tests\Support\bindRetainedJobBrowserFixtures;
 
 describe('Horizon interface interactions', function (): void {
     beforeEach(function (): void {
@@ -576,7 +576,7 @@ describe('Horizon interface interactions', function (): void {
     });
 
     it('navigates to consolidated job tabs through the mobile sidebar submenu', function (): void {
-        config()->set('horizon-new-dawn.job_navigation_breakdown', true);
+        config()->set('zenith.job_navigation_breakdown', true);
 
         visit('/horizon')
             ->on()->iPhone14Pro()

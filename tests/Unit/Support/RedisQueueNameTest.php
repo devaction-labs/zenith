@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use DevactionLabs\HorizonNewDawn\Support\RedisQueueName;
+use DevactionLabs\Zenith\Support\RedisQueueName;
 use Illuminate\Redis\Connections\Connection;
 use Illuminate\Redis\Connections\PhpRedisClusterConnection;
 use Illuminate\Redis\Connections\PredisClusterConnection;

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Instances;
+namespace DevactionLabs\Zenith\Instances;
 
 use Laravel\Horizon\MasterSupervisor;
 

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use DevactionLabs\HorizonNewDawn\Queues\ClearQueueMetadata;
+use DevactionLabs\Zenith\Queues\ClearQueueMetadata;
 use Illuminate\Contracts\Redis\Factory as RedisFactory;
 use Illuminate\Redis\Connections\Connection;
 use Illuminate\Redis\Connections\PhpRedisConnection;
@@ -10,9 +10,9 @@ use Illuminate\Redis\Connections\PredisConnection;
 use Illuminate\Support\Str;
 use Predis\Client;
 
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturns;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturnsFor;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\Zenith\Tests\Support\dashboardReturns;
+use function DevactionLabs\Zenith\Tests\Support\dashboardReturnsFor;
+use function DevactionLabs\Zenith\Tests\Support\mockDashboardContract;
 
 $createRedisClient = static fn (string $prefix = ''): Client => new Client([
     'scheme' => 'tcp',
@@ -57,7 +57,7 @@ describe('ClearQueueMetadata', function () use ($createRedisClient, $redisIsUnav
     });
 
     it('purges a pending job after its recent job reference has expired', function () use ($createRedisClient): void {
-        $prefix = 'horizon-new-dawn-test:'.Str::uuid().':';
+        $prefix = 'zenith-test:'.Str::uuid().':';
         $client = $createRedisClient($prefix);
 
         config()->set('horizon.prefix', $prefix);

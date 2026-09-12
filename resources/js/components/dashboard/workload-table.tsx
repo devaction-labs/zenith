@@ -28,7 +28,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { show as queueShow } from "@/generated/routes/horizon-new-dawn/queues";
+import { show as queueShow } from "@/generated/routes/zenith/queues";
 import {
   sortRows,
   useSortableRows,

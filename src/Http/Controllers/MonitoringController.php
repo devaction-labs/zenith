@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Http\Controllers;
+namespace DevactionLabs\Zenith\Http\Controllers;
 
-use DevactionLabs\HorizonNewDawn\Http\Requests\MonitorTagRequest;
-use DevactionLabs\HorizonNewDawn\Monitoring\Actions\MonitorTag;
-use DevactionLabs\HorizonNewDawn\Monitoring\Actions\StopMonitoringTag;
-use DevactionLabs\HorizonNewDawn\Monitoring\MonitoringData;
-use DevactionLabs\HorizonNewDawn\Support\Data\PageMetaData;
-use DevactionLabs\HorizonNewDawn\Support\NavigationItem;
+use DevactionLabs\Zenith\Http\Requests\MonitorTagRequest;
+use DevactionLabs\Zenith\Monitoring\Actions\MonitorTag;
+use DevactionLabs\Zenith\Monitoring\Actions\StopMonitoringTag;
+use DevactionLabs\Zenith\Monitoring\MonitoringData;
+use DevactionLabs\Zenith\Support\Data\PageMetaData;
+use DevactionLabs\Zenith\Support\NavigationItem;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;

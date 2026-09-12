@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Support\Data;
+namespace DevactionLabs\Zenith\Support\Data;
 
-use DevactionLabs\HorizonNewDawn\Authorization\HorizonAbilitiesData;
-use DevactionLabs\HorizonNewDawn\Dashboard\HorizonStatus;
-use DevactionLabs\HorizonNewDawn\Support\FrameworkCapabilities;
+use DevactionLabs\Zenith\Authorization\HorizonAbilitiesData;
+use DevactionLabs\Zenith\Dashboard\HorizonStatus;
+use DevactionLabs\Zenith\Support\FrameworkCapabilities;
 use Spatie\LaravelData\Data;
 
 final class HorizonShellData extends Data

@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 require_once __DIR__.'/../Support/RetainedJobBrowserFixtures.php';
 
-use DevactionLabs\HorizonNewDawn\Jobs\JobListType;
-use DevactionLabs\HorizonNewDawn\Jobs\JobsData;
-use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobType;
+use DevactionLabs\Zenith\Jobs\JobListType;
+use DevactionLabs\Zenith\Jobs\JobsData;
+use DevactionLabs\Zenith\Jobs\RetainedJobType;
 
-use function DevactionLabs\HorizonNewDawn\Tests\Support\bindBrowserPageFixtures;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\bindRetainedJobBrowserFixtures;
+use function DevactionLabs\Zenith\Tests\Support\bindBrowserPageFixtures;
+use function DevactionLabs\Zenith\Tests\Support\bindRetainedJobBrowserFixtures;
 
 it('filters the complete retained pending job set and resets its cursor', function (): void {
     $matchingId = bindRetainedJobBrowserFixtures();
@@ -313,7 +313,7 @@ it('finds an exact job ID beyond the first 50 retained jobs', function (): void 
 
 it('loads the job filter catalog on intent after soft navigation without polling it', function (): void {
     bindRetainedJobBrowserFixtures(type: RetainedJobType::Completed);
-    config()->set('horizon-new-dawn.poll_interval', 200);
+    config()->set('zenith.poll_interval', 200);
 
     $page = visit('/horizon/jobs/pending');
 
@@ -544,7 +544,7 @@ it('refreshes available job classes on filter intent as retained jobs arrive', f
         matchingIndex: 1,
         type: $type,
     );
-    config()->set('horizon-new-dawn.poll_interval', 200);
+    config()->set('zenith.poll_interval', 200);
 
     $page = visit($url)
         ->click('button[aria-label="Filter jobs"]');
@@ -607,7 +607,7 @@ it('refreshes available job classes on filter intent as retained jobs arrive', f
         matchingIndex: 1,
         type: $type,
     );
-    config()->set('horizon-new-dawn.poll_interval', 200);
+    config()->set('zenith.poll_interval', 200);
 
     $beforeIntent = $page->script(<<<'JS'
         () => new Promise((resolve, reject) => {
@@ -788,11 +788,11 @@ it('sorts the loaded completed rows locally and re-sorts infinite-scroll additio
 
     $beforeIds = $page->script(<<<'JS'
         () => {
-            window.__horizonNewDawnSortRequests = []
+            window.__zenithSortRequests = []
             const originalOpen = XMLHttpRequest.prototype.open
 
             XMLHttpRequest.prototype.open = function (...arguments_) {
-                window.__horizonNewDawnSortRequests.push({
+                window.__zenithSortRequests.push({
                     method: arguments_[0],
                     url: arguments_[1],
                 })
@@ -821,7 +821,7 @@ it('sorts the loaded completed rows locally and re-sorts infinite-scroll additio
                 document.querySelectorAll('table tbody:last-of-type tr a'),
                 (link) => decodeURIComponent(link.getAttribute('href')?.split('/').at(-1) ?? ''),
             ),
-            requests: window.__horizonNewDawnSortRequests,
+            requests: window.__zenithSortRequests,
             hasServerSortProp: Object.prototype.hasOwnProperty.call(
                 window.history.state?.page?.props ?? {},
                 'sort',
@@ -909,11 +909,11 @@ it('sorts only the loaded failed rows without resetting the cursor or requesting
 
     $beforeIds = $page->script(<<<'JS'
         () => {
-            window.__horizonNewDawnSortRequests = 0
+            window.__zenithSortRequests = 0
             const originalOpen = XMLHttpRequest.prototype.open
 
             XMLHttpRequest.prototype.open = function (...arguments_) {
-                window.__horizonNewDawnSortRequests++
+                window.__zenithSortRequests++
 
                 return originalOpen.apply(this, arguments_)
             }
@@ -939,7 +939,7 @@ it('sorts only the loaded failed rows without resetting the cursor or requesting
                 document.querySelectorAll('table tbody:last-of-type tr a'),
                 (link) => decodeURIComponent(link.getAttribute('href')?.split('/').at(-1) ?? ''),
             ),
-            requests: window.__horizonNewDawnSortRequests,
+            requests: window.__zenithSortRequests,
         })
     JS);
 
@@ -965,11 +965,11 @@ it('shows newest queue activity first and sorts loaded rows without a request', 
 
     $beforeIds = $page->script(<<<'JS'
         () => {
-            window.__horizonNewDawnSortRequests = []
+            window.__zenithSortRequests = []
             const originalOpen = XMLHttpRequest.prototype.open
 
             XMLHttpRequest.prototype.open = function (...arguments_) {
-                window.__horizonNewDawnSortRequests.push({
+                window.__zenithSortRequests.push({
                     method: arguments_[0],
                     url: arguments_[1],
                 })
@@ -1008,7 +1008,7 @@ it('shows newest queue activity first and sorts loaded rows without a request', 
                 document.querySelectorAll('table tbody:last-of-type tr a'),
                 (link) => decodeURIComponent(link.getAttribute('href')?.split('/').at(-1) ?? ''),
             ),
-            requests: window.__horizonNewDawnSortRequests,
+            requests: window.__zenithSortRequests,
         })
     JS);
 

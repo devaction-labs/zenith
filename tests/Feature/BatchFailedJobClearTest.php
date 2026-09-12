@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use DevactionLabs\HorizonNewDawn\BulkOperations\Jobs\ClearBatchFailedJobsJob;
+use DevactionLabs\Zenith\BulkOperations\Jobs\ClearBatchFailedJobsJob;
 use Illuminate\Bus\BatchRepository;
 use Illuminate\Contracts\Queue\Queue;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
@@ -13,18 +13,18 @@ use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Exceptions;
 use Laravel\Horizon\Horizon;
 
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardExpects;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturns;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\horizonBatch;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\Zenith\Tests\Support\dashboardExpects;
+use function DevactionLabs\Zenith\Tests\Support\dashboardReturns;
+use function DevactionLabs\Zenith\Tests\Support\horizonBatch;
+use function DevactionLabs\Zenith\Tests\Support\mockDashboardContract;
 use function Pest\Laravel\delete;
 use function Pest\Laravel\withoutMiddleware;
 
 /** @param 'never'|'once'|'twice'|'zeroOrMoreTimes' $times */
 function bindBatchFailedClearAsyncBulkQueue(string $times = 'once'): void
 {
-    config()->set('horizon-new-dawn.bulk_operations.connection', 'operations');
-    config()->set('horizon-new-dawn.bulk_operations.queue', 'horizon-maintenance');
+    config()->set('zenith.bulk_operations.connection', 'operations');
+    config()->set('zenith.bulk_operations.queue', 'horizon-maintenance');
 
     $manager = Mockery::mock(QueueManager::class);
     dashboardExpects($manager, 'connection', ['operations'], times: $times, value: Mockery::mock(Queue::class));
@@ -33,8 +33,8 @@ function bindBatchFailedClearAsyncBulkQueue(string $times = 'once'): void
 
 function bindBatchFailedClearSyncBulkQueue(): void
 {
-    config()->set('horizon-new-dawn.bulk_operations.connection', 'sync');
-    config()->set('horizon-new-dawn.bulk_operations.queue', null);
+    config()->set('zenith.bulk_operations.connection', 'sync');
+    config()->set('zenith.bulk_operations.queue', null);
 
     $manager = Mockery::mock(QueueManager::class);
     dashboardExpects($manager, 'connection', ['sync'], value: new SyncQueue);

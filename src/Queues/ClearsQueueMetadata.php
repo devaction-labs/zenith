@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Queues;
+namespace DevactionLabs\Zenith\Queues;
 
 interface ClearsQueueMetadata
 {

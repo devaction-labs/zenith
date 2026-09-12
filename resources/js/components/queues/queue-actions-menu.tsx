@@ -32,12 +32,12 @@ import {
 } from "@/components/ui/input-group";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Switch } from "@/components/ui/switch";
-import { destroy as clearQueue } from "@/generated/routes/horizon-new-dawn/queues/clear";
+import { destroy as clearQueue } from "@/generated/routes/zenith/queues/clear";
 import {
   destroy as resumeQueue,
   store as pauseQueue,
-} from "@/generated/routes/horizon-new-dawn/queues/pause";
-import { store as retryFailedQueueJobs } from "@/generated/routes/horizon-new-dawn/queues/retry-failed";
+} from "@/generated/routes/zenith/queues/pause";
+import { store as retryFailedQueueJobs } from "@/generated/routes/zenith/queues/retry-failed";
 import { formatDuration } from "@/lib/format-duration";
 import { resolveHorizonRoute } from "@/lib/horizon-route";
 

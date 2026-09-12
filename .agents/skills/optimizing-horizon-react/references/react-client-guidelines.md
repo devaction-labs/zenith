@@ -1,6 +1,6 @@
 # React client guidelines
 
-Adapted for Horizon New Dawn from Vercel Labs' MIT-licensed React Best Practices at commit `4559f18a20c1691c744b4395194290db6a0df5e9`:
+Adapted for Zenith from Vercel Labs' MIT-licensed React Best Practices at commit `4559f18a20c1691c744b4395194290db6a0df5e9`:
 
 - https://github.com/vercel-labs/agent-skills/tree/4559f18a20c1691c744b4395194290db6a0df5e9/skills/react-best-practices
 - https://github.com/vercel-labs/agent-skills/blob/4559f18a20c1691c744b4395194290db6a0df5e9/skills/react-best-practices/AGENTS.md

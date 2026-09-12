@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Batches;
+namespace DevactionLabs\Zenith\Batches;
 
-use DevactionLabs\HorizonNewDawn\Batches\Data\BatchJobListData;
-use DevactionLabs\HorizonNewDawn\Batches\Data\BatchJobListsData;
-use DevactionLabs\HorizonNewDawn\Jobs\Data\JobRowData;
-use DevactionLabs\HorizonNewDawn\Jobs\JobListType;
-use DevactionLabs\HorizonNewDawn\Jobs\JobsData;
-use DevactionLabs\HorizonNewDawn\Jobs\PendingJobEntryScanner;
+use DevactionLabs\Zenith\Batches\Data\BatchJobListData;
+use DevactionLabs\Zenith\Batches\Data\BatchJobListsData;
+use DevactionLabs\Zenith\Jobs\Data\JobRowData;
+use DevactionLabs\Zenith\Jobs\JobListType;
+use DevactionLabs\Zenith\Jobs\JobsData;
+use DevactionLabs\Zenith\Jobs\PendingJobEntryScanner;
 use Illuminate\Bus\Batch;
 use Illuminate\Support\Collection;
 use Laravel\Horizon\Contracts\JobRepository;

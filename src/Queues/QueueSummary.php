@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Queues;
+namespace DevactionLabs\Zenith\Queues;
 
-use DevactionLabs\HorizonNewDawn\Metrics\SnapshotJobsPerMinute;
-use DevactionLabs\HorizonNewDawn\Queues\Data\QueueRowData;
-use DevactionLabs\HorizonNewDawn\Queues\Data\QueueSummaryData;
+use DevactionLabs\Zenith\Metrics\SnapshotJobsPerMinute;
+use DevactionLabs\Zenith\Queues\Data\QueueRowData;
+use DevactionLabs\Zenith\Queues\Data\QueueSummaryData;
 use Laravel\Horizon\Contracts\MetricsRepository;
 use Throwable;
 

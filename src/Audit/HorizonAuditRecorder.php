@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Audit;
+namespace DevactionLabs\Zenith\Audit;
 
 use Illuminate\Contracts\Auth\Factory as AuthFactory;
 use Illuminate\Http\Request;
@@ -12,7 +12,7 @@ use Throwable;
 
 final readonly class HorizonAuditRecorder
 {
-    public const string TABLE = 'horizon_new_dawn_audit_events';
+    public const string TABLE = 'zenith_audit_events';
 
     public function __construct(
         private AuthFactory $auth,
@@ -31,7 +31,7 @@ final readonly class HorizonAuditRecorder
             'context' => $this->safeContext($context),
         ];
 
-        Log::info('horizon-new-dawn.audit', $entry);
+        Log::info('zenith.audit', $entry);
 
         if (! $this->tableReady()) {
             return;

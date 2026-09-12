@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Tests\Support;
+namespace DevactionLabs\Zenith\Tests\Support;
 
 final class HorizonJob
 {

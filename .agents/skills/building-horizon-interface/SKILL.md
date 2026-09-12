@@ -1,13 +1,13 @@
 ---
 name: building-horizon-interface
-description: Use when creating or structurally changing Horizon New Dawn screens, panels, tables, detail views, tabs, search or filter toolbars, loading states, or responsive layouts. Applies the package's shared interface system and consumer-browser proof requirements.
+description: Use when creating or structurally changing Zenith screens, panels, tables, detail views, tabs, search or filter toolbars, loading states, or responsive layouts. Applies the package's shared interface system and consumer-browser proof requirements.
 ---
 
 # Building the Horizon Interface
 
 ## Overview
 
-Build new UI from Horizon New Dawn's shared layout system instead of reconstructing spacing, responsive behavior, and interaction states per screen. Keep implementation and review guidance aligned through one project reference.
+Build new UI from Zenith's shared layout system instead of reconstructing spacing, responsive behavior, and interaction states per screen. Keep implementation and review guidance aligned through one project reference.
 
 ## Required guidance
 

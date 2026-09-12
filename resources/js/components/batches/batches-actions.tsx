@@ -14,7 +14,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
-import { destroy as clearBatches } from "@/generated/routes/horizon-new-dawn/batches/clear";
+import { destroy as clearBatches } from "@/generated/routes/zenith/batches/clear";
 import { resolveHorizonRoute } from "@/lib/horizon-route";
 import type { BatchClearCounts, BatchClearScope } from "@/types/batches";
 

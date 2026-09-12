@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Queues;
+namespace DevactionLabs\Zenith\Queues;
 
 use Carbon\CarbonImmutable;
-use DevactionLabs\HorizonNewDawn\Queues\Data\QueueWaitThresholdData;
-use DevactionLabs\HorizonNewDawn\Queues\Data\QueueWaitThresholdTargetData;
+use DevactionLabs\Zenith\Queues\Data\QueueWaitThresholdData;
+use DevactionLabs\Zenith\Queues\Data\QueueWaitThresholdTargetData;
 use Illuminate\Contracts\Config\Repository;
 use InvalidArgumentException;
 

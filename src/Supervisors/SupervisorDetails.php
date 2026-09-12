@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Supervisors;
+namespace DevactionLabs\Zenith\Supervisors;
 
-use DevactionLabs\HorizonNewDawn\Supervisors\Data\SupervisorDetailsData;
-use DevactionLabs\HorizonNewDawn\Supervisors\Data\SupervisorDetailsResultData;
-use DevactionLabs\HorizonNewDawn\Supervisors\Data\SupervisorWarningData;
+use DevactionLabs\Zenith\Supervisors\Data\SupervisorDetailsData;
+use DevactionLabs\Zenith\Supervisors\Data\SupervisorDetailsResultData;
+use DevactionLabs\Zenith\Supervisors\Data\SupervisorWarningData;
 use Illuminate\Contracts\Config\Repository as ConfigRepository;
 use Illuminate\Support\Str;
 use Laravel\Horizon\Contracts\SupervisorRepository;

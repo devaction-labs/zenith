@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Http\Controllers;
+namespace DevactionLabs\Zenith\Http\Controllers;
 
-use DevactionLabs\HorizonNewDawn\Queues\Actions\PauseAllQueues;
-use DevactionLabs\HorizonNewDawn\Queues\Actions\ResumeAllQueues;
+use DevactionLabs\Zenith\Queues\Actions\PauseAllQueues;
+use DevactionLabs\Zenith\Queues\Actions\ResumeAllQueues;
 use Illuminate\Http\RedirectResponse;
 use Throwable;
 

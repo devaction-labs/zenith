@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use DevactionLabs\HorizonNewDawn\Support\RedisClusterDetector;
+use DevactionLabs\Zenith\Support\RedisClusterDetector;
 
 describe('RedisClusterDetector', function (): void {
     it('is disabled when no Redis Cluster connections are configured', function (): void {

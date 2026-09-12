@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-use DevactionLabs\HorizonNewDawn\Batches\DatabaseBatchCapability;
-use DevactionLabs\HorizonNewDawn\Support\ComposerAssetHook;
+use DevactionLabs\Zenith\Batches\DatabaseBatchCapability;
+use DevactionLabs\Zenith\Support\ComposerAssetHook;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Support\Facades\Artisan;
@@ -38,28 +38,28 @@ afterEach(function () use ($installComposerJsonBackup): void {
 
     $installComposerJsonBackup->contents = null;
 
-    $filesystem->delete(config_path('horizon-new-dawn.php'));
-    $filesystem->deleteDirectory(public_path('vendor/horizon-new-dawn'));
-    $filesystem->deleteDirectory(dirname(public_path()).'/horizon-new-dawn-outside-test');
+    $filesystem->delete(config_path('zenith.php'));
+    $filesystem->deleteDirectory(public_path('vendor/zenith'));
+    $filesystem->deleteDirectory(dirname(public_path()).'/zenith-outside-test');
 });
 
 it('publishes the package configuration and compiled assets', function (): void {
-    $command = artisan('horizon-new-dawn:install', ['--force' => true]);
+    $command = artisan('zenith:install', ['--force' => true]);
 
     if (! $command instanceof PendingCommand) {
         throw new RuntimeException('The install command did not return a pending command.');
     }
 
     $command
-        ->expectsOutputToContain('Horizon New Dawn is ready')
+        ->expectsOutputToContain('Zenith is ready')
         ->assertSuccessful()
         ->execute();
 
     $filesystem = app(Filesystem::class);
     $source = dirname(__DIR__, 2).'/dist/build';
-    $destination = public_path('vendor/horizon-new-dawn/build');
+    $destination = public_path('vendor/zenith/build');
 
-    expect(config_path('horizon-new-dawn.php'))->toBeFile()
+    expect(config_path('zenith.php'))->toBeFile()
         ->and($destination.'/manifest.json')->toBeFile();
 
     foreach ($filesystem->allFiles($source) as $file) {
@@ -77,7 +77,7 @@ it('warns when Redis Cluster connections are configured', function (): void {
         ],
     ]);
 
-    $command = artisan('horizon-new-dawn:install', ['--force' => true]);
+    $command = artisan('zenith:install', ['--force' => true]);
 
     if (! $command instanceof PendingCommand) {
         throw new RuntimeException('The install command did not return a pending command.');
@@ -91,33 +91,33 @@ it('warns when Redis Cluster connections are configured', function (): void {
 
 it('installs when cached configuration predates the package', function (): void {
     $filesystem = app(Filesystem::class);
-    $destination = public_path('vendor/horizon-new-dawn/build');
+    $destination = public_path('vendor/zenith/build');
 
-    $filesystem->delete(config_path('horizon-new-dawn.php'));
-    $filesystem->deleteDirectory(public_path('vendor/horizon-new-dawn'));
-    config()->set('horizon-new-dawn', []);
+    $filesystem->delete(config_path('zenith.php'));
+    $filesystem->deleteDirectory(public_path('vendor/zenith'));
+    config()->set('zenith', []);
 
-    expect(Artisan::call('horizon-new-dawn:install'))->toBe(0)
-        ->and(config_path('horizon-new-dawn.php'))->toBeFile()
+    expect(Artisan::call('zenith:install'))->toBe(0)
+        ->and(config_path('zenith.php'))->toBeFile()
         ->and($destination.'/manifest.json')->toBeFile()
         ->and($destination.'/favicon.svg')->not->toBeFile();
 });
 
 it('ignores a stale assets_path configuration when publishing assets', function (): void {
     $filesystem = app(Filesystem::class);
-    $publishedConfig = config_path('horizon-new-dawn.php');
-    $outsideDirectory = dirname(public_path()).'/horizon-new-dawn-outside-test';
+    $publishedConfig = config_path('zenith.php');
+    $outsideDirectory = dirname(public_path()).'/zenith-outside-test';
     $outsideSentinel = $outsideDirectory.'/keep.txt';
-    $destination = public_path('vendor/horizon-new-dawn/build');
-    $consumerConfig = "<?php\n\nreturn ['assets_path' => '../horizon-new-dawn-outside-test', 'consumer' => true];\n";
+    $destination = public_path('vendor/zenith/build');
+    $consumerConfig = "<?php\n\nreturn ['assets_path' => '../zenith-outside-test', 'consumer' => true];\n";
 
     $filesystem->ensureDirectoryExists(dirname($publishedConfig));
     $filesystem->put($publishedConfig, $consumerConfig);
     $filesystem->ensureDirectoryExists($outsideDirectory);
     $filesystem->put($outsideSentinel, 'keep');
-    config()->set('horizon-new-dawn.assets_path', '../horizon-new-dawn-outside-test');
+    config()->set('zenith.assets_path', '../zenith-outside-test');
 
-    expect(Artisan::call('horizon-new-dawn:install', ['--force' => true]))->toBe(0)
+    expect(Artisan::call('zenith:install', ['--force' => true]))->toBe(0)
         ->and($filesystem->get($publishedConfig))->toBe($consumerConfig)
         ->and($filesystem->get($outsideSentinel))->toBe('keep')
         ->and($destination.'/manifest.json')->toBeFile()
@@ -126,9 +126,9 @@ it('ignores a stale assets_path configuration when publishing assets', function 
 
 it('preserves published consumer configuration when force refreshing assets', function (): void {
     $filesystem = app(Filesystem::class);
-    $publishedConfig = config_path('horizon-new-dawn.php');
-    $destination = public_path('vendor/horizon-new-dawn/build');
-    $staleAssetsPath = 'vendor/horizon-new-dawn-install-test/custom-build';
+    $publishedConfig = config_path('zenith.php');
+    $destination = public_path('vendor/zenith/build');
+    $staleAssetsPath = 'vendor/zenith-install-test/custom-build';
     $consumerConfig = <<<PHP
 <?php
 
@@ -142,9 +142,9 @@ PHP;
 
     $filesystem->ensureDirectoryExists(dirname($publishedConfig));
     $filesystem->put($publishedConfig, $consumerConfig);
-    config()->set('horizon-new-dawn.assets_path', $staleAssetsPath);
+    config()->set('zenith.assets_path', $staleAssetsPath);
 
-    expect(Artisan::call('horizon-new-dawn:install', ['--force' => true]))->toBe(0)
+    expect(Artisan::call('zenith:install', ['--force' => true]))->toBe(0)
         ->and($filesystem->get($publishedConfig))->toBe($consumerConfig)
         ->and($destination.'/manifest.json')->toBeFile()
         ->and(public_path($staleAssetsPath.'/manifest.json'))->not->toBeFile();
@@ -152,7 +152,7 @@ PHP;
 
 it('replaces the whole published directory and removes prior package-owned files', function (): void {
     $filesystem = app(Filesystem::class);
-    $destination = public_path('vendor/horizon-new-dawn/build');
+    $destination = public_path('vendor/zenith/build');
     $manifestPath = $destination.'/manifest.json';
     $previousAsset = $destination.'/assets/app-previous-content-hash.js';
     $supersededAsset = $destination.'/assets/app-superseded-content-hash.js';
@@ -190,7 +190,7 @@ it('replaces the whole published directory and removes prior package-owned files
     $filesystem->ensureDirectoryExists($destination);
     $filesystem->put($manifestPath, $oldManifest);
 
-    expect(Artisan::call('horizon-new-dawn:install', ['--force' => true]))->toBe(0)
+    expect(Artisan::call('zenith:install', ['--force' => true]))->toBe(0)
         ->and($manifestPath)->toBeFile()
         ->and($filesystem->get($manifestPath))->not->toBe($oldManifest)
         ->and($previousAsset)->not->toBeFile()
@@ -204,7 +204,7 @@ it('replaces the whole published directory and removes prior package-owned files
 
 it('removes untracked package-directory files when force refreshing an incomplete publication', function (): void {
     $filesystem = app(Filesystem::class);
-    $destination = public_path('vendor/horizon-new-dawn/build');
+    $destination = public_path('vendor/zenith/build');
     $previousAsset = $destination.'/assets/app-previous.js';
     $untrackedAsset = $destination.'/assets/app-untracked.js';
 
@@ -219,7 +219,7 @@ it('removes untracked package-directory files when force refreshing an incomplet
         ],
     ], JSON_THROW_ON_ERROR));
 
-    expect(Artisan::call('horizon-new-dawn:install', ['--force' => true]))->toBe(0)
+    expect(Artisan::call('zenith:install', ['--force' => true]))->toBe(0)
         ->and($destination.'/manifest.json')->toBeFile()
         ->and($previousAsset)->not->toBeFile()
         ->and($untrackedAsset)->not->toBeFile();
@@ -227,7 +227,7 @@ it('removes untracked package-directory files when force refreshing an incomplet
 
 it('restores the previous publication when replacing an existing destination fails', function (): void {
     $filesystem = app(Filesystem::class);
-    $destination = public_path('vendor/horizon-new-dawn/build');
+    $destination = public_path('vendor/zenith/build');
     $manifestPath = $destination.'/manifest.json';
     $oldManifest = json_encode([
         'resources/js/app.tsx' => [
@@ -260,7 +260,7 @@ it('restores the previous publication when replacing an existing destination fai
         }
     });
 
-    expect(fn (): int => Artisan::call('horizon-new-dawn:install', ['--force' => true]))
+    expect(fn (): int => Artisan::call('zenith:install', ['--force' => true]))
         ->toThrow(RuntimeException::class, 'Unable to publish')
         ->and($manifestPath)->toBeFile()
         ->and((new Filesystem)->get($manifestPath))->toBe($oldManifest)
@@ -271,30 +271,30 @@ it('restores the previous publication when replacing an existing destination fai
 
 it('repairs an empty published assets directory without force', function (): void {
     $filesystem = app(Filesystem::class);
-    $assetsPath = 'vendor/horizon-new-dawn/build';
+    $assetsPath = 'vendor/zenith/build';
     $destination = public_path($assetsPath);
 
     $filesystem->ensureDirectoryExists($destination);
 
-    expect(Artisan::call('horizon-new-dawn:install'))->toBe(0)
+    expect(Artisan::call('zenith:install'))->toBe(0)
         ->and($destination.'/manifest.json')->toBeFile()
         ->and($destination.'/favicon.svg')->not->toBeFile();
 });
 
 it('repairs a top-level list manifest without force', function (): void {
     $filesystem = app(Filesystem::class);
-    $assetsPath = 'vendor/horizon-new-dawn/build';
+    $assetsPath = 'vendor/zenith/build';
     $destination = public_path($assetsPath);
 
     publishBrokenPublication($filesystem, $destination, []);
 
-    expect(Artisan::call('horizon-new-dawn:install'))->toBe(0)
+    expect(Artisan::call('zenith:install'))->toBe(0)
         ->and(installedManifest($destination))->toHaveKey('resources/js/app.tsx');
 });
 
 it('repairs a publication with a missing referenced chunk without force', function (): void {
     $filesystem = app(Filesystem::class);
-    $assetsPath = 'vendor/horizon-new-dawn/build';
+    $assetsPath = 'vendor/zenith/build';
     $destination = public_path($assetsPath);
 
     publishBrokenPublication($filesystem, $destination, [
@@ -305,27 +305,27 @@ it('repairs a publication with a missing referenced chunk without force', functi
         'missing' => ['assets/app-missing.js'],
     ]);
 
-    expect(Artisan::call('horizon-new-dawn:install'))->toBe(0)
+    expect(Artisan::call('zenith:install'))->toBe(0)
         ->and($destination.'/assets/app-missing.js')->not->toBeFile()
         ->and(installedManifest($destination)['resources/js/app.tsx']['file'] ?? null)->not->toBe('assets/app-missing.js');
 });
 
 it('repairs a malformed published manifest without force', function (): void {
     $filesystem = app(Filesystem::class);
-    $assetsPath = 'vendor/horizon-new-dawn/build';
+    $assetsPath = 'vendor/zenith/build';
     $destination = public_path($assetsPath);
 
     publishCompletePublication($filesystem, $destination);
     $filesystem->put($destination.'/manifest.json', '{invalid');
 
-    expect(Artisan::call('horizon-new-dawn:install'))->toBe(0)
+    expect(Artisan::call('zenith:install'))->toBe(0)
         ->and($destination.'/manifest.json')->toBeFile()
         ->and(installedManifest($destination))->toHaveKey('resources/js/app.tsx');
 });
 
 it('repairs a published manifest that is missing the entrypoint without force', function (): void {
     $filesystem = app(Filesystem::class);
-    $assetsPath = 'vendor/horizon-new-dawn/build';
+    $assetsPath = 'vendor/zenith/build';
     $destination = public_path($assetsPath);
 
     publishManifestFixture($filesystem, $destination, [
@@ -336,27 +336,27 @@ it('repairs a published manifest that is missing the entrypoint without force', 
         ],
     ], ['assets/app-other.js']);
 
-    expect(Artisan::call('horizon-new-dawn:install'))->toBe(0)
+    expect(Artisan::call('zenith:install'))->toBe(0)
         ->and(installedManifest($destination))->toHaveKey('resources/js/app.tsx');
 });
 
 it('treats a complete publication without a favicon as current', function (): void {
     $filesystem = app(Filesystem::class);
-    $assetsPath = 'vendor/horizon-new-dawn/build';
+    $assetsPath = 'vendor/zenith/build';
     $destination = public_path($assetsPath);
 
     $filesystem->deleteDirectory($destination);
     publishCompletePublication($filesystem, $destination);
 
     expect($destination.'/favicon.svg')->not->toBeFile()
-        ->and(Artisan::call('horizon-new-dawn:install'))->toBe(0)
+        ->and(Artisan::call('zenith:install'))->toBe(0)
         ->and($destination.'/favicon.svg')->not->toBeFile()
         ->and(installedManifest($destination))->toHaveKey('resources/js/app.tsx');
 });
 
 it('repairs a publication with an invalid file path without force', function (string $path): void {
     $filesystem = app(Filesystem::class);
-    $assetsPath = 'vendor/horizon-new-dawn/build';
+    $assetsPath = 'vendor/zenith/build';
     $destination = public_path($assetsPath);
 
     publishBrokenPublication($filesystem, $destination, [
@@ -365,7 +365,7 @@ it('repairs a publication with an invalid file path without force', function (st
         ],
     ]);
 
-    expect(Artisan::call('horizon-new-dawn:install'))->toBe(0)
+    expect(Artisan::call('zenith:install'))->toBe(0)
         ->and(installedManifest($destination)['resources/js/app.tsx']['file'] ?? null)->not->toBe($path);
 })->with([
     'empty file' => [''],
@@ -375,7 +375,7 @@ it('repairs a publication with an invalid file path without force', function (st
 
 it('repairs a publication with an invalid asset collection path without force', function (string $collection, string $path): void {
     $filesystem = app(Filesystem::class);
-    $assetsPath = 'vendor/horizon-new-dawn/build';
+    $assetsPath = 'vendor/zenith/build';
     $destination = public_path($assetsPath);
 
     publishBrokenPublication($filesystem, $destination, [
@@ -384,7 +384,7 @@ it('repairs a publication with an invalid asset collection path without force', 
         ],
     ]);
 
-    expect(Artisan::call('horizon-new-dawn:install'))->toBe(0)
+    expect(Artisan::call('zenith:install'))->toBe(0)
         ->and(installedManifest($destination)['resources/js/app.tsx'][$collection] ?? [])->not->toContain($path);
 })->with([
     'missing css' => ['css', 'assets/missing.css'],
@@ -395,7 +395,7 @@ it('repairs a publication with an invalid asset collection path without force', 
 
 it('repairs a publication with a dangling import without force', function (): void {
     $filesystem = app(Filesystem::class);
-    $assetsPath = 'vendor/horizon-new-dawn/build';
+    $assetsPath = 'vendor/zenith/build';
     $destination = public_path($assetsPath);
 
     publishBrokenPublication($filesystem, $destination, [
@@ -404,13 +404,13 @@ it('repairs a publication with a dangling import without force', function (): vo
         ],
     ]);
 
-    expect(Artisan::call('horizon-new-dawn:install'))->toBe(0)
+    expect(Artisan::call('zenith:install'))->toBe(0)
         ->and(installedManifest($destination)['resources/js/app.tsx']['imports'] ?? [])->not->toContain('missing-chunk');
 });
 
 it('repairs a publication with a dangling dynamic import without force', function (): void {
     $filesystem = app(Filesystem::class);
-    $assetsPath = 'vendor/horizon-new-dawn/build';
+    $assetsPath = 'vendor/zenith/build';
     $destination = public_path($assetsPath);
 
     publishBrokenPublication($filesystem, $destination, [
@@ -419,13 +419,13 @@ it('repairs a publication with a dangling dynamic import without force', functio
         ],
     ]);
 
-    expect(Artisan::call('horizon-new-dawn:install'))->toBe(0)
+    expect(Artisan::call('zenith:install'))->toBe(0)
         ->and(installedManifest($destination)['resources/js/app.tsx']['dynamicImports'] ?? [])->not->toContain('missing-dynamic-chunk');
 });
 
 it('refreshes a complete stale publication without force', function (): void {
     $filesystem = app(Filesystem::class);
-    $assetsPath = 'vendor/horizon-new-dawn/build';
+    $assetsPath = 'vendor/zenith/build';
     $destination = public_path($assetsPath);
     $manifest = [
         'resources/js/app.tsx' => [
@@ -447,7 +447,7 @@ it('refreshes a complete stale publication without force', function (): void {
         flags: JSON_THROW_ON_ERROR,
     );
 
-    expect(Artisan::call('horizon-new-dawn:install'))->toBe(0)
+    expect(Artisan::call('zenith:install'))->toBe(0)
         ->and(installedManifest($destination))->toBe($sourceManifest)
         ->and($destination.'/assets/app-older.js')->not->toBeFile()
         ->and($destination.'/assets/app-older.css')->not->toBeFile()
@@ -456,11 +456,11 @@ it('refreshes a complete stale publication without force', function (): void {
 
 it('refreshes when only the published manifest differs from the package build', function (): void {
     $filesystem = app(Filesystem::class);
-    $assetsPath = 'vendor/horizon-new-dawn/build';
+    $assetsPath = 'vendor/zenith/build';
     $destination = public_path($assetsPath);
     $manifestPath = $destination.'/manifest.json';
 
-    expect(Artisan::call('horizon-new-dawn:install', ['--force' => true]))->toBe(0);
+    expect(Artisan::call('zenith:install', ['--force' => true]))->toBe(0);
 
     $staleManifest = installedManifest($destination);
     $staleManifest['resources/js/app.tsx']['stale'] = true;
@@ -472,22 +472,22 @@ it('refreshes when only the published manifest differs from the package build', 
         flags: JSON_THROW_ON_ERROR,
     );
 
-    expect(Artisan::call('horizon-new-dawn:install'))->toBe(0)
+    expect(Artisan::call('zenith:install'))->toBe(0)
         ->and(installedManifest($destination))->toBe($sourceManifest);
 });
 
 it('refreshes when the published directory contains files absent from the package build', function (): void {
     $filesystem = app(Filesystem::class);
-    $destination = public_path('vendor/horizon-new-dawn/build');
+    $destination = public_path('vendor/zenith/build');
     $metadataPath = $destination.'/.platform-metadata';
     $extraAsset = $destination.'/assets/app-extra.js';
 
-    expect(Artisan::call('horizon-new-dawn:install', ['--force' => true]))->toBe(0);
+    expect(Artisan::call('zenith:install', ['--force' => true]))->toBe(0);
 
     $filesystem->put($metadataPath, 'consumer metadata');
     $filesystem->put($extraAsset, 'extra asset');
 
-    expect(Artisan::call('horizon-new-dawn:install'))->toBe(0)
+    expect(Artisan::call('zenith:install'))->toBe(0)
         ->and($metadataPath)->not->toBeFile()
         ->and($extraAsset)->not->toBeFile()
         ->and($destination.'/manifest.json')->toBeFile();
@@ -495,9 +495,9 @@ it('refreshes when the published directory contains files absent from the packag
 
 it('is a no-op when the published directory exactly matches the package build', function (): void {
     $filesystem = app(Filesystem::class);
-    $destination = public_path('vendor/horizon-new-dawn/build');
+    $destination = public_path('vendor/zenith/build');
 
-    expect(Artisan::call('horizon-new-dawn:install', ['--force' => true]))->toBe(0);
+    expect(Artisan::call('zenith:install', ['--force' => true]))->toBe(0);
 
     $manifestBefore = $filesystem->get($destination.'/manifest.json');
 
@@ -509,24 +509,24 @@ it('is a no-op when the published directory exactly matches the package build', 
         }
     });
 
-    expect(Artisan::call('horizon-new-dawn:install'))->toBe(0)
+    expect(Artisan::call('zenith:install'))->toBe(0)
         ->and($filesystem->get($destination.'/manifest.json'))->toBe($manifestBefore);
 });
 
 it('removes abandoned staging directories while preserving fresh sibling publishes', function (): void {
     $filesystem = app(Filesystem::class);
-    $assetsPath = 'vendor/horizon-new-dawn/build';
+    $assetsPath = 'vendor/zenith/build';
     $destination = public_path($assetsPath);
     $abandonedStagingDirectory = dirname($destination).'/.build-abandoned.tmp';
     $freshStagingDirectory = dirname($destination).'/.build-active.tmp';
 
-    expect(Artisan::call('horizon-new-dawn:install', ['--force' => true]))->toBe(0);
+    expect(Artisan::call('zenith:install', ['--force' => true]))->toBe(0);
 
     $filesystem->ensureDirectoryExists($abandonedStagingDirectory);
     $filesystem->ensureDirectoryExists($freshStagingDirectory);
     touch($abandonedStagingDirectory, time() - 7200);
 
-    expect(Artisan::call('horizon-new-dawn:install'))->toBe(0)
+    expect(Artisan::call('zenith:install'))->toBe(0)
         ->and($abandonedStagingDirectory)->not->toBeDirectory()
         ->and($freshStagingDirectory)->toBeDirectory();
 });
@@ -542,7 +542,7 @@ it('warns when production queue and metrics prerequisites are missing', function
     });
 
     try {
-        expect(Artisan::call('horizon-new-dawn:install', ['--no-composer-hook' => true]))->toBe(0)
+        expect(Artisan::call('zenith:install', ['--no-composer-hook' => true]))->toBe(0)
             ->and(Artisan::output())
             ->toContain('Bulk operations require an asynchronous queue connection')
             ->toContain('Schedule `horizon:snapshot` every five minutes')
@@ -566,8 +566,8 @@ it('appends the Composer asset refresh hook during a normal install', function (
         ],
     ], JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT)."\n");
 
-    expect(Artisan::call('horizon-new-dawn:install', ['--force' => true]))->toBe(0)
-        ->and(Artisan::output())->toContain('Added the Horizon New Dawn asset refresh Composer hook');
+    expect(Artisan::call('zenith:install', ['--force' => true]))->toBe(0)
+        ->and(Artisan::output())->toContain('Added the Zenith asset refresh Composer hook');
 
     $composer = json_decode($filesystem->get($composerJson), true, flags: JSON_THROW_ON_ERROR);
 
@@ -592,8 +592,8 @@ it('does not rewrite composer.json when the asset hook already exists', function
 
     $filesystem->put($composerJson, $original);
 
-    expect(Artisan::call('horizon-new-dawn:install', ['--force' => true]))->toBe(0);
-    expect(Artisan::output())->not()->toContain('Added the Horizon New Dawn asset refresh Composer hook');
+    expect(Artisan::call('zenith:install', ['--force' => true]))->toBe(0);
+    expect(Artisan::output())->not()->toContain('Added the Zenith asset refresh Composer hook');
     expect($filesystem->get($composerJson))->toBe($original);
 });
 
@@ -611,12 +611,12 @@ it('skips composer.json mutation when --no-composer-hook is provided', function 
 
     $filesystem->put($composerJson, $original);
 
-    expect(Artisan::call('horizon-new-dawn:install', [
+    expect(Artisan::call('zenith:install', [
         '--force' => true,
         '--no-composer-hook' => true,
     ]))->toBe(0);
     expect($filesystem->get($composerJson))->toBe($original);
-    expect(Artisan::output())->not()->toContain('Added the Horizon New Dawn asset refresh Composer hook');
+    expect(Artisan::output())->not()->toContain('Added the Zenith asset refresh Composer hook');
 });
 
 it('warns and continues when composer.json cannot be updated', function (): void {
@@ -624,12 +624,12 @@ it('warns and continues when composer.json cannot be updated', function (): void
     $composerJson = base_path('composer.json');
     $filesystem->put($composerJson, '{invalid');
 
-    expect(Artisan::call('horizon-new-dawn:install', ['--force' => true]))->toBe(0)
+    expect(Artisan::call('zenith:install', ['--force' => true]))->toBe(0)
         ->and(Artisan::output())
         ->toContain('Could not update composer.json with the asset refresh hook')
-        ->toContain('Horizon New Dawn is ready')
-        ->and(config_path('horizon-new-dawn.php'))->toBeFile()
-        ->and(public_path('vendor/horizon-new-dawn/build/manifest.json'))->toBeFile()
+        ->toContain('Zenith is ready')
+        ->and(config_path('zenith.php'))->toBeFile()
+        ->and(public_path('vendor/zenith/build/manifest.json'))->toBeFile()
         ->and($filesystem->get($composerJson))->toBe('{invalid');
 });
 

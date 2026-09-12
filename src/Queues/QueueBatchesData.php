@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Queues;
+namespace DevactionLabs\Zenith\Queues;
 
-use DevactionLabs\HorizonNewDawn\Batches\BatchesData;
-use DevactionLabs\HorizonNewDawn\Batches\BatchSort;
-use DevactionLabs\HorizonNewDawn\Batches\BatchSortDirection;
-use DevactionLabs\HorizonNewDawn\Batches\Data\BatchIndexFiltersData;
-use DevactionLabs\HorizonNewDawn\Batches\DatabaseBatchQuery;
-use DevactionLabs\HorizonNewDawn\Dashboard\Data\DashboardBatchPreviewData;
-use DevactionLabs\HorizonNewDawn\Queues\Data\QueueActivityPageData;
-use DevactionLabs\HorizonNewDawn\Queues\Data\QueueRetainedBatchesData;
-use DevactionLabs\HorizonNewDawn\Support\PollInterval;
+use DevactionLabs\Zenith\Batches\BatchesData;
+use DevactionLabs\Zenith\Batches\BatchSort;
+use DevactionLabs\Zenith\Batches\BatchSortDirection;
+use DevactionLabs\Zenith\Batches\Data\BatchIndexFiltersData;
+use DevactionLabs\Zenith\Batches\DatabaseBatchQuery;
+use DevactionLabs\Zenith\Dashboard\Data\DashboardBatchPreviewData;
+use DevactionLabs\Zenith\Queues\Data\QueueActivityPageData;
+use DevactionLabs\Zenith\Queues\Data\QueueRetainedBatchesData;
+use DevactionLabs\Zenith\Support\PollInterval;
 use Illuminate\Bus\Batch;
 use Illuminate\Bus\BatchRepository;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
@@ -339,6 +339,6 @@ final readonly class QueueBatchesData
         $prefix = config('horizon.prefix', 'horizon:');
         $prefix = is_string($prefix) ? $prefix : 'horizon:';
 
-        return 'horizon-new-dawn:queue-batches:'.hash('sha256', $prefix."\0".$queue);
+        return 'zenith:queue-batches:'.hash('sha256', $prefix."\0".$queue);
     }
 }

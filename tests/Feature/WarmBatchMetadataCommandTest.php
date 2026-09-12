@@ -15,7 +15,7 @@ beforeEach(function (): void {
     config()->set('queue.default', 'redis');
     config()->set('queue.connections.redis.queue', 'default');
 
-    Schema::dropIfExists('horizon_new_dawn_batch_metadata');
+    Schema::dropIfExists('zenith_batch_metadata');
     Schema::dropIfExists('job_batches');
     Schema::create('job_batches', function (Blueprint $table): void {
         $table->string('id')->primary();
@@ -30,22 +30,22 @@ beforeEach(function (): void {
 });
 
 afterEach(function (): void {
-    Schema::dropIfExists('horizon_new_dawn_batch_metadata');
+    Schema::dropIfExists('zenith_batch_metadata');
     Schema::dropIfExists('job_batches');
 });
 
 it('warms first-observed destination metadata before operator requests', function (): void {
-    $migration = require __DIR__.'/../../database/migrations/2026_07_26_000000_create_horizon_new_dawn_batch_metadata_table.php';
+    $migration = require __DIR__.'/../../database/migrations/2026_07_26_000000_create_zenith_batch_metadata_table.php';
     $migration->up();
     app('db')->table('job_batches')->insert([
         'id' => 'batch-001',
         'options' => serialize([]),
     ]);
 
-    expect(Artisan::call('horizon-new-dawn:warm-batch-metadata'))->toBe(0)
+    expect(Artisan::call('zenith:warm-batch-metadata'))->toBe(0)
         ->and(Artisan::output())->toContain('Batch destination metadata is warm')
         ->and((array) app('db')
-            ->table('horizon_new_dawn_batch_metadata')
+            ->table('zenith_batch_metadata')
             ->where('batch_id', 'batch-001')
             ->first())->toMatchArray([
                 'queue' => 'default',
@@ -56,12 +56,12 @@ it('warms first-observed destination metadata before operator requests', functio
 });
 
 it('fails clearly until the destination metadata migration has run', function (): void {
-    expect(Artisan::call('horizon-new-dawn:warm-batch-metadata'))->toBe(1)
+    expect(Artisan::call('zenith:warm-batch-metadata'))->toBe(1)
         ->and(Artisan::output())->toContain(
-            'Run the Horizon New Dawn batch metadata migration',
+            'Run the Zenith batch metadata migration',
         );
 });
 
 it('registers the warm batch metadata command with Artisan', function (): void {
-    expect(Artisan::all())->toHaveKey('horizon-new-dawn:warm-batch-metadata');
+    expect(Artisan::all())->toHaveKey('zenith:warm-batch-metadata');
 });

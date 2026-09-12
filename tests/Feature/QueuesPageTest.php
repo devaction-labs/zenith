@@ -2,22 +2,22 @@
 
 declare(strict_types=1);
 
-use DevactionLabs\HorizonNewDawn\Assets\AssetManifest;
-use DevactionLabs\HorizonNewDawn\Batches\BatchesData;
-use DevactionLabs\HorizonNewDawn\Batches\BatchJobsData;
-use DevactionLabs\HorizonNewDawn\FailedJobs\FailedJobRetryEligibility;
-use DevactionLabs\HorizonNewDawn\FailedJobs\FailedJobsData;
-use DevactionLabs\HorizonNewDawn\Jobs\JobsData;
-use DevactionLabs\HorizonNewDawn\Metrics\MetricsData;
-use DevactionLabs\HorizonNewDawn\Metrics\SnapshotJobsPerMinute;
-use DevactionLabs\HorizonNewDawn\Queues\QueueActivityData;
-use DevactionLabs\HorizonNewDawn\Queues\QueueBatchesData;
-use DevactionLabs\HorizonNewDawn\Queues\QueueJobsData;
-use DevactionLabs\HorizonNewDawn\Queues\QueuePauseStatus;
-use DevactionLabs\HorizonNewDawn\Queues\QueuesData;
-use DevactionLabs\HorizonNewDawn\Queues\QueueSummary;
-use DevactionLabs\HorizonNewDawn\Queues\QueueWaitThreshold;
-use DevactionLabs\HorizonNewDawn\Support\HorizonRuntime;
+use DevactionLabs\Zenith\Assets\AssetManifest;
+use DevactionLabs\Zenith\Batches\BatchesData;
+use DevactionLabs\Zenith\Batches\BatchJobsData;
+use DevactionLabs\Zenith\FailedJobs\FailedJobRetryEligibility;
+use DevactionLabs\Zenith\FailedJobs\FailedJobsData;
+use DevactionLabs\Zenith\Jobs\JobsData;
+use DevactionLabs\Zenith\Metrics\MetricsData;
+use DevactionLabs\Zenith\Metrics\SnapshotJobsPerMinute;
+use DevactionLabs\Zenith\Queues\QueueActivityData;
+use DevactionLabs\Zenith\Queues\QueueBatchesData;
+use DevactionLabs\Zenith\Queues\QueueJobsData;
+use DevactionLabs\Zenith\Queues\QueuePauseStatus;
+use DevactionLabs\Zenith\Queues\QueuesData;
+use DevactionLabs\Zenith\Queues\QueueSummary;
+use DevactionLabs\Zenith\Queues\QueueWaitThreshold;
+use DevactionLabs\Zenith\Support\HorizonRuntime;
 use Illuminate\Bus\BatchRepository;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Illuminate\Contracts\Queue\Factory as QueueFactory;
@@ -31,18 +31,18 @@ use Laravel\Horizon\Contracts\TagRepository;
 use Laravel\Horizon\Horizon;
 use Laravel\Horizon\WaitTimeCalculator;
 
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardExpects;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardNeverReceives;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturns;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturnsFor;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\horizonJob;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\Zenith\Tests\Support\dashboardExpects;
+use function DevactionLabs\Zenith\Tests\Support\dashboardNeverReceives;
+use function DevactionLabs\Zenith\Tests\Support\dashboardReturns;
+use function DevactionLabs\Zenith\Tests\Support\dashboardReturnsFor;
+use function DevactionLabs\Zenith\Tests\Support\horizonJob;
+use function DevactionLabs\Zenith\Tests\Support\mockDashboardContract;
 use function Pest\Laravel\get;
 use function Pest\Laravel\getJson;
 
 beforeEach(function (): void {
     Horizon::auth(static fn (): bool => true);
-    config()->set('horizon-new-dawn.poll_interval', 0);
+    config()->set('zenith.poll_interval', 0);
 
     $masters = mockDashboardContract(MasterSupervisorRepository::class);
     dashboardReturns($masters, 'all', [(object) ['status' => 'running']]);

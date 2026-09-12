@@ -1,6 +1,6 @@
 ---
 name: reviewing-horizon-interface
-description: Use when reviewing Horizon New Dawn UI code or rendered pages for design fidelity, accessibility, responsive behavior, interaction consistency, empty/loading states, or browser-visible regressions.
+description: Use when reviewing Zenith UI code or rendered pages for design fidelity, accessibility, responsive behavior, interaction consistency, empty/loading states, or browser-visible regressions.
 ---
 
 # Reviewing the Horizon Interface
@@ -12,7 +12,7 @@ Review the interface at the boundary the user experiences. Treat supplied design
 ## Review contract
 
 1. Establish the authority for the task: explicit user direction and selected browser evidence, supplied design artifacts, current project conventions and shared components, then general guidelines.
-2. Read [interface-guidelines.md](references/interface-guidelines.md). Read [project-adjustments.md](references/project-adjustments.md) for every Horizon New Dawn review.
+2. Read [interface-guidelines.md](references/interface-guidelines.md). Read [project-adjustments.md](references/project-adjustments.md) for every Zenith review.
 3. Inspect shared primitives before reporting repeated page-level symptoms. One table, header, badge, spacing, or navigation defect may affect many routes.
 4. Review applicable states, not only the easiest screenshot: populated, empty, loading, refreshing, error, long content, destructive actions, light/dark/system theme, and responsive widths.
 5. Validate the rendered package in the exact consumer URL named by the user. When none is named, use `https://horizon-demo.nmbp/horizon/`. A package build or Testbench render is not consumer proof.

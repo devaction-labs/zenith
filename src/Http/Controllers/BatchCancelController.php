@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Http\Controllers;
+namespace DevactionLabs\Zenith\Http\Controllers;
 
-use DevactionLabs\HorizonNewDawn\Batches\Actions\CancelBatch;
+use DevactionLabs\Zenith\Batches\Actions\CancelBatch;
 use Illuminate\Http\RedirectResponse;
 use Throwable;
 

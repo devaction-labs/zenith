@@ -34,10 +34,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
-import { show as failedJobShow } from "@/generated/routes/horizon-new-dawn/failed-jobs";
-import { show as batchShow } from "@/generated/routes/horizon-new-dawn/batches";
-import { show as jobShow } from "@/generated/routes/horizon-new-dawn/jobs";
-import { show as queueShow } from "@/generated/routes/horizon-new-dawn/queues";
+import { show as failedJobShow } from "@/generated/routes/zenith/failed-jobs";
+import { show as batchShow } from "@/generated/routes/zenith/batches";
+import { show as jobShow } from "@/generated/routes/zenith/jobs";
+import { show as queueShow } from "@/generated/routes/zenith/queues";
 import { useActiveTabQuery } from "@/hooks/use-active-tab-query";
 import { usePageRefresh } from "@/hooks/use-dashboard-refresh";
 import { useAutoLoadPreference } from "@/layouts/horizon-layout";

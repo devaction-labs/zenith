@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Console;
+namespace DevactionLabs\Zenith\Console;
 
-use DevactionLabs\HorizonNewDawn\Assets\AssetPath;
-use DevactionLabs\HorizonNewDawn\Assets\AssetsPublisher;
+use DevactionLabs\Zenith\Assets\AssetPath;
+use DevactionLabs\Zenith\Assets\AssetsPublisher;
 use Illuminate\Console\Command;
 
 final class AssetsCommand extends Command
 {
-    protected $signature = 'horizon-new-dawn:assets
+    protected $signature = 'zenith:assets
         {--force : Refresh previously published assets}';
 
-    protected $description = 'Publish the Horizon New Dawn compiled assets';
+    protected $description = 'Publish the Zenith compiled assets';
 
     public function handle(AssetsPublisher $publisher, AssetPath $assetPath): int
     {
@@ -22,7 +22,7 @@ final class AssetsCommand extends Command
             force: (bool) $this->option('force'),
         );
 
-        $this->components->info('Horizon New Dawn assets are ready.');
+        $this->components->info('Zenith assets are ready.');
 
         return self::SUCCESS;
     }

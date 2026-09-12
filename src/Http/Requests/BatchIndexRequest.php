@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Http\Requests;
+namespace DevactionLabs\Zenith\Http\Requests;
 
-use DevactionLabs\HorizonNewDawn\Batches\BatchCreatedRange;
-use DevactionLabs\HorizonNewDawn\Batches\BatchSort;
-use DevactionLabs\HorizonNewDawn\Batches\BatchSortDirection;
-use DevactionLabs\HorizonNewDawn\Batches\BatchStatus;
-use DevactionLabs\HorizonNewDawn\Batches\Data\BatchIndexFiltersData;
+use DevactionLabs\Zenith\Batches\BatchCreatedRange;
+use DevactionLabs\Zenith\Batches\BatchSort;
+use DevactionLabs\Zenith\Batches\BatchSortDirection;
+use DevactionLabs\Zenith\Batches\BatchStatus;
+use DevactionLabs\Zenith\Batches\Data\BatchIndexFiltersData;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 

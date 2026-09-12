@@ -3,13 +3,13 @@
 declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
-use DevactionLabs\HorizonNewDawn\Queues\QueuePauseMetadata;
-use DevactionLabs\HorizonNewDawn\Queues\QueuePauseStatus;
-use DevactionLabs\HorizonNewDawn\Support\FrameworkCapabilities;
+use DevactionLabs\Zenith\Queues\QueuePauseMetadata;
+use DevactionLabs\Zenith\Queues\QueuePauseStatus;
+use DevactionLabs\Zenith\Support\FrameworkCapabilities;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Illuminate\Queue\QueueManager;
 
-use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\Zenith\Tests\Support\mockDashboardContract;
 
 beforeEach(function (): void {
     CarbonImmutable::setTestNow('2026-07-20 18:00:00 UTC');

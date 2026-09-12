@@ -2,28 +2,28 @@
 
 declare(strict_types=1);
 
-use DevactionLabs\HorizonNewDawn\Batches\BatchesData;
-use DevactionLabs\HorizonNewDawn\Batches\BatchJobsData;
-use DevactionLabs\HorizonNewDawn\Batches\DatabaseBatchCapability;
-use DevactionLabs\HorizonNewDawn\Dashboard\DashboardBatchSummary;
-use DevactionLabs\HorizonNewDawn\Dashboard\DashboardData;
-use DevactionLabs\HorizonNewDawn\Jobs\JobsData;
-use DevactionLabs\HorizonNewDawn\Support\NavigationCounts;
+use DevactionLabs\Zenith\Batches\BatchesData;
+use DevactionLabs\Zenith\Batches\BatchJobsData;
+use DevactionLabs\Zenith\Batches\DatabaseBatchCapability;
+use DevactionLabs\Zenith\Dashboard\DashboardBatchSummary;
+use DevactionLabs\Zenith\Dashboard\DashboardData;
+use DevactionLabs\Zenith\Jobs\JobsData;
+use DevactionLabs\Zenith\Support\NavigationCounts;
 use Illuminate\Bus\BatchFactory;
 use Illuminate\Bus\BatchRepository;
 use Illuminate\Bus\DatabaseBatchRepository;
 use Illuminate\Support\Facades\Schema;
 use Laravel\Horizon\Contracts\JobRepository;
 
-use function DevactionLabs\HorizonNewDawn\Tests\Support\bindBrowserPageFixtures;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\Zenith\Tests\Support\bindBrowserPageFixtures;
+use function DevactionLabs\Zenith\Tests\Support\mockDashboardContract;
 
 it('guides operators to create the batch table and keeps batches navigation visible', function (): void {
     bindBrowserPageFixtures();
     config()->set('queue.batching.database', null);
     config()->set('queue.batching.table', 'job_batches');
-    config()->set('horizon-new-dawn.poll_interval', 0);
-    Schema::dropIfExists('horizon_new_dawn_batch_metadata');
+    config()->set('zenith.poll_interval', 0);
+    Schema::dropIfExists('zenith_batch_metadata');
     Schema::dropIfExists('job_batches');
 
     $repository = new DatabaseBatchRepository(

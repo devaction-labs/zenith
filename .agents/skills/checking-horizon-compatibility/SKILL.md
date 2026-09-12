@@ -1,6 +1,6 @@
 ---
 name: checking-horizon-compatibility
-description: Verify Horizon New Dawn features across its declared PHP, Laravel, Horizon, Inertia, and browser compatibility matrix. Use whenever adding or changing code that calls Laravel or Horizon APIs, uses PHP language/library features, adds routes or mutations, changes page props, changes Composer constraints, or claims support for another framework version.
+description: Verify Zenith features across its declared PHP, Laravel, Horizon, Inertia, and browser compatibility matrix. Use whenever adding or changing code that calls Laravel or Horizon APIs, uses PHP language/library features, adds routes or mutations, changes page props, changes Composer constraints, or claims support for another framework version.
 ---
 
 # Checking Horizon Compatibility

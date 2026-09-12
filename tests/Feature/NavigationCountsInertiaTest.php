@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-use DevactionLabs\HorizonNewDawn\Batches\BatchRepositoryOverview;
-use DevactionLabs\HorizonNewDawn\Batches\DatabaseBatchCapability;
-use DevactionLabs\HorizonNewDawn\Queues\QueuePauseStatus;
-use DevactionLabs\HorizonNewDawn\Queues\QueuesData;
-use DevactionLabs\HorizonNewDawn\Queues\QueueWaitThreshold;
-use DevactionLabs\HorizonNewDawn\Support\NavigationCounts;
+use DevactionLabs\Zenith\Batches\BatchRepositoryOverview;
+use DevactionLabs\Zenith\Batches\DatabaseBatchCapability;
+use DevactionLabs\Zenith\Queues\QueuePauseStatus;
+use DevactionLabs\Zenith\Queues\QueuesData;
+use DevactionLabs\Zenith\Queues\QueueWaitThreshold;
+use DevactionLabs\Zenith\Support\NavigationCounts;
 use Illuminate\Bus\BatchRepository;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Illuminate\Contracts\Queue\Factory as QueueFactory;
@@ -20,16 +20,16 @@ use Laravel\Horizon\Contracts\MetricsRepository;
 use Laravel\Horizon\Contracts\SupervisorRepository;
 use Laravel\Horizon\WaitTimeCalculator;
 
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturns;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturnsFor;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturnsUsing;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\horizonBatch;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\Zenith\Tests\Support\dashboardReturns;
+use function DevactionLabs\Zenith\Tests\Support\dashboardReturnsFor;
+use function DevactionLabs\Zenith\Tests\Support\dashboardReturnsUsing;
+use function DevactionLabs\Zenith\Tests\Support\horizonBatch;
+use function DevactionLabs\Zenith\Tests\Support\mockDashboardContract;
 use function Pest\Laravel\get;
 
 it('delivers navigation counts in their own deferred group', function (): void {
     config()->set('queue.batching.database', null);
-    config()->set('horizon-new-dawn.poll_interval', 0);
+    config()->set('zenith.poll_interval', 0);
     $redisConnection = mockDashboardContract(Connection::class);
     dashboardReturnsFor($redisConnection, 'scard', ['monitoring'], 2);
     dashboardReturnsFor($redisConnection, 'scard', ['measured_jobs'], 4);

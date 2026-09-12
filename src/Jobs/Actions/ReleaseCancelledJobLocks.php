@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Jobs\Actions;
+namespace DevactionLabs\Zenith\Jobs\Actions;
 
 use Illuminate\Bus\DebounceLock;
 use Illuminate\Bus\UniqueLock;
@@ -122,7 +122,7 @@ final readonly class ReleaseCancelledJobLocks
      */
     private function allowedClasses(): array
     {
-        $configured = config('horizon-new-dawn.job_payload_allowed_classes', []);
+        $configured = config('zenith.job_payload_allowed_classes', []);
 
         if (! is_array($configured)) {
             return [];

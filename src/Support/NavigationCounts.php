@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Support;
+namespace DevactionLabs\Zenith\Support;
 
 use Closure;
-use DevactionLabs\HorizonNewDawn\Batches\BatchRepositoryOverview;
-use DevactionLabs\HorizonNewDawn\Batches\DatabaseBatchCapability;
-use DevactionLabs\HorizonNewDawn\Queues\QueuesData;
-use DevactionLabs\HorizonNewDawn\Support\Data\NavigationCountsData;
+use DevactionLabs\Zenith\Batches\BatchRepositoryOverview;
+use DevactionLabs\Zenith\Batches\DatabaseBatchCapability;
+use DevactionLabs\Zenith\Queues\QueuesData;
+use DevactionLabs\Zenith\Support\Data\NavigationCountsData;
 use Illuminate\Contracts\Redis\Factory as RedisFactory;
 use Laravel\Horizon\Contracts\JobRepository;
 use Laravel\Horizon\Contracts\MasterSupervisorRepository;

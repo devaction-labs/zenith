@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Jobs;
+namespace DevactionLabs\Zenith\Jobs;
 
 use DateTimeImmutable;
 use DateTimeZone;
-use DevactionLabs\HorizonNewDawn\Jobs\Data\JobDetailData;
-use DevactionLabs\HorizonNewDawn\Jobs\Data\JobFilterCatalogData;
-use DevactionLabs\HorizonNewDawn\Jobs\Data\JobIndexFiltersData;
-use DevactionLabs\HorizonNewDawn\Jobs\Data\JobPageData;
-use DevactionLabs\HorizonNewDawn\Jobs\Data\JobRowData;
+use DevactionLabs\Zenith\Jobs\Data\JobDetailData;
+use DevactionLabs\Zenith\Jobs\Data\JobFilterCatalogData;
+use DevactionLabs\Zenith\Jobs\Data\JobIndexFiltersData;
+use DevactionLabs\Zenith\Jobs\Data\JobPageData;
+use DevactionLabs\Zenith\Jobs\Data\JobRowData;
 use Illuminate\Contracts\Redis\Factory as RedisFactory;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Date;
@@ -713,7 +713,7 @@ final readonly class JobsData
             return null;
         }
 
-        if (is_numeric($payload['horizonNewDawn']['madeAvailableAt'] ?? null)) {
+        if (is_numeric($payload['zenith']['madeAvailableAt'] ?? null)) {
             return null;
         }
 

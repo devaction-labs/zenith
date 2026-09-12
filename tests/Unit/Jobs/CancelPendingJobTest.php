@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-use DevactionLabs\HorizonNewDawn\BulkOperations\BulkOperationSnapshot;
-use DevactionLabs\HorizonNewDawn\Jobs\Actions\CancelPendingJob;
-use DevactionLabs\HorizonNewDawn\Jobs\Actions\CancelPendingJobs;
-use DevactionLabs\HorizonNewDawn\Jobs\Actions\ReleaseCancelledJobLocks;
-use DevactionLabs\HorizonNewDawn\Jobs\ForgetsPendingJob;
-use DevactionLabs\HorizonNewDawn\Jobs\PendingJobCancellationResult;
-use DevactionLabs\HorizonNewDawn\Jobs\PendingJobCancellationScope;
+use DevactionLabs\Zenith\BulkOperations\BulkOperationSnapshot;
+use DevactionLabs\Zenith\Jobs\Actions\CancelPendingJob;
+use DevactionLabs\Zenith\Jobs\Actions\CancelPendingJobs;
+use DevactionLabs\Zenith\Jobs\Actions\ReleaseCancelledJobLocks;
+use DevactionLabs\Zenith\Jobs\ForgetsPendingJob;
+use DevactionLabs\Zenith\Jobs\PendingJobCancellationResult;
+use DevactionLabs\Zenith\Jobs\PendingJobCancellationScope;
 use Illuminate\Bus\UniqueLock;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Illuminate\Contracts\Encryption\Encrypter;
@@ -20,12 +20,12 @@ use Illuminate\Redis\Connections\Connection;
 use Illuminate\Support\Collection;
 use Laravel\Horizon\Contracts\JobRepository;
 
-use function DevactionLabs\HorizonNewDawn\Tests\Support\bulkSnapshotRedis;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardNeverReceives;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturnsFor;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturnsUsing;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\horizonJob;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\Zenith\Tests\Support\bulkSnapshotRedis;
+use function DevactionLabs\Zenith\Tests\Support\dashboardNeverReceives;
+use function DevactionLabs\Zenith\Tests\Support\dashboardReturnsFor;
+use function DevactionLabs\Zenith\Tests\Support\dashboardReturnsUsing;
+use function DevactionLabs\Zenith\Tests\Support\horizonJob;
+use function DevactionLabs\Zenith\Tests\Support\mockDashboardContract;
 
 describe('CancelPendingJob', function (): void {
     it('atomically removes a normal pending job from either ready or delayed storage', function (): void {
@@ -354,7 +354,7 @@ describe('ReleaseCancelledJobLocks', function (): void {
     it('does not instantiate job payload classes unless they are explicitly allowed', function (): void {
         foreach ([[], [CancelPendingUniqueJob::class]] as $allowedClasses) {
             CancelPendingPayloadWithWakeup::$wakeups = 0;
-            config()->set('horizon-new-dawn.job_payload_allowed_classes', $allowedClasses);
+            config()->set('zenith.job_payload_allowed_classes', $allowedClasses);
 
             (new ReleaseCancelledJobLocks(
                 app(CacheFactory::class),
@@ -374,7 +374,7 @@ describe('ReleaseCancelledJobLocks', function (): void {
         $cache = app(CacheFactory::class);
         $lock = new UniqueLock($cache->store('array'));
 
-        config()->set('horizon-new-dawn.job_payload_allowed_classes', [
+        config()->set('zenith.job_payload_allowed_classes', [
             CancelPendingUniqueJob::class,
         ]);
 
@@ -395,7 +395,7 @@ describe('ReleaseCancelledJobLocks', function (): void {
         $encrypter = app(Encrypter::class);
         $lock = new UniqueLock($cache->store('array'));
 
-        config()->set('horizon-new-dawn.job_payload_allowed_classes', [
+        config()->set('zenith.job_payload_allowed_classes', [
             CancelPendingUniqueJob::class,
         ]);
 

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Metrics;
+namespace DevactionLabs\Zenith\Metrics;
 
 enum MetricType: string
 {

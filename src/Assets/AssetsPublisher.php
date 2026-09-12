@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Assets;
+namespace DevactionLabs\Zenith\Assets;
 
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Support\Str;
@@ -40,11 +40,11 @@ final class AssetsPublisher
 
         try {
             if (! $this->filesystem->copyDirectory($source, $stagingDirectory)) {
-                throw new RuntimeException('Unable to stage Horizon New Dawn assets.');
+                throw new RuntimeException('Unable to stage Zenith assets.');
             }
 
             if (! $this->hasCompletePublishedAssets($stagingDirectory)) {
-                throw new RuntimeException('Unable to stage a complete Horizon New Dawn asset build.');
+                throw new RuntimeException('Unable to stage a complete Zenith asset build.');
             }
 
             $this->replacePublishedDirectory($stagingDirectory, $destination);

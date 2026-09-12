@@ -16,7 +16,7 @@ import { copyToClipboard } from "@/lib/clipboard";
 import { formatDuration } from "@/lib/format-duration";
 import { resolveHorizonRoute } from "@/lib/horizon-route";
 import { urlWithCurrentQuery } from "@/lib/url-query";
-import { show as monitoringShow } from "@/generated/routes/horizon-new-dawn/monitoring";
+import { show as monitoringShow } from "@/generated/routes/zenith/monitoring";
 import type { MonitoringTagPageProps } from "@/types/monitoring";
 
 const monitoringRefreshProps = ["summary"];

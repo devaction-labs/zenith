@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Queues\Data;
+namespace DevactionLabs\Zenith\Queues\Data;
 
-use DevactionLabs\HorizonNewDawn\Batches\Data\BatchRowData;
-use DevactionLabs\HorizonNewDawn\Jobs\Data\JobRowData;
+use DevactionLabs\Zenith\Batches\Data\BatchRowData;
+use DevactionLabs\Zenith\Jobs\Data\JobRowData;
 use Spatie\LaravelData\Data;
 
 final class QueueActivityPageData extends Data

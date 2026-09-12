@@ -3,13 +3,13 @@
 declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
-use DevactionLabs\HorizonNewDawn\Queues\Actions\PauseAllQueues;
-use DevactionLabs\HorizonNewDawn\Queues\Actions\PauseQueue;
-use DevactionLabs\HorizonNewDawn\Queues\Actions\ResumeAllQueues;
-use DevactionLabs\HorizonNewDawn\Queues\Actions\ResumeQueue;
-use DevactionLabs\HorizonNewDawn\Queues\Data\PauseQueueData;
-use DevactionLabs\HorizonNewDawn\Queues\QueuePauseMetadata;
-use DevactionLabs\HorizonNewDawn\Support\FrameworkCapabilities;
+use DevactionLabs\Zenith\Queues\Actions\PauseAllQueues;
+use DevactionLabs\Zenith\Queues\Actions\PauseQueue;
+use DevactionLabs\Zenith\Queues\Actions\ResumeAllQueues;
+use DevactionLabs\Zenith\Queues\Actions\ResumeQueue;
+use DevactionLabs\Zenith\Queues\Data\PauseQueueData;
+use DevactionLabs\Zenith\Queues\QueuePauseMetadata;
+use DevactionLabs\Zenith\Support\FrameworkCapabilities;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Illuminate\Queue\QueueManager;
 

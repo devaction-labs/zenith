@@ -2,28 +2,28 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Tests\Support;
+namespace DevactionLabs\Zenith\Tests\Support;
 
-use DevactionLabs\HorizonNewDawn\Batches\BatchesData;
-use DevactionLabs\HorizonNewDawn\Batches\BatchJobsData;
-use DevactionLabs\HorizonNewDawn\FailedJobs\FailedJobRetryEligibility;
-use DevactionLabs\HorizonNewDawn\FailedJobs\FailedJobsData;
-use DevactionLabs\HorizonNewDawn\Jobs\ForgetsPendingJob;
-use DevactionLabs\HorizonNewDawn\Jobs\JobsData;
-use DevactionLabs\HorizonNewDawn\Metrics\MetricsData;
-use DevactionLabs\HorizonNewDawn\Metrics\SnapshotJobsPerMinute;
-use DevactionLabs\HorizonNewDawn\Monitoring\MonitoringData;
-use DevactionLabs\HorizonNewDawn\Queues\QueueActivityData;
-use DevactionLabs\HorizonNewDawn\Queues\QueueBatchesData;
-use DevactionLabs\HorizonNewDawn\Queues\QueueJobsData;
-use DevactionLabs\HorizonNewDawn\Queues\QueuePauseMetadata;
-use DevactionLabs\HorizonNewDawn\Queues\QueuePauseStatus;
-use DevactionLabs\HorizonNewDawn\Queues\QueuesData;
-use DevactionLabs\HorizonNewDawn\Queues\QueueSummary;
-use DevactionLabs\HorizonNewDawn\Queues\QueueWaitThreshold;
-use DevactionLabs\HorizonNewDawn\Supervisors\SupervisorDetails;
-use DevactionLabs\HorizonNewDawn\Support\FrameworkCapabilities;
-use DevactionLabs\HorizonNewDawn\Support\HorizonRuntime;
+use DevactionLabs\Zenith\Batches\BatchesData;
+use DevactionLabs\Zenith\Batches\BatchJobsData;
+use DevactionLabs\Zenith\FailedJobs\FailedJobRetryEligibility;
+use DevactionLabs\Zenith\FailedJobs\FailedJobsData;
+use DevactionLabs\Zenith\Jobs\ForgetsPendingJob;
+use DevactionLabs\Zenith\Jobs\JobsData;
+use DevactionLabs\Zenith\Metrics\MetricsData;
+use DevactionLabs\Zenith\Metrics\SnapshotJobsPerMinute;
+use DevactionLabs\Zenith\Monitoring\MonitoringData;
+use DevactionLabs\Zenith\Queues\QueueActivityData;
+use DevactionLabs\Zenith\Queues\QueueBatchesData;
+use DevactionLabs\Zenith\Queues\QueueJobsData;
+use DevactionLabs\Zenith\Queues\QueuePauseMetadata;
+use DevactionLabs\Zenith\Queues\QueuePauseStatus;
+use DevactionLabs\Zenith\Queues\QueuesData;
+use DevactionLabs\Zenith\Queues\QueueSummary;
+use DevactionLabs\Zenith\Queues\QueueWaitThreshold;
+use DevactionLabs\Zenith\Supervisors\SupervisorDetails;
+use DevactionLabs\Zenith\Support\FrameworkCapabilities;
+use DevactionLabs\Zenith\Support\HorizonRuntime;
 use Illuminate\Bus\BatchRepository;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Illuminate\Contracts\Config\Repository as ConfigRepository;
@@ -58,9 +58,9 @@ function bindBrowserPageFixtures(
     // bus and use an async bulk connection name so BulkOperationDispatcher accepts
     // the queue while Bus::fake() records the coordinator job for toast success.
     Bus::fake();
-    config()->set('horizon-new-dawn.poll_interval', 0);
-    config()->set('horizon-new-dawn.bulk_operations.connection', 'operations');
-    config()->set('horizon-new-dawn.bulk_operations.queue', 'horizon-maintenance');
+    config()->set('zenith.poll_interval', 0);
+    config()->set('zenith.bulk_operations.connection', 'operations');
+    config()->set('zenith.bulk_operations.queue', 'horizon-maintenance');
     config()->set('queue.connections.redis.retry_after', 120);
     $capabilities = new FrameworkCapabilities(queuePausing: false, timedQueuePausing: false);
     app()->instance(FrameworkCapabilities::class, $capabilities);
@@ -317,7 +317,7 @@ function bindBrowserPageFixtures(
 function bindBrowserQueueCompletedSummaryRefreshFixtures(): void
 {
     bindBrowserPageFixtures();
-    config()->set('horizon-new-dawn.poll_interval', 500);
+    config()->set('zenith.poll_interval', 500);
 
     $summaryAttempt = 0;
     $completedJobs = static function (int $count): Collection {
@@ -443,7 +443,7 @@ function bindBrowserFailedJobIdentifierOverflowFixtures(): array
 function bindBrowserSupervisorScalingFixtures(): void
 {
     bindBrowserPageFixtures();
-    config()->set('horizon-new-dawn.poll_interval', 2000);
+    config()->set('zenith.poll_interval', 2000);
 
     $masters = mockDashboardContract(MasterSupervisorRepository::class);
     dashboardReturns($masters, 'all', [
@@ -476,7 +476,7 @@ function bindBrowserSupervisorScalingFixtures(): void
 function bindBrowserProcessTransitionFixtures(bool $supervisorPaused = true): string
 {
     bindBrowserPageFixtures();
-    config()->set('horizon-new-dawn.poll_interval', 2000);
+    config()->set('zenith.poll_interval', 2000);
 
     $instance = MasterSupervisor::basename().'-a1b2';
     $supervisor = $instance.':supervisor-1';
@@ -610,7 +610,7 @@ function browserScalingSupervisor(
 function bindBrowserInfiniteScrollRefreshFixtures(bool $emptyOnRefresh = false): void
 {
     bindBrowserPageFixtures();
-    config()->set('horizon-new-dawn.poll_interval', 2000);
+    config()->set('zenith.poll_interval', 2000);
 
     $failedJob = static function (int $index): HorizonJob {
         $job = horizonJob($index, "failed-{$index}");

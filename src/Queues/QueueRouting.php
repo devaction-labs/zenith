@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Queues;
+namespace DevactionLabs\Zenith\Queues;
 
-use DevactionLabs\HorizonNewDawn\Queues\Data\QueueClassRouteData;
-use DevactionLabs\HorizonNewDawn\Queues\Data\QueueRoutingData;
+use DevactionLabs\Zenith\Queues\Data\QueueClassRouteData;
+use DevactionLabs\Zenith\Queues\Data\QueueRoutingData;
 use Illuminate\Container\Container;
 use Illuminate\Queue\QueueRoutes;
 use Throwable;

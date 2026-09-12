@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Jobs;
+namespace DevactionLabs\Zenith\Jobs;
 
 use Closure;
-use DevactionLabs\HorizonNewDawn\Support\RedisScript;
+use DevactionLabs\Zenith\Support\RedisScript;
 use Illuminate\Contracts\Redis\Factory as RedisFactory;
 use Illuminate\Redis\Connections\Connection;
 use Illuminate\Redis\Connections\PhpRedisClusterConnection;
@@ -4076,13 +4076,13 @@ final class RetainedJobIndex
 
         $hash = substr(hash('sha256', $seed), 0, 32);
 
-        return $this->namespace = "\x1fhorizon-new-dawn:v2:{$hash}:jobs";
+        return $this->namespace = "\x1fzenith:v2:{$hash}:jobs";
     }
 
     private function assertNamespaceOwnership(): void
     {
         $key = $this->key('owner');
-        $owner = 'devaction-labs/horizon-new-dawn:retained-jobs:v2';
+        $owner = 'devaction-labs/zenith:retained-jobs:v2';
         $this->connection()->setnx($key, $owner);
 
         if ($this->connection()->get($key) !== $owner) {

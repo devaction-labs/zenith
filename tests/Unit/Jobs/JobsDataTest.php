@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
-use DevactionLabs\HorizonNewDawn\Jobs\JobListType;
-use DevactionLabs\HorizonNewDawn\Jobs\JobsData;
+use DevactionLabs\Zenith\Jobs\JobListType;
+use DevactionLabs\Zenith\Jobs\JobsData;
 use Illuminate\Contracts\Redis\Factory as RedisFactory;
 use Illuminate\Redis\Connections\Connection;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Date;
 use Laravel\Horizon\Contracts\JobRepository;
 
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturns;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturnsFor;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturnsUsing;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\horizonJob;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\Zenith\Tests\Support\dashboardReturns;
+use function DevactionLabs\Zenith\Tests\Support\dashboardReturnsFor;
+use function DevactionLabs\Zenith\Tests\Support\dashboardReturnsUsing;
+use function DevactionLabs\Zenith\Tests\Support\horizonJob;
+use function DevactionLabs\Zenith\Tests\Support\mockDashboardContract;
 
 describe('JobsData', function (): void {
     afterEach(function (): void {
@@ -334,7 +334,7 @@ describe('JobsData', function (): void {
             'createdAt' => 1_784_281_000,
             'pushedAt' => 1_784_281_000.25,
             'delay' => 600,
-            'horizonNewDawn' => ['madeAvailableAt' => 1_784_281_300],
+            'zenith' => ['madeAvailableAt' => 1_784_281_300],
             'data' => [
                 'command' => serialize((object) ['delay' => 600]),
             ],

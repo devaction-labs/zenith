@@ -1,5 +1,5 @@
 {
-    "name": "devaction-labs/horizon-new-dawn",
+    "name": "devaction-labs/zenith",
     "description": "A React and Inertia interface for Laravel Horizon.",
     "keywords": [
         "dashboard",
@@ -9,7 +9,7 @@
         "queues",
         "react"
     ],
-    "homepage": "https://github.com/devaction-labs/horizon-new-dawn",
+    "homepage": "https://github.com/devaction-labs/zenith",
     "type": "library",
     "license": "MIT",
     "authors": [
@@ -44,12 +44,12 @@
     },
     "autoload": {
         "psr-4": {
-            "DevactionLabs\\HorizonNewDawn\\": "src/"
+            "DevactionLabs\\Zenith\\": "src/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "DevactionLabs\\HorizonNewDawn\\Tests\\": "tests/",
+            "DevactionLabs\\Zenith\\Tests\\": "tests/",
             "Workbench\\App\\": "workbench/app/",
             "Workbench\\Database\\Seeders\\": "workbench/database/seeders/"
         }
@@ -57,13 +57,13 @@
     "extra": {
         "laravel": {
             "providers": [
-                "DevactionLabs\\HorizonNewDawn\\HorizonNewDawnServiceProvider"
+                "DevactionLabs\\Zenith\\ZenithServiceProvider"
             ]
         }
     },
     "support": {
-        "issues": "https://github.com/devaction-labs/horizon-new-dawn/issues",
-        "source": "https://github.com/devaction-labs/horizon-new-dawn"
+        "issues": "https://github.com/devaction-labs/zenith/issues",
+        "source": "https://github.com/devaction-labs/zenith"
     },
     "scripts": {
         "analyse": "@php -d memory_limit=1G vendor/bin/phpstan analyse",

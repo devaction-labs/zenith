@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\BulkOperations\Jobs;
+namespace DevactionLabs\Zenith\BulkOperations\Jobs;
 
-use DevactionLabs\HorizonNewDawn\Batches\Actions\ClearBatches;
-use DevactionLabs\HorizonNewDawn\Batches\BatchClearScope;
-use DevactionLabs\HorizonNewDawn\BulkOperations\BulkOperationJob;
+use DevactionLabs\Zenith\Batches\Actions\ClearBatches;
+use DevactionLabs\Zenith\Batches\BatchClearScope;
+use DevactionLabs\Zenith\BulkOperations\BulkOperationJob;
 
 final class ClearBatchesJob extends BulkOperationJob
 {
@@ -27,6 +27,6 @@ final class ClearBatchesJob extends BulkOperationJob
     /** @return list<string> */
     public function tags(): array
     {
-        return ['horizon-new-dawn', 'bulk:clear-batches', 'scope:'.$this->scope->value];
+        return ['zenith', 'bulk:clear-batches', 'scope:'.$this->scope->value];
     }
 }

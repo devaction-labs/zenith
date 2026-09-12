@@ -6,13 +6,13 @@ env:
   DB_CONNECTION: sqlite
   QUEUE_CONNECTION: redis
   REDIS_CLIENT: predis
-  HORIZON_PREFIX: horizon_new_dawn
+  HORIZON_PREFIX: zenith
 
 providers:
   - Inertia\ServiceProvider
   - Spatie\LaravelData\LaravelDataServiceProvider
   - Laravel\Horizon\HorizonServiceProvider
-  - DevactionLabs\HorizonNewDawn\HorizonNewDawnServiceProvider
+  - DevactionLabs\Zenith\ZenithServiceProvider
   - Workbench\App\Providers\WorkbenchServiceProvider
 
 dont-discover:
@@ -37,7 +37,7 @@ workbench:
     views: false
   build:
     - create-sqlite-db
-    - horizon-new-dawn-install:
+    - zenith-install:
         --force: true
     - migrate-fresh:
         --seed: true

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Dashboard\Data;
+namespace DevactionLabs\Zenith\Dashboard\Data;
 
-use DevactionLabs\HorizonNewDawn\Queues\Data\QueueWaitThresholdData;
+use DevactionLabs\Zenith\Queues\Data\QueueWaitThresholdData;
 use Spatie\LaravelData\Data;
 
 final class WorkloadSplitData extends Data

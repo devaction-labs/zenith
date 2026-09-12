@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Http\Requests;
+namespace DevactionLabs\Zenith\Http\Requests;
 
-use DevactionLabs\HorizonNewDawn\Queues\Data\PauseQueueData;
+use DevactionLabs\Zenith\Queues\Data\PauseQueueData;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 

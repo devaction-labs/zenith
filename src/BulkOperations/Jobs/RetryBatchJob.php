@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\BulkOperations\Jobs;
+namespace DevactionLabs\Zenith\BulkOperations\Jobs;
 
-use DevactionLabs\HorizonNewDawn\Batches\Actions\RetryBatch;
-use DevactionLabs\HorizonNewDawn\BulkOperations\BulkOperationJob;
+use DevactionLabs\Zenith\Batches\Actions\RetryBatch;
+use DevactionLabs\Zenith\BulkOperations\BulkOperationJob;
 
 final class RetryBatchJob extends BulkOperationJob
 {
@@ -26,6 +26,6 @@ final class RetryBatchJob extends BulkOperationJob
     /** @return list<string> */
     public function tags(): array
     {
-        return ['horizon-new-dawn', 'bulk:retry-batch', 'batch:'.$this->batchId];
+        return ['zenith', 'bulk:retry-batch', 'batch:'.$this->batchId];
     }
 }

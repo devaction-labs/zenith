@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Support;
+namespace DevactionLabs\Zenith\Support;
 
 final class PollInterval
 {
@@ -13,7 +13,7 @@ final class PollInterval
         return max(
             0,
             (int) config(
-                'horizon-new-dawn.poll_interval',
+                'zenith.poll_interval',
                 self::DEFAULT_MILLISECONDS,
             ),
         );

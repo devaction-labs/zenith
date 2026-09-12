@@ -24,7 +24,7 @@ if (result.status !== 0) {
   process.exitCode = result.status ?? 1;
 } else {
   const generatedRoutesPath = path.resolve(packagePath, "resources/js/generated/routes");
-  const retainedNamespaces = new Set(["horizon", "horizon-new-dawn"]);
+  const retainedNamespaces = new Set(["horizon", "zenith"]);
 
   for (const entry of readdirSync(generatedRoutesPath, { withFileTypes: true })) {
     if (entry.isDirectory() && !retainedNamespaces.has(entry.name)) {

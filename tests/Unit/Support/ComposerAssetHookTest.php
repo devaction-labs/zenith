@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-use DevactionLabs\HorizonNewDawn\Support\ComposerAssetHook;
-use DevactionLabs\HorizonNewDawn\Support\ComposerAssetHookResult;
+use DevactionLabs\Zenith\Support\ComposerAssetHook;
+use DevactionLabs\Zenith\Support\ComposerAssetHookResult;
 use Illuminate\Filesystem\Filesystem;
 
 it('appends the asset refresh hook after existing post-autoload-dump entries', function (): void {
@@ -133,7 +133,7 @@ it('detects a semantic asset hook without rewriting composer.json', function ():
             'scripts' => [
                 'post-autoload-dump' => [
                     '@php artisan package:discover --ansi',
-                    'php artisan horizon-new-dawn:assets',
+                    'php artisan zenith:assets',
                 ],
             ],
         ], JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT)."\n";
@@ -153,7 +153,7 @@ it('detects a semantic asset hook inside a string post-autoload-dump entry', fun
     try {
         $original = json_encode([
             'scripts' => [
-                'post-autoload-dump' => '@php artisan horizon-new-dawn:assets --ansi',
+                'post-autoload-dump' => '@php artisan zenith:assets --ansi',
             ],
         ], JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT)."\n";
 
@@ -290,7 +290,7 @@ it('returns failed when composer.json cannot be written and leaves the original 
 function composerAssetHookFixture(): array
 {
     $filesystem = new Filesystem;
-    $directory = sys_get_temp_dir().'/horizon-new-dawn-composer-hook-'.uniqid('', true);
+    $directory = sys_get_temp_dir().'/zenith-composer-hook-'.uniqid('', true);
     $filesystem->ensureDirectoryExists($directory);
 
     return [
