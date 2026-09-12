@@ -22,4 +22,8 @@ return [
         'store' => null,
         'ttl' => 86400,
     ],
+    'history' => [
+        'enabled' => false,
+        'retention' => [],
+    ],
 ];

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use DevactionLabs\Zenith\Batches\DatabaseBatchCapability;
 use DevactionLabs\Zenith\Support\ComposerAssetHook;
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Support\Facades\Artisan;
@@ -551,6 +552,35 @@ it('warns when production queue and metrics prerequisites are missing', function
         Schema::dropIfExists('job_batches');
         Schema::dropIfExists(DatabaseBatchCapability::METADATA_TABLE);
     }
+});
+
+it('warns when durable job history is enabled but the prune command is not scheduled', function (): void {
+    config()->set('zenith.history.enabled', true);
+
+    expect(Artisan::call('zenith:install', ['--no-composer-hook' => true]))->toBe(0)
+        ->and(Artisan::output())
+        ->toContain('Schedule `zenith:prune-history`');
+});
+
+it('does not warn about job history when it is disabled', function (): void {
+    config()->set('zenith.history.enabled', false);
+
+    expect(Artisan::call('zenith:install', ['--no-composer-hook' => true]))->toBe(0)
+        ->and(Artisan::output())
+        ->not->toContain('zenith:prune-history');
+});
+
+it('does not warn about job history when the prune command is already scheduled', function (): void {
+    config()->set('zenith.history.enabled', true);
+
+    app(Schedule::class)
+        ->command('zenith:prune-history')
+        ->daily()
+        ->withoutOverlapping();
+
+    expect(Artisan::call('zenith:install', ['--no-composer-hook' => true]))->toBe(0)
+        ->and(Artisan::output())
+        ->not->toContain('Schedule `zenith:prune-history`');
 });
 
 it('appends the Composer asset refresh hook during a normal install', function (): void {

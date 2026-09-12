@@ -324,6 +324,14 @@ use Illuminate\Support\Facades\Schedule;
 Schedule::command('horizon:snapshot')->everyFiveMinutes();
 ```
 
+If durable job history is enabled, schedule the prune command outside peak
+traffic with Laravel's `withoutOverlapping()` guard so a slow run is never
+started twice:
+
+```php
+Schedule::command('zenith:prune-history')->daily()->withoutOverlapping();
+```
+
 Rollback by restoring the prior Composer lock file and application release,
 running that release's installer, rebuilding Laravel's caches, and restarting
 the long-lived processes. Redis Cluster remains outside the supported
@@ -459,6 +467,10 @@ return [
         'store' => null,
         'ttl' => 86400,
     ],
+    'history' => [
+        'enabled' => false,
+        'retention' => [],
+    ],
 ];
 ```
 
@@ -485,6 +497,31 @@ instead of occupying a worker, must add `new
 method — `RunWorkflowStep` already does this for workflow steps. Give a
 waiting job's class a `retryUntil()` deadline rather than a fixed `$tries`, so
 being released while it waits never exhausts its attempts.
+
+`history.enabled` opt-ins into durable job history: once `true` and migrated,
+`zenith_job_history` stores one row per terminal job attempt (class, queue,
+connection, status, attempts, runtime, tags, a short error summary, and
+pushed/completed/failed timestamps) with no raw payload or exception trace.
+`history.retention` is an ordered list of rules, each with an optional
+`queue`, `class`, and/or `status` filter and a required `days` value, for
+example:
+
+```php
+'history' => [
+    'enabled' => true,
+    'retention' => [
+        ['queue' => 'emails', 'days' => 7],
+        ['status' => 'failed', 'days' => 90],
+        ['days' => 30],
+    ],
+],
+```
+
+`zenith:prune-history` deletes rows older than their matching rule's `days`.
+Rules are evaluated in the listed order and the first one whose filters match
+a row governs it; list a rule with no filters last, since it is a catch-all
+and nothing after it can ever match. Rows matched by no rule are kept
+indefinitely rather than pruned by guesswork.
 
 ## Development
 

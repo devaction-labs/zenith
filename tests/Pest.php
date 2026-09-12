@@ -11,6 +11,7 @@ use PHPUnit\Framework\SkippedWithMessageException;
 require_once __DIR__.'/Support/DashboardMocks.php';
 require_once __DIR__.'/Support/BrowserPageFixtures.php';
 require_once __DIR__.'/Support/BulkOperationSnapshotRedis.php';
+require_once __DIR__.'/Support/FakeQueueJob.php';
 require_once __DIR__.'/Support/HorizonBatches.php';
 require_once __DIR__.'/Support/HorizonJobs.php';
 require_once __DIR__.'/Support/WorkflowTables.php';

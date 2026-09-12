@@ -111,6 +111,19 @@ final class InstallCommand extends Command
             );
         }
 
+        $pruneHistoryScheduled = collect($schedule->events())->contains(
+            static fn (object $event): bool => str_contains(
+                (string) ($event->command ?? ''),
+                'zenith:prune-history',
+            ),
+        );
+
+        if (config('zenith.history.enabled') === true && ! $pruneHistoryScheduled) {
+            $this->components->warn(
+                'Schedule `zenith:prune-history` with `withoutOverlapping()` to bound the durable job history table.',
+            );
+        }
+
         $batchQueryCapability = $batchCapability->capability();
 
         if (! $batchQueryCapability->supported) {
