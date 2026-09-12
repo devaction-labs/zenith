@@ -1,6 +1,8 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../../wayfinder'
 import clearAll from './clear-all'
 import retryAll from './retry-all'
+import retrySelected from './retry-selected'
+import selected from './selected'
 import retry from './retry'
 /**
 * @see \DevactionLabs\Zenith\Http\Controllers\FailedJobController::index
@@ -164,6 +166,8 @@ const failedJobs = {
     index: Object.assign(index, index),
     clearAll: Object.assign(clearAll, clearAll),
     retryAll: Object.assign(retryAll, retryAll),
+    retrySelected: Object.assign(retrySelected, retrySelected),
+    selected: Object.assign(selected, selected),
     show: Object.assign(show, show),
     destroy: Object.assign(destroy, destroy),
     retry: Object.assign(retry, retry),

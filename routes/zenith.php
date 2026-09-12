@@ -14,6 +14,8 @@ use DevactionLabs\Zenith\Http\Controllers\FailedJobClearAllController;
 use DevactionLabs\Zenith\Http\Controllers\FailedJobController;
 use DevactionLabs\Zenith\Http\Controllers\FailedJobRetryAllController;
 use DevactionLabs\Zenith\Http\Controllers\FailedJobRetryController;
+use DevactionLabs\Zenith\Http\Controllers\FailedJobsSelectedClearController;
+use DevactionLabs\Zenith\Http\Controllers\FailedJobsSelectedRetryController;
 use DevactionLabs\Zenith\Http\Controllers\HorizonPauseController;
 use DevactionLabs\Zenith\Http\Controllers\HorizonTerminationController;
 use DevactionLabs\Zenith\Http\Controllers\JobController;
@@ -26,6 +28,7 @@ use DevactionLabs\Zenith\Http\Controllers\MonitoringTagController;
 use DevactionLabs\Zenith\Http\Controllers\PendingJobClearAllController;
 use DevactionLabs\Zenith\Http\Controllers\PendingJobController;
 use DevactionLabs\Zenith\Http\Controllers\PendingJobsCancellationController;
+use DevactionLabs\Zenith\Http\Controllers\PendingJobsSelectedCancelController;
 use DevactionLabs\Zenith\Http\Controllers\QueueBatchRetryController;
 use DevactionLabs\Zenith\Http\Controllers\QueueClearAllController;
 use DevactionLabs\Zenith\Http\Controllers\QueueClearController;
@@ -169,6 +172,9 @@ Route::delete('/jobs/pending/cancel/{scope}', [PendingJobsCancellationController
     ->middleware(horizonAbility('cancelJobs'))
     ->where('scope', 'ready|delayed|pending')
     ->name('jobs.pending.cancel.destroy');
+Route::delete('/jobs/pending/cancel-selected', [PendingJobsSelectedCancelController::class, 'destroy'])
+    ->middleware(horizonAbility('cancelJobs'))
+    ->name('jobs.pending.cancel-selected.destroy');
 Route::post('/jobs/pending/{job}/release', [DelayedJobReleaseController::class, 'store'])
     ->middleware(horizonAbility('cancelJobs'))
     ->name('jobs.pending.release.store');
@@ -189,6 +195,12 @@ Route::delete('/failed', [FailedJobClearAllController::class, 'destroy'])
 Route::post('/failed/retry-all', [FailedJobRetryAllController::class, 'store'])
     ->middleware(horizonAbility('retryJobs'))
     ->name('failed-jobs.retry-all.store');
+Route::post('/failed/retry-selected', [FailedJobsSelectedRetryController::class, 'store'])
+    ->middleware(horizonAbility('retryJobs'))
+    ->name('failed-jobs.retry-selected.store');
+Route::delete('/failed/selected', [FailedJobsSelectedClearController::class, 'destroy'])
+    ->middleware(horizonAbility('clearQueues'))
+    ->name('failed-jobs.selected.destroy');
 Route::get('/failed/{job}', [FailedJobController::class, 'show'])->name('failed-jobs.show');
 Route::delete('/failed/{job}', [FailedJobController::class, 'destroy'])
     ->middleware(horizonAbility('clearQueues'))

@@ -44,6 +44,14 @@ export type JobRow = {
   inspectable?: boolean;
 };
 
+export type JobTableSelection = {
+  label: string;
+  selectedIds: ReadonlySet<string>;
+  onToggle: (id: string) => void;
+  onSelectIds: (ids: readonly string[]) => void;
+  onClear: () => void;
+};
+
 export type JobCollection = {
   data: JobRow[];
   total: number;

@@ -8,6 +8,7 @@ import {
   type ControlledTableSorting,
 } from "@/components/data-table/table-sorting";
 import { NewEntriesTableRow, TableNoticeRow } from "@/components/data-table/new-entries-alert";
+import { RowSelectionHeaderCell } from "@/components/data-table/row-selection-header";
 import { TableEmpty } from "@/components/data-table/table-empty";
 import { Duration } from "@/components/duration";
 import { JobTablePrimaryCell } from "@/components/jobs/job-table-primary-cell";
@@ -19,6 +20,7 @@ import {
 } from "@/components/navigation-icons";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Table,
   TableBody,
@@ -36,7 +38,7 @@ import { resolveHorizonRoute } from "@/lib/horizon-route";
 import { isInteractiveTarget } from "@/lib/interactive-target";
 import { pendingJobState, type PendingJobState } from "@/lib/pending-job-state";
 import { cn } from "@/lib/utils";
-import type { JobListType, JobRow } from "@/types/jobs";
+import type { JobListType, JobRow, JobTableSelection } from "@/types/jobs";
 
 const emptyStateIcons = {
   pending: PendingJobsNavigationIcon,
@@ -85,6 +87,14 @@ function pendingStateDescription(job: JobRow, state: PendingJobState, now: numbe
   return pendingStates[state].description;
 }
 
+/**
+ * Reserved pending jobs cannot be cancelled, matching the individual pending
+ * actions menu which already hides for that state.
+ */
+function isSelectableJob(job: JobRow, compact: boolean, now: number): boolean {
+  return !compact || pendingJobState(job, now) !== "reserved";
+}
+
 /** Keep reserved jobs in a stable lead group after client-side sorts of the loaded page. */
 function groupReservedPendingJobs(jobs: readonly JobRow[], now: number): JobRow[] {
   const reserved: JobRow[] = [];
@@ -115,6 +125,7 @@ export function JobTable({
   sorting,
   bodyRef,
   showPendingActions = true,
+  selection,
 }: {
   jobs: readonly JobRow[];
   type: JobListType;
@@ -130,16 +141,25 @@ export function JobTable({
   bodyRef?: Ref<HTMLTableSectionElement>;
   /** Individual pending cancel/release actions. Batch tables keep batch-level management only. */
   showPendingActions?: boolean;
+  /** Adds a checkbox column for multi-select bulk actions. Omitted, selection is disabled. */
+  selection?: JobTableSelection;
 }) {
   const now = useScheduledJobClock(jobs);
   const compact = type === "pending";
   const pendingActions = compact && showPendingActions;
-  const columnCount = compact ? (pendingActions ? 4 : 3) : 4;
+  const columnCount = (compact ? (pendingActions ? 4 : 3) : 4) + (selection ? 1 : 0);
   const displayJobs = useMemo(
     () => (compact ? groupReservedPendingJobs(jobs, now) : jobs),
     [compact, jobs, now],
   );
   const hasVisibleJobs = displayJobs.length > 0;
+  const selectableIds = useMemo(
+    () =>
+      selection
+        ? displayJobs.filter((job) => isSelectableJob(job, compact, now)).map((job) => job.id)
+        : [],
+    [selection, displayJobs, compact, now],
+  );
 
   if (!available) {
     const unavailableCopy = {
@@ -173,6 +193,17 @@ export function JobTable({
     <Table>
       <TableHeader className="sticky top-0 z-10">
         <TableRow>
+          {selection ? (
+            <TableHead className="w-10 pr-0">
+              <RowSelectionHeaderCell
+                label={selection.label}
+                loadedIds={selectableIds}
+                selectedCount={selection.selectedIds.size}
+                onSelectIds={selection.onSelectIds}
+                onClear={selection.onClear}
+              />
+            </TableHead>
+          ) : null}
           <SortableTableHead label="Job" {...controlledSortHeader(sorting, "name")} />
           {compact ? (
             <SortableTableHead
@@ -250,6 +281,17 @@ export function JobTable({
               }
               onMouseEnter={detailUrl ? () => router.prefetch(detailUrl) : undefined}
             >
+              {selection ? (
+                <TableCell className="pr-0" onClick={(event) => event.stopPropagation()}>
+                  {isSelectableJob(job, compact, now) ? (
+                    <Checkbox
+                      aria-label={`Select job ${job.shortName}`}
+                      checked={selection.selectedIds.has(job.id)}
+                      onCheckedChange={() => selection.onToggle(job.id)}
+                    />
+                  ) : null}
+                </TableCell>
+              ) : null}
               <JobTablePrimaryCell
                 name={job.shortName}
                 fullName={job.name}
