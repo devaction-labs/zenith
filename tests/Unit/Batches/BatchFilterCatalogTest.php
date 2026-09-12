@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
-use DevactionLabs\HorizonNewDawn\Batches\BatchesData;
-use DevactionLabs\HorizonNewDawn\Batches\BatchFilterCatalog;
-use DevactionLabs\HorizonNewDawn\Batches\BatchJobsData;
-use DevactionLabs\HorizonNewDawn\Jobs\JobsData;
+use DevactionLabs\Zenith\Batches\BatchesData;
+use DevactionLabs\Zenith\Batches\BatchFilterCatalog;
+use DevactionLabs\Zenith\Batches\BatchJobsData;
+use DevactionLabs\Zenith\Jobs\JobsData;
 use Illuminate\Bus\BatchRepository;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Laravel\Horizon\Contracts\JobRepository;
 
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardExpects;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturnsUsing;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\horizonBatch;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\Zenith\Tests\Support\dashboardExpects;
+use function DevactionLabs\Zenith\Tests\Support\dashboardReturnsUsing;
+use function DevactionLabs\Zenith\Tests\Support\horizonBatch;
+use function DevactionLabs\Zenith\Tests\Support\mockDashboardContract;
 
 afterEach(function (): void {
     app(CacheFactory::class)->store()->clear();
@@ -160,7 +160,7 @@ it('uses the configured or default poll interval for its cache ttl', function (
     int $expectedCacheSeconds,
 ): void {
     config()->set(
-        'horizon-new-dawn',
+        'zenith',
         $pollInterval === null ? [] : ['poll_interval' => $pollInterval],
     );
 
@@ -182,7 +182,7 @@ it('uses the configured or default poll interval for its cache ttl', function (
         $store,
         'remember',
         [
-            'horizon-new-dawn:batch-filter-catalog:v1',
+            'zenith:batch-filter-catalog:v1',
             $expectedCacheSeconds,
             Mockery::on(static fn (mixed $value): bool => $value instanceof Closure),
         ],
@@ -208,7 +208,7 @@ it('uses the configured or default poll interval for its cache ttl', function (
 ]);
 
 it('shares a normalized cached catalog for one poll interval and rebuilds invalid payloads', function (): void {
-    config()->set('horizon-new-dawn.poll_interval', 5000);
+    config()->set('zenith.poll_interval', 5000);
 
     $repository = mockDashboardContract(BatchRepository::class);
     $calls = 0;
@@ -232,7 +232,7 @@ it('shares a normalized cached catalog for one poll interval and rebuilds invali
     $first = (new BatchFilterCatalog($repository, catalogBatchData($repository), app(CacheFactory::class)))->get();
     $second = (new BatchFilterCatalog($repository, catalogBatchData($repository), app(CacheFactory::class)))->get();
 
-    $cache->put('horizon-new-dawn:batch-filter-catalog:v1', [
+    $cache->put('zenith:batch-filter-catalog:v1', [
         'available' => true,
         'complete' => true,
         'message' => null,
@@ -293,9 +293,9 @@ it('falls back to a repository-built catalog when the cache store fails', functi
 });
 
 it('returns every queue and connection from a multipage retained scan', function (): void {
-    config()->set('horizon-new-dawn.poll_interval', 0);
+    config()->set('zenith.poll_interval', 0);
     // Former public default was 1000; page size is 100, so this forces a page past the ceiling.
-    config()->set('horizon-new-dawn.retained_batch_scan_limit', 1000);
+    config()->set('zenith.retained_batch_scan_limit', 1000);
 
     $calls = 0;
     $repository = mockDashboardContract(BatchRepository::class);

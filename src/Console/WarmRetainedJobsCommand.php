@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Console;
+namespace DevactionLabs\Zenith\Console;
 
-use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobIndex;
-use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobType;
+use DevactionLabs\Zenith\Jobs\RetainedJobIndex;
+use DevactionLabs\Zenith\Jobs\RetainedJobType;
 use Illuminate\Console\Command;
 
 final class WarmRetainedJobsCommand extends Command
 {
-    protected $signature = 'horizon-new-dawn:warm-retained-jobs';
+    protected $signature = 'zenith:warm-retained-jobs';
 
     protected $description = 'Warm the retained job Redis indexes for every Horizon retained job type';
 

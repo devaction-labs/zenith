@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-use DevactionLabs\HorizonNewDawn\Assets\AssetManifest;
-use DevactionLabs\HorizonNewDawn\BulkOperations\Jobs\ClearRecentJobsJob;
-use DevactionLabs\HorizonNewDawn\BulkOperations\Jobs\RetryMonitoredFailedJobsJob;
-use DevactionLabs\HorizonNewDawn\Jobs\JobsData;
-use DevactionLabs\HorizonNewDawn\Monitoring\MonitoringData;
-use DevactionLabs\HorizonNewDawn\Support\HorizonRuntime;
+use DevactionLabs\Zenith\Assets\AssetManifest;
+use DevactionLabs\Zenith\BulkOperations\Jobs\ClearRecentJobsJob;
+use DevactionLabs\Zenith\BulkOperations\Jobs\RetryMonitoredFailedJobsJob;
+use DevactionLabs\Zenith\Jobs\JobsData;
+use DevactionLabs\Zenith\Monitoring\MonitoringData;
+use DevactionLabs\Zenith\Support\HorizonRuntime;
 use Illuminate\Contracts\Queue\Queue;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
@@ -24,13 +24,13 @@ use Laravel\Horizon\Horizon;
 use Laravel\Horizon\Jobs\MonitorTag as HorizonMonitorTag;
 use Laravel\Horizon\Jobs\StopMonitoringTag as HorizonStopMonitoringTag;
 
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardExpects;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardNeverReceives;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturns;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturnsFor;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturnsUsing;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\horizonJob;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\Zenith\Tests\Support\dashboardExpects;
+use function DevactionLabs\Zenith\Tests\Support\dashboardNeverReceives;
+use function DevactionLabs\Zenith\Tests\Support\dashboardReturns;
+use function DevactionLabs\Zenith\Tests\Support\dashboardReturnsFor;
+use function DevactionLabs\Zenith\Tests\Support\dashboardReturnsUsing;
+use function DevactionLabs\Zenith\Tests\Support\horizonJob;
+use function DevactionLabs\Zenith\Tests\Support\mockDashboardContract;
 use function Pest\Laravel\delete;
 use function Pest\Laravel\get;
 use function Pest\Laravel\getJson;
@@ -40,8 +40,8 @@ use function Pest\Laravel\withoutMiddleware;
 /** @param 'never'|'once'|'twice'|'zeroOrMoreTimes' $times */
 function bindMonitoringAsyncBulkQueue(string $times = 'once'): void
 {
-    config()->set('horizon-new-dawn.bulk_operations.connection', 'operations');
-    config()->set('horizon-new-dawn.bulk_operations.queue', 'horizon-maintenance');
+    config()->set('zenith.bulk_operations.connection', 'operations');
+    config()->set('zenith.bulk_operations.queue', 'horizon-maintenance');
 
     $manager = Mockery::mock(QueueManager::class);
     dashboardExpects($manager, 'connection', ['operations'], times: $times, value: Mockery::mock(Queue::class));
@@ -50,8 +50,8 @@ function bindMonitoringAsyncBulkQueue(string $times = 'once'): void
 
 function bindMonitoringSyncBulkQueue(): void
 {
-    config()->set('horizon-new-dawn.bulk_operations.connection', 'sync');
-    config()->set('horizon-new-dawn.bulk_operations.queue', null);
+    config()->set('zenith.bulk_operations.connection', 'sync');
+    config()->set('zenith.bulk_operations.queue', null);
 
     $manager = Mockery::mock(QueueManager::class);
     dashboardExpects($manager, 'connection', ['sync'], times: 'twice', value: new SyncQueue);

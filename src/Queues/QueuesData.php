@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Queues;
+namespace DevactionLabs\Zenith\Queues;
 
-use DevactionLabs\HorizonNewDawn\Queues\Data\QueueListData;
-use DevactionLabs\HorizonNewDawn\Queues\Data\QueuePauseTargetData;
-use DevactionLabs\HorizonNewDawn\Queues\Data\QueueRowData;
-use DevactionLabs\HorizonNewDawn\Queues\Data\QueueTargetData;
+use DevactionLabs\Zenith\Queues\Data\QueueListData;
+use DevactionLabs\Zenith\Queues\Data\QueuePauseTargetData;
+use DevactionLabs\Zenith\Queues\Data\QueueRowData;
+use DevactionLabs\Zenith\Queues\Data\QueueTargetData;
 use Illuminate\Contracts\Queue\Factory as QueueFactory;
 use Illuminate\Contracts\Queue\Queue;
 use Laravel\Horizon\Contracts\MetricsRepository;

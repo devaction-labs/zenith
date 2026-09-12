@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Http\Controllers;
+namespace DevactionLabs\Zenith\Http\Controllers;
 
-use DevactionLabs\HorizonNewDawn\Jobs\Actions\ReleaseDelayedJobNow;
-use DevactionLabs\HorizonNewDawn\Jobs\ReleaseDelayedJobNowResult;
+use DevactionLabs\Zenith\Jobs\Actions\ReleaseDelayedJobNow;
+use DevactionLabs\Zenith\Jobs\ReleaseDelayedJobNowResult;
 use Illuminate\Http\RedirectResponse;
 use Throwable;
 

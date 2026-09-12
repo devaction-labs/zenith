@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Queues;
+namespace DevactionLabs\Zenith\Queues;
 
-use DevactionLabs\HorizonNewDawn\Jobs\ForgetsPendingJob;
-use DevactionLabs\HorizonNewDawn\Support\RedisScript;
+use DevactionLabs\Zenith\Jobs\ForgetsPendingJob;
+use DevactionLabs\Zenith\Support\RedisScript;
 use Illuminate\Contracts\Redis\Factory as RedisFactory;
 use Illuminate\Redis\Connections\Connection;
 

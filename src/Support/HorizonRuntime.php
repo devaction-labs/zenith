@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Support;
+namespace DevactionLabs\Zenith\Support;
 
-use DevactionLabs\HorizonNewDawn\Dashboard\DashboardPendingState;
-use DevactionLabs\HorizonNewDawn\Dashboard\HorizonStatus;
+use DevactionLabs\Zenith\Dashboard\DashboardPendingState;
+use DevactionLabs\Zenith\Dashboard\HorizonStatus;
 use Laravel\Horizon\Contracts\MasterSupervisorRepository;
 use Laravel\Horizon\Contracts\WorkloadRepository;
 use Laravel\Horizon\WaitTimeCalculator;

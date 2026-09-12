@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Console;
+namespace DevactionLabs\Zenith\Console;
 
-use DevactionLabs\HorizonNewDawn\Assets\AssetPath;
-use DevactionLabs\HorizonNewDawn\Assets\AssetsPublisher;
-use DevactionLabs\HorizonNewDawn\Batches\DatabaseBatchCapability;
-use DevactionLabs\HorizonNewDawn\Support\ComposerAssetHook;
-use DevactionLabs\HorizonNewDawn\Support\ComposerAssetHookResult;
-use DevactionLabs\HorizonNewDawn\Support\RedisClusterDetector;
+use DevactionLabs\Zenith\Assets\AssetPath;
+use DevactionLabs\Zenith\Assets\AssetsPublisher;
+use DevactionLabs\Zenith\Batches\DatabaseBatchCapability;
+use DevactionLabs\Zenith\Support\ComposerAssetHook;
+use DevactionLabs\Zenith\Support\ComposerAssetHookResult;
+use DevactionLabs\Zenith\Support\RedisClusterDetector;
 use Illuminate\Console\Command;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Filesystem\Filesystem;
@@ -21,11 +21,11 @@ use Throwable;
 
 final class InstallCommand extends Command
 {
-    protected $signature = 'horizon-new-dawn:install
+    protected $signature = 'zenith:install
         {--force : Refresh previously published assets}
         {--no-composer-hook : Skip adding the Composer post-autoload-dump asset refresh hook}';
 
-    protected $description = 'Publish the Horizon New Dawn configuration and compiled assets';
+    protected $description = 'Publish the Zenith configuration and compiled assets';
 
     public function handle(
         Filesystem $filesystem,
@@ -41,8 +41,8 @@ final class InstallCommand extends Command
 
         $this->publishFile(
             $filesystem,
-            $packageRoot.'/config/horizon-new-dawn.php',
-            config_path('horizon-new-dawn.php'),
+            $packageRoot.'/config/zenith.php',
+            config_path('zenith.php'),
         );
 
         $publisher->publish(
@@ -55,7 +55,7 @@ final class InstallCommand extends Command
         }
 
         $this->warnAboutProductionPrerequisites($queues, $schedule, $batchCapability);
-        $this->components->info('Horizon New Dawn is ready.');
+        $this->components->info('Zenith is ready.');
 
         return self::SUCCESS;
     }
@@ -66,13 +66,13 @@ final class InstallCommand extends Command
 
         match ($result) {
             ComposerAssetHookResult::Added => $this->components->info(
-                'Added the Horizon New Dawn asset refresh Composer hook.',
+                'Added the Zenith asset refresh Composer hook.',
             ),
             ComposerAssetHookResult::AlreadyPresent => null,
             ComposerAssetHookResult::Missing,
             ComposerAssetHookResult::Malformed,
             ComposerAssetHookResult::Failed => $this->components->warn(
-                'Could not update composer.json with the asset refresh hook. Run `php artisan horizon-new-dawn:assets` after Composer installs, or add `@php artisan horizon-new-dawn:assets --ansi` to scripts.post-autoload-dump manually.',
+                'Could not update composer.json with the asset refresh hook. Run `php artisan zenith:assets` after Composer installs, or add `@php artisan zenith:assets --ansi` to scripts.post-autoload-dump manually.',
             ),
         };
     }
@@ -83,7 +83,7 @@ final class InstallCommand extends Command
         DatabaseBatchCapability $batchCapability,
     ): void {
         try {
-            $connection = config('horizon-new-dawn.bulk_operations.connection');
+            $connection = config('zenith.bulk_operations.connection');
             $queue = $queues->connection(is_string($connection) && $connection !== '' ? $connection : null);
 
             if ($queue instanceof SyncQueue || $queue instanceof NullQueue) {

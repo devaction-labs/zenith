@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\BulkOperations;
+namespace DevactionLabs\Zenith\BulkOperations;
 
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -19,13 +19,13 @@ abstract class BulkOperationJob implements ShouldQueue
 
     public function __construct()
     {
-        $connection = config('horizon-new-dawn.bulk_operations.connection');
-        $queue = config('horizon-new-dawn.bulk_operations.queue');
+        $connection = config('zenith.bulk_operations.connection');
+        $queue = config('zenith.bulk_operations.queue');
 
         if ($connection !== null) {
             if (! is_string($connection) || trim($connection) === '') {
                 throw new InvalidArgumentException(
-                    'The horizon-new-dawn.bulk_operations.connection configuration value must be null or a non-empty string.',
+                    'The zenith.bulk_operations.connection configuration value must be null or a non-empty string.',
                 );
             }
 
@@ -35,7 +35,7 @@ abstract class BulkOperationJob implements ShouldQueue
         if ($queue !== null) {
             if (! is_string($queue) || trim($queue) === '') {
                 throw new InvalidArgumentException(
-                    'The horizon-new-dawn.bulk_operations.queue configuration value must be null or a non-empty string.',
+                    'The zenith.bulk_operations.queue configuration value must be null or a non-empty string.',
                 );
             }
 
@@ -45,7 +45,7 @@ abstract class BulkOperationJob implements ShouldQueue
 
     public function failed(?Throwable $exception): void
     {
-        Log::error('Horizon New Dawn bulk operation failed.', [
+        Log::error('Zenith bulk operation failed.', [
             'job' => static::class,
             'connection' => $this->connection,
             'queue' => $this->queue,
@@ -58,7 +58,7 @@ abstract class BulkOperationJob implements ShouldQueue
      */
     protected function reportCompletion(string $operation, int $affected, array $context = []): void
     {
-        Log::info('Horizon New Dawn bulk operation completed.', [
+        Log::info('Zenith bulk operation completed.', [
             'operation' => $operation,
             'affected' => $affected,
             ...$context,

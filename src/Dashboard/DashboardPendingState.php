@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Dashboard;
+namespace DevactionLabs\Zenith\Dashboard;
 
-use DevactionLabs\HorizonNewDawn\Dashboard\Data\DashboardPendingStateData;
+use DevactionLabs\Zenith\Dashboard\Data\DashboardPendingStateData;
 use Illuminate\Contracts\Queue\Factory as QueueFactory;
 use LogicException;
 use Throwable;

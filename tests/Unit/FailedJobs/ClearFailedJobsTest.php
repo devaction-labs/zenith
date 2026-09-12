@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-use DevactionLabs\HorizonNewDawn\BulkOperations\BulkOperationSnapshot;
-use DevactionLabs\HorizonNewDawn\FailedJobs\Actions\ClearFailedJobs;
+use DevactionLabs\Zenith\BulkOperations\BulkOperationSnapshot;
+use DevactionLabs\Zenith\FailedJobs\Actions\ClearFailedJobs;
 use Illuminate\Queue\Failed\FailedJobProviderInterface;
 use Laravel\Horizon\Contracts\JobRepository;
 
-use function DevactionLabs\HorizonNewDawn\Tests\Support\bulkSnapshotRedis;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardExpects;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\Zenith\Tests\Support\bulkSnapshotRedis;
+use function DevactionLabs\Zenith\Tests\Support\dashboardExpects;
+use function DevactionLabs\Zenith\Tests\Support\mockDashboardContract;
 
 it('clears claimed snapshot members without scanning live failed-job windows', function (): void {
     $redis = bulkSnapshotRedis();

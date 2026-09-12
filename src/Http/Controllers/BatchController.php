@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Http\Controllers;
+namespace DevactionLabs\Zenith\Http\Controllers;
 
-use DevactionLabs\HorizonNewDawn\Batches\BatchesData;
-use DevactionLabs\HorizonNewDawn\Batches\BatchFilterCatalog;
-use DevactionLabs\HorizonNewDawn\Batches\ClearableBatches;
-use DevactionLabs\HorizonNewDawn\Batches\Data\BatchIndexFiltersData;
-use DevactionLabs\HorizonNewDawn\Batches\DatabaseBatchCapability;
-use DevactionLabs\HorizonNewDawn\Http\Requests\BatchIndexRequest;
-use DevactionLabs\HorizonNewDawn\Support\Data\PageMetaData;
-use DevactionLabs\HorizonNewDawn\Support\NavigationItem;
-use DevactionLabs\HorizonNewDawn\Support\Scrolling\HorizonScrollMetadata;
+use DevactionLabs\Zenith\Batches\BatchesData;
+use DevactionLabs\Zenith\Batches\BatchFilterCatalog;
+use DevactionLabs\Zenith\Batches\ClearableBatches;
+use DevactionLabs\Zenith\Batches\Data\BatchIndexFiltersData;
+use DevactionLabs\Zenith\Batches\DatabaseBatchCapability;
+use DevactionLabs\Zenith\Http\Requests\BatchIndexRequest;
+use DevactionLabs\Zenith\Support\Data\PageMetaData;
+use DevactionLabs\Zenith\Support\NavigationItem;
+use DevactionLabs\Zenith\Support\Scrolling\HorizonScrollMetadata;
 use Inertia\Inertia;
 use Inertia\Response;
 

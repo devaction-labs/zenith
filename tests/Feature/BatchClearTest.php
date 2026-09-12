@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-use DevactionLabs\HorizonNewDawn\Batches\Actions\ClearBatches;
-use DevactionLabs\HorizonNewDawn\Batches\BatchClearScope;
-use DevactionLabs\HorizonNewDawn\Batches\ClearableBatches;
-use DevactionLabs\HorizonNewDawn\Batches\DatabaseBatchCapability;
-use DevactionLabs\HorizonNewDawn\BulkOperations\Jobs\ClearBatchesJob;
+use DevactionLabs\Zenith\Batches\Actions\ClearBatches;
+use DevactionLabs\Zenith\Batches\BatchClearScope;
+use DevactionLabs\Zenith\Batches\ClearableBatches;
+use DevactionLabs\Zenith\Batches\DatabaseBatchCapability;
+use DevactionLabs\Zenith\BulkOperations\Jobs\ClearBatchesJob;
 use Illuminate\Bus\BatchFactory;
 use Illuminate\Bus\BatchRepository;
 use Illuminate\Bus\DatabaseBatchRepository;
@@ -27,18 +27,18 @@ use Illuminate\Support\Facades\Schema;
 use Laravel\Horizon\Contracts\JobRepository;
 use Laravel\Horizon\Horizon;
 
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardExpects;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardNeverReceives;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturnsUsing;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\horizonJob;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\Zenith\Tests\Support\dashboardExpects;
+use function DevactionLabs\Zenith\Tests\Support\dashboardNeverReceives;
+use function DevactionLabs\Zenith\Tests\Support\dashboardReturnsUsing;
+use function DevactionLabs\Zenith\Tests\Support\horizonJob;
+use function DevactionLabs\Zenith\Tests\Support\mockDashboardContract;
 use function Pest\Laravel\delete;
 use function Pest\Laravel\withoutMiddleware;
 
 function bindBatchClearAsyncBulkQueue(): void
 {
-    config()->set('horizon-new-dawn.bulk_operations.connection', 'operations');
-    config()->set('horizon-new-dawn.bulk_operations.queue', 'horizon-maintenance');
+    config()->set('zenith.bulk_operations.connection', 'operations');
+    config()->set('zenith.bulk_operations.queue', 'horizon-maintenance');
 
     $manager = Mockery::mock(QueueManager::class);
     dashboardExpects($manager, 'connection', ['operations'], value: Mockery::mock(Queue::class));
@@ -47,8 +47,8 @@ function bindBatchClearAsyncBulkQueue(): void
 
 function bindBatchClearSyncBulkQueue(): void
 {
-    config()->set('horizon-new-dawn.bulk_operations.connection', 'sync');
-    config()->set('horizon-new-dawn.bulk_operations.queue', null);
+    config()->set('zenith.bulk_operations.connection', 'sync');
+    config()->set('zenith.bulk_operations.queue', null);
 
     $manager = Mockery::mock(QueueManager::class);
     dashboardExpects($manager, 'connection', ['sync'], value: new SyncQueue);
@@ -59,11 +59,11 @@ beforeEach(function (): void {
     withoutMiddleware([PreventRequestForgery::class, ValidateCsrfToken::class]);
     Horizon::auth(static fn (): bool => true);
     config()->set('queue.batching.database', null);
-    config()->set('queue.batching.table', 'horizon_new_dawn_batch_clearing');
+    config()->set('queue.batching.table', 'zenith_batch_clearing');
 
     Schema::dropIfExists(DatabaseBatchCapability::METADATA_TABLE);
-    Schema::dropIfExists('horizon_new_dawn_batch_clearing');
-    Schema::create('horizon_new_dawn_batch_clearing', function (Blueprint $table): void {
+    Schema::dropIfExists('zenith_batch_clearing');
+    Schema::create('zenith_batch_clearing', function (Blueprint $table): void {
         $table->string('id')->primary();
         $table->string('name');
         $table->integer('total_jobs');
@@ -78,7 +78,7 @@ beforeEach(function (): void {
 
     $now = now()->getTimestamp();
 
-    DB::table('horizon_new_dawn_batch_clearing')->insert([
+    DB::table('zenith_batch_clearing')->insert([
         batchClearRow('complete', totalJobs: 1, pendingJobs: 0, finishedAt: $now),
         batchClearRow('incomplete', failedJobs: 1, failedJobIds: ['failed-1']),
         batchClearRow('cancelled', pendingJobs: 0, cancelledAt: $now, finishedAt: $now),
@@ -91,7 +91,7 @@ beforeEach(function (): void {
     $repository = new DatabaseBatchRepository(
         app(BatchFactory::class),
         DB::connection(),
-        'horizon_new_dawn_batch_clearing',
+        'zenith_batch_clearing',
     );
     $jobs = mockDashboardContract(JobRepository::class);
     dashboardNeverReceives($jobs, 'countPending');
@@ -124,8 +124,8 @@ beforeEach(function (): void {
 
 afterEach(function (): void {
     Schema::dropIfExists(DatabaseBatchCapability::METADATA_TABLE);
-    Schema::dropIfExists('horizon_new_dawn_batch_clearing');
-    (require dirname(__DIR__, 2).'/database/migrations/2026_07_26_000000_create_horizon_new_dawn_batch_metadata_table.php')->up();
+    Schema::dropIfExists('zenith_batch_clearing');
+    (require dirname(__DIR__, 2).'/database/migrations/2026_07_26_000000_create_zenith_batch_metadata_table.php')->up();
     Horizon::auth(static fn (): bool => true);
 });
 
@@ -142,7 +142,7 @@ it('counts safely clearable database batches without the attribution migration',
 });
 
 it('excludes database batches with active or unverifiable Horizon retries', function (): void {
-    DB::table('horizon_new_dawn_batch_clearing')->insert(
+    DB::table('zenith_batch_clearing')->insert(
         batchClearRow(
             'missing-retry-parent',
             failedJobs: 1,
@@ -161,7 +161,7 @@ it('clears the requested batch scope without deleting in-progress batches', func
 ): void {
     expect(app(ClearBatches::class)->handle(BatchClearScope::from($scope)))->toBe($cleared);
 
-    expect(DB::table('horizon_new_dawn_batch_clearing')->orderBy('id')->pluck('id')->all())
+    expect(DB::table('zenith_batch_clearing')->orderBy('id')->pluck('id')->all())
         ->toBe($remaining);
 })->with([
     'complete' => [
@@ -206,7 +206,7 @@ it('rejects unsupported batch clearing scopes', function (): void {
 
 it('classifies more than one thousand database batches without a scan ceiling', function (): void {
     foreach (array_chunk(range(1, 1001), 100) as $indexes) {
-        DB::table('horizon_new_dawn_batch_clearing')->insert(array_map(
+        DB::table('zenith_batch_clearing')->insert(array_map(
             static fn (int $index): array => batchClearRow(
                 sprintf('bulk-complete-%04d', $index),
                 pendingJobs: 0,
@@ -243,7 +243,7 @@ it('queues an oversized batch clear as background work', function (): void {
 it('fails closed when batch clear availability cannot be verified', function (): void {
     Bus::fake();
     Exceptions::fake();
-    Schema::drop('horizon_new_dawn_batch_clearing');
+    Schema::drop('zenith_batch_clearing');
 
     delete('/horizon/batches/finished')
         ->assertRedirect()
@@ -258,7 +258,7 @@ it('fails closed when batch clear availability cannot be verified', function ():
 
 it('deletes clearable batches in bounded transactions', function (): void {
     foreach (array_chunk(range(1, 200), 100) as $indexes) {
-        DB::table('horizon_new_dawn_batch_clearing')->insert(array_map(
+        DB::table('zenith_batch_clearing')->insert(array_map(
             static fn (int $index): array => batchClearRow(
                 sprintf('transaction-complete-%03d', $index),
                 pendingJobs: 0,

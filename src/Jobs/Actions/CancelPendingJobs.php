@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Jobs\Actions;
+namespace DevactionLabs\Zenith\Jobs\Actions;
 
-use DevactionLabs\HorizonNewDawn\BulkOperations\BulkOperationSnapshot;
-use DevactionLabs\HorizonNewDawn\Jobs\Data\CancelPendingJobsChunkResultData;
-use DevactionLabs\HorizonNewDawn\Jobs\PendingJobCancellationResult;
-use DevactionLabs\HorizonNewDawn\Jobs\PendingJobCancellationScope;
+use DevactionLabs\Zenith\BulkOperations\BulkOperationSnapshot;
+use DevactionLabs\Zenith\Jobs\Data\CancelPendingJobsChunkResultData;
+use DevactionLabs\Zenith\Jobs\PendingJobCancellationResult;
+use DevactionLabs\Zenith\Jobs\PendingJobCancellationScope;
 use Laravel\Horizon\Contracts\JobRepository;
 use Throwable;
 

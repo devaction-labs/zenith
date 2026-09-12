@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-use DevactionLabs\HorizonNewDawn\Assets\AssetManifest;
-use DevactionLabs\HorizonNewDawn\Assets\AssetPath;
+use DevactionLabs\Zenith\Assets\AssetManifest;
+use DevactionLabs\Zenith\Assets\AssetPath;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Foundation\Vite;
 use Illuminate\Support\Facades\Route;
@@ -14,7 +14,7 @@ use function Pest\Laravel\get;
 $isolatedPublicPath = null;
 
 beforeEach(function () use (&$isolatedPublicPath): void {
-    $publicPath = sys_get_temp_dir().'/horizon-new-dawn-asset-test-'.uniqid('', true);
+    $publicPath = sys_get_temp_dir().'/zenith-asset-test-'.uniqid('', true);
     $filesystem = app(Filesystem::class);
 
     $filesystem->ensureDirectoryExists($publicPath);
@@ -28,7 +28,7 @@ afterEach(function () use (&$isolatedPublicPath): void {
 
     if (is_string($isolatedPublicPath)) {
         $filesystem->deleteDirectory($isolatedPublicPath);
-        $filesystem->deleteDirectory(dirname($isolatedPublicPath).'/horizon-new-dawn-assets-outside');
+        $filesystem->deleteDirectory(dirname($isolatedPublicPath).'/zenith-assets-outside');
     }
 
     $isolatedPublicPath = null;
@@ -36,7 +36,7 @@ afterEach(function () use (&$isolatedPublicPath): void {
 
 it('resolves hashed entry assets from the published Vite manifest', function (): void {
     $filesystem = app(Filesystem::class);
-    $buildDirectory = public_path('vendor/horizon-new-dawn/build');
+    $buildDirectory = public_path('vendor/zenith/build');
 
     $filesystem->ensureDirectoryExists($buildDirectory);
     $filesystem->put($buildDirectory.'/manifest.json', json_encode([
@@ -55,8 +55,8 @@ it('resolves hashed entry assets from the published Vite manifest', function ():
     $tags = (string) app(AssetManifest::class)->tags();
 
     expect($tags)
-        ->toContain(url('/vendor/horizon-new-dawn/build/assets/app-abc123.js'))
-        ->toContain(url('/vendor/horizon-new-dawn/build/assets/app-def456.css'))
+        ->toContain(url('/vendor/zenith/build/assets/app-abc123.js'))
+        ->toContain(url('/vendor/zenith/build/assets/app-def456.css'))
         ->toContain('type="module"')
         ->toContain('rel="stylesheet"');
     expect($tags)->not->toContain('@vite/client');
@@ -64,7 +64,7 @@ it('resolves hashed entry assets from the published Vite manifest', function ():
 
 it('resolves the hashed favicon URL from the package-scoped Vite manifest entry', function (): void {
     $filesystem = app(Filesystem::class);
-    $buildDirectory = public_path('vendor/horizon-new-dawn/build');
+    $buildDirectory = public_path('vendor/zenith/build');
 
     $filesystem->ensureDirectoryExists($buildDirectory.'/assets');
     $filesystem->put($buildDirectory.'/manifest.json', json_encode([
@@ -82,12 +82,12 @@ it('resolves the hashed favicon URL from the package-scoped Vite manifest entry'
     $filesystem->put($buildDirectory.'/assets/favicon-xyz789.svg', '<svg />');
 
     expect(app(AssetManifest::class)->favicon())
-        ->toBe(url('/vendor/horizon-new-dawn/build/assets/favicon-xyz789.svg'));
+        ->toBe(url('/vendor/zenith/build/assets/favicon-xyz789.svg'));
 });
 
 it('explains how to repair a missing published favicon manifest entry', function (): void {
     $filesystem = app(Filesystem::class);
-    $buildDirectory = public_path('vendor/horizon-new-dawn/build');
+    $buildDirectory = public_path('vendor/zenith/build');
 
     $filesystem->ensureDirectoryExists($buildDirectory);
     $filesystem->put($buildDirectory.'/manifest.json', json_encode([
@@ -100,13 +100,13 @@ it('explains how to repair a missing published favicon manifest entry', function
     ], JSON_THROW_ON_ERROR));
 
     expect(fn (): string => app(AssetManifest::class)->favicon())
-        ->toThrow(RuntimeException::class, 'php artisan horizon-new-dawn:install');
+        ->toThrow(RuntimeException::class, 'php artisan zenith:install');
 });
 
 it('uses the package asset path when cached configuration has no package keys', function (): void {
-    config()->set('horizon-new-dawn', []);
+    config()->set('zenith', []);
 
-    expect(app(AssetPath::class)->relative())->toBe('vendor/horizon-new-dawn/build')
+    expect(app(AssetPath::class)->relative())->toBe('vendor/zenith/build')
         ->and(app(AssetPath::class)->absolute())->toBe(resolvedPackageAssetAbsolutePath())
         ->and(app(AssetPath::class)->manifest())->toBe(
             resolvedPackageAssetAbsolutePath().DIRECTORY_SEPARATOR.'manifest.json',
@@ -114,21 +114,21 @@ it('uses the package asset path when cached configuration has no package keys', 
 });
 
 it('ignores a stale assets_path configuration value', function (): void {
-    config()->set('horizon-new-dawn.assets_path', 'vendor/custom-horizon-assets/build');
+    config()->set('zenith.assets_path', 'vendor/custom-horizon-assets/build');
 
-    expect(app(AssetPath::class)->relative())->toBe('vendor/horizon-new-dawn/build')
+    expect(app(AssetPath::class)->relative())->toBe('vendor/zenith/build')
         ->and(app(AssetPath::class)->absolute())->toBe(resolvedPackageAssetAbsolutePath());
 });
 
 it('explains how to repair a missing published manifest', function (): void {
     expect(fn () => app(AssetManifest::class)->tags())
-        ->toThrow(RuntimeException::class, 'php artisan horizon-new-dawn:install');
+        ->toThrow(RuntimeException::class, 'php artisan zenith:install');
 });
 
 it('rejects an asset path whose existing symlink escapes public', function (): void {
     $filesystem = app(Filesystem::class);
-    $outsideDirectory = dirname(public_path()).'/horizon-new-dawn-assets-outside';
-    $symlink = public_path('vendor/horizon-new-dawn');
+    $outsideDirectory = dirname(public_path()).'/zenith-assets-outside';
+    $symlink = public_path('vendor/zenith');
 
     $filesystem->ensureDirectoryExists($outsideDirectory);
     $filesystem->ensureDirectoryExists(dirname($symlink));
@@ -146,7 +146,7 @@ function resolvedPackageAssetAbsolutePath(): string
         throw new RuntimeException('The test public path could not be resolved.');
     }
 
-    return $publicPath.DIRECTORY_SEPARATOR.'vendor'.DIRECTORY_SEPARATOR.'horizon-new-dawn'.DIRECTORY_SEPARATOR.'build';
+    return $publicPath.DIRECTORY_SEPARATOR.'vendor'.DIRECTORY_SEPARATOR.'zenith'.DIRECTORY_SEPARATOR.'build';
 }
 
 it('ships every file referenced by the production Vite manifest', function (): void {
@@ -215,7 +215,7 @@ it('ships every file referenced by the production Vite manifest', function (): v
 
 it('ignores a consumer public/hot file and never mutates the global Vite singleton', function (): void {
     $filesystem = app(Filesystem::class);
-    $buildDirectory = public_path('vendor/horizon-new-dawn/build');
+    $buildDirectory = public_path('vendor/zenith/build');
     $globalVite = app(Vite::class);
     $originalHotFile = $globalVite->hotFile();
 
@@ -242,7 +242,7 @@ it('ignores a consumer public/hot file and never mutates the global Vite singlet
 
     Route::get(
         '/package-vite-hot-isolation',
-        fn () => Inertia::render('Test')->rootView('horizon-new-dawn::app'),
+        fn () => Inertia::render('Test')->rootView('zenith::app'),
     );
 
     $content = get('/package-vite-hot-isolation')
@@ -254,15 +254,15 @@ it('ignores a consumer public/hot file and never mutates the global Vite singlet
     }
 
     expect($content)
-        ->toContain('/vendor/horizon-new-dawn/build/assets/app-published.js')
-        ->toContain('/vendor/horizon-new-dawn/build/assets/app-published.css')
-        ->toContain('/vendor/horizon-new-dawn/build/assets/favicon-published.svg')
+        ->toContain('/vendor/zenith/build/assets/app-published.js')
+        ->toContain('/vendor/zenith/build/assets/app-published.css')
+        ->toContain('/vendor/zenith/build/assets/favicon-published.svg')
         ->toContain('data-horizon-favicon');
     expect($content)
         ->not->toContain('http://127.0.0.1:5173')
         ->and($content)->not->toContain('@vite/client')
         ->and($content)->not->toContain('resources/js/app.tsx')
-        ->and($content)->not->toContain('/vendor/horizon-new-dawn/build/favicon.svg');
+        ->and($content)->not->toContain('/vendor/zenith/build/favicon.svg');
     expect($globalVite->isRunningHot())->toBeTrue()
         ->and($globalVite->hotFile())->toBe($originalHotFile)
         ->and($globalVite->hotFile())->toBe(public_path('/hot'));
@@ -270,7 +270,7 @@ it('ignores a consumer public/hot file and never mutates the global Vite singlet
 
 it('propagates the host Vite CSP nonce onto package Vite tags', function (): void {
     $filesystem = app(Filesystem::class);
-    $buildDirectory = public_path('vendor/horizon-new-dawn/build');
+    $buildDirectory = public_path('vendor/zenith/build');
 
     $filesystem->ensureDirectoryExists($buildDirectory.'/assets');
     $filesystem->put($buildDirectory.'/manifest.json', json_encode([
@@ -297,7 +297,7 @@ it('propagates the host Vite CSP nonce onto package Vite tags', function (): voi
 
 it('versions requests with Laravel Vite manifestHash', function (): void {
     $filesystem = app(Filesystem::class);
-    $buildDirectory = public_path('vendor/horizon-new-dawn/build');
+    $buildDirectory = public_path('vendor/zenith/build');
     $manifestPath = $buildDirectory.'/manifest.json';
 
     $filesystem->ensureDirectoryExists($buildDirectory);

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use DevactionLabs\HorizonNewDawn\Support\HorizonWorkCommandCompatibility;
+use DevactionLabs\Zenith\Support\HorizonWorkCommandCompatibility;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputOption;
 

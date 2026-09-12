@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use function DevactionLabs\HorizonNewDawn\Tests\Support\bindBrowserPageFixtures;
+use function DevactionLabs\Zenith\Tests\Support\bindBrowserPageFixtures;
 
 describe('Horizon interface', function (): void {
     it('renders the dashboard in a real browser', function (): void {

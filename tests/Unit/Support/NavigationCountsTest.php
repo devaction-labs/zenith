@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-use DevactionLabs\HorizonNewDawn\Batches\BatchRepositoryOverview;
-use DevactionLabs\HorizonNewDawn\Batches\DatabaseBatchCapability;
-use DevactionLabs\HorizonNewDawn\Queues\QueuePauseStatus;
-use DevactionLabs\HorizonNewDawn\Queues\QueuesData;
-use DevactionLabs\HorizonNewDawn\Queues\QueueWaitThreshold;
-use DevactionLabs\HorizonNewDawn\Support\NavigationCounts;
+use DevactionLabs\Zenith\Batches\BatchRepositoryOverview;
+use DevactionLabs\Zenith\Batches\DatabaseBatchCapability;
+use DevactionLabs\Zenith\Queues\QueuePauseStatus;
+use DevactionLabs\Zenith\Queues\QueuesData;
+use DevactionLabs\Zenith\Queues\QueueWaitThreshold;
+use DevactionLabs\Zenith\Support\NavigationCounts;
 use Illuminate\Bus\BatchFactory;
 use Illuminate\Bus\BatchRepository;
 use Illuminate\Bus\DatabaseBatchRepository;
@@ -23,13 +23,13 @@ use Laravel\Horizon\Contracts\MetricsRepository;
 use Laravel\Horizon\Contracts\SupervisorRepository;
 use Laravel\Horizon\WaitTimeCalculator;
 
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturns;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturnsFor;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturnsUsing;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardThrows;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardThrowsFor;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\horizonBatch;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\Zenith\Tests\Support\dashboardReturns;
+use function DevactionLabs\Zenith\Tests\Support\dashboardReturnsFor;
+use function DevactionLabs\Zenith\Tests\Support\dashboardReturnsUsing;
+use function DevactionLabs\Zenith\Tests\Support\dashboardThrows;
+use function DevactionLabs\Zenith\Tests\Support\dashboardThrowsFor;
+use function DevactionLabs\Zenith\Tests\Support\horizonBatch;
+use function DevactionLabs\Zenith\Tests\Support\mockDashboardContract;
 
 it('collects bounded navigation counts from Horizon storage', function (): void {
     expect(navigationCounts()->get()->toArray())->toBe([
@@ -84,8 +84,8 @@ it('counts every retained batch page for navigation', function (): void {
 it('returns a null batch navigation count without reporting when the database batch table is missing', function (): void {
     config()->set('queue.batching.database', null);
     config()->set('queue.batching.table', 'job_batches');
-    config()->set('horizon-new-dawn.poll_interval', 0);
-    Schema::dropIfExists('horizon_new_dawn_batch_metadata');
+    config()->set('zenith.poll_interval', 0);
+    Schema::dropIfExists('zenith_batch_metadata');
     Schema::dropIfExists('job_batches');
 
     $repository = new DatabaseBatchRepository(
@@ -113,7 +113,7 @@ function navigationCounts(
     bool $withDefaultBatches = true,
 ): NavigationCounts {
     config()->set('queue.batching.database', null);
-    config()->set('horizon-new-dawn.poll_interval', 0);
+    config()->set('zenith.poll_interval', 0);
 
     $redisConnection = mockDashboardContract(Connection::class);
 

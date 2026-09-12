@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\FailedJobs;
+namespace DevactionLabs\Zenith\FailedJobs;
 
-use DevactionLabs\HorizonNewDawn\FailedJobs\Data\FailedJobBulkActionsData;
-use DevactionLabs\HorizonNewDawn\FailedJobs\Data\FailedJobDetailData;
-use DevactionLabs\HorizonNewDawn\FailedJobs\Data\FailedJobRetryData;
-use DevactionLabs\HorizonNewDawn\Jobs\Data\JobFilterCatalogData;
-use DevactionLabs\HorizonNewDawn\Jobs\Data\JobIndexFiltersData;
-use DevactionLabs\HorizonNewDawn\Jobs\Data\JobPageData;
-use DevactionLabs\HorizonNewDawn\Jobs\Data\JobRowData;
-use DevactionLabs\HorizonNewDawn\Jobs\JobsData;
-use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobFilterCatalog;
-use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobQuery;
-use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobType;
+use DevactionLabs\Zenith\FailedJobs\Data\FailedJobBulkActionsData;
+use DevactionLabs\Zenith\FailedJobs\Data\FailedJobDetailData;
+use DevactionLabs\Zenith\FailedJobs\Data\FailedJobRetryData;
+use DevactionLabs\Zenith\Jobs\Data\JobFilterCatalogData;
+use DevactionLabs\Zenith\Jobs\Data\JobIndexFiltersData;
+use DevactionLabs\Zenith\Jobs\Data\JobPageData;
+use DevactionLabs\Zenith\Jobs\Data\JobRowData;
+use DevactionLabs\Zenith\Jobs\JobsData;
+use DevactionLabs\Zenith\Jobs\RetainedJobFilterCatalog;
+use DevactionLabs\Zenith\Jobs\RetainedJobQuery;
+use DevactionLabs\Zenith\Jobs\RetainedJobType;
 use Illuminate\Contracts\Redis\Factory as RedisFactory;
 use Illuminate\Redis\Connections\PhpRedisConnection;
 use Illuminate\Redis\Connections\PredisConnection;

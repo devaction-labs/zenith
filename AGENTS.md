@@ -1,6 +1,6 @@
-# Horizon New Dawn
+# Zenith
 
-Horizon New Dawn is a Laravel 13 package that replaces Laravel Horizon's bundled UI with a package-owned React and Inertia interface.
+Zenith is a Laravel 13 package that replaces Laravel Horizon's bundled UI with a package-owned React and Inertia interface.
 
 ## Project Context
 

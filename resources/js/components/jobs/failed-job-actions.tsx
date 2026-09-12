@@ -21,10 +21,10 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { destroy as removeFailedJob } from "@/generated/routes/horizon-new-dawn/failed-jobs";
-import { destroy as clearAllFailedJobs } from "@/generated/routes/horizon-new-dawn/failed-jobs/clear-all";
-import { store as retryAllFailedJobs } from "@/generated/routes/horizon-new-dawn/failed-jobs/retry-all";
-import { store as retryFailedJob } from "@/generated/routes/horizon-new-dawn/failed-jobs/retry";
+import { destroy as removeFailedJob } from "@/generated/routes/zenith/failed-jobs";
+import { destroy as clearAllFailedJobs } from "@/generated/routes/zenith/failed-jobs/clear-all";
+import { store as retryAllFailedJobs } from "@/generated/routes/zenith/failed-jobs/retry-all";
+import { store as retryFailedJob } from "@/generated/routes/zenith/failed-jobs/retry";
 import { cn } from "@/lib/utils";
 import { useHorizonAbilities } from "@/hooks/use-horizon-abilities";
 import { resolveHorizonRoute } from "@/lib/horizon-route";

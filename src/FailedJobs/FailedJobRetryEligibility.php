@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\FailedJobs;
+namespace DevactionLabs\Zenith\FailedJobs;
 
 use JsonException;
 

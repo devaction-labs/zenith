@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-use DevactionLabs\HorizonNewDawn\Batches\BatchRepositoryOverview;
-use DevactionLabs\HorizonNewDawn\Batches\DatabaseBatchCapability;
-use DevactionLabs\HorizonNewDawn\Dashboard\DashboardBatchSummary;
-use DevactionLabs\HorizonNewDawn\Dashboard\DashboardData;
-use DevactionLabs\HorizonNewDawn\Dashboard\DashboardPendingState;
-use DevactionLabs\HorizonNewDawn\Metrics\SnapshotJobsPerMinute;
-use DevactionLabs\HorizonNewDawn\Queues\QueuePauseMetadata;
-use DevactionLabs\HorizonNewDawn\Queues\QueuePauseStatus;
-use DevactionLabs\HorizonNewDawn\Queues\QueueWaitThreshold;
-use DevactionLabs\HorizonNewDawn\Support\HorizonRuntime;
+use DevactionLabs\Zenith\Batches\BatchRepositoryOverview;
+use DevactionLabs\Zenith\Batches\DatabaseBatchCapability;
+use DevactionLabs\Zenith\Dashboard\DashboardBatchSummary;
+use DevactionLabs\Zenith\Dashboard\DashboardData;
+use DevactionLabs\Zenith\Dashboard\DashboardPendingState;
+use DevactionLabs\Zenith\Metrics\SnapshotJobsPerMinute;
+use DevactionLabs\Zenith\Queues\QueuePauseMetadata;
+use DevactionLabs\Zenith\Queues\QueuePauseStatus;
+use DevactionLabs\Zenith\Queues\QueueWaitThreshold;
+use DevactionLabs\Zenith\Support\HorizonRuntime;
 use Illuminate\Bus\BatchFactory;
 use Illuminate\Bus\BatchRepository;
 use Illuminate\Bus\DatabaseBatchRepository;
@@ -29,8 +29,8 @@ use Laravel\Horizon\Contracts\SupervisorRepository;
 use Laravel\Horizon\Horizon;
 use Laravel\Horizon\WaitTimeCalculator;
 
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturns;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\Zenith\Tests\Support\dashboardReturns;
+use function DevactionLabs\Zenith\Tests\Support\mockDashboardContract;
 use function Pest\Laravel\get;
 
 beforeEach(function (): void {
@@ -43,15 +43,15 @@ beforeEach(function (): void {
 
 afterEach(function (): void {
     Horizon::auth(static fn (): bool => true);
-    Schema::dropIfExists('horizon_new_dawn_batch_metadata');
+    Schema::dropIfExists('zenith_batch_metadata');
     Schema::dropIfExists('job_batches');
 });
 
 it('keeps the dashboard available while omitting batch summary when the batch table is missing', function (): void {
     config()->set('queue.batching.database', null);
     config()->set('queue.batching.table', 'job_batches');
-    config()->set('horizon-new-dawn.poll_interval', 0);
-    Schema::dropIfExists('horizon_new_dawn_batch_metadata');
+    config()->set('zenith.poll_interval', 0);
+    Schema::dropIfExists('zenith_batch_metadata');
     Schema::dropIfExists('job_batches');
 
     $jobs = mockDashboardContract(JobRepository::class);

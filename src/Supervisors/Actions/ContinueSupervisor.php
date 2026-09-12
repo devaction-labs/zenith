@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Supervisors\Actions;
+namespace DevactionLabs\Zenith\Supervisors\Actions;
 
-use DevactionLabs\HorizonNewDawn\Supervisors\LocalSupervisor;
+use DevactionLabs\Zenith\Supervisors\LocalSupervisor;
 use Laravel\Horizon\Contracts\HorizonCommandQueue;
 use Laravel\Horizon\Contracts\SupervisorRepository;
 use Laravel\Horizon\SupervisorCommands\ContinueWorking;

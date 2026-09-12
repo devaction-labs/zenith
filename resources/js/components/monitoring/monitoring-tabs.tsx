@@ -2,7 +2,7 @@ import { Link, router } from "@inertiajs/react";
 
 import { ResponsiveTabsHeader } from "@/components/responsive-tabs-header";
 import { Tabs } from "@/components/ui/tabs";
-import { show as monitoringShow } from "@/generated/routes/horizon-new-dawn/monitoring";
+import { show as monitoringShow } from "@/generated/routes/zenith/monitoring";
 import { useActiveTabQuery } from "@/hooks/use-active-tab-query";
 import { formatCount } from "@/lib/format-count";
 import { resolveHorizonRoute } from "@/lib/horizon-route";

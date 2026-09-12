@@ -2,10 +2,7 @@ import { Link, router, usePage } from "@inertiajs/react";
 import { useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
-import {
-  show as monitoringShow,
-  store as monitorTag,
-} from "@/generated/routes/horizon-new-dawn/monitoring";
+import { show as monitoringShow, store as monitorTag } from "@/generated/routes/zenith/monitoring";
 import { resolveHorizonRoute } from "@/lib/horizon-route";
 import { cn } from "@/lib/utils";
 import type { HorizonPageProps } from "@/types/page";

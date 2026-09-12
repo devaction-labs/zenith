@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Support;
+namespace DevactionLabs\Zenith\Support;
 
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Support\Str;
@@ -11,7 +11,7 @@ use Throwable;
 
 final class ComposerAssetHook
 {
-    public const string SCRIPT = '@php artisan horizon-new-dawn:assets --ansi';
+    public const string SCRIPT = '@php artisan zenith:assets --ansi';
 
     public function __construct(
         private readonly Filesystem $filesystem,
@@ -92,7 +92,7 @@ final class ComposerAssetHook
     private function containsAssetHook(array $entries): bool
     {
         foreach ($entries as $entry) {
-            if (str_contains($entry, 'horizon-new-dawn:assets')) {
+            if (str_contains($entry, 'zenith:assets')) {
                 return true;
             }
         }

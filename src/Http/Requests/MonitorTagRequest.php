@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Http\Requests;
+namespace DevactionLabs\Zenith\Http\Requests;
 
 use Closure;
-use DevactionLabs\HorizonNewDawn\Monitoring\MonitoringTagGuard;
+use DevactionLabs\Zenith\Monitoring\MonitoringTagGuard;
 use Illuminate\Foundation\Http\FormRequest;
 
 final class MonitorTagRequest extends FormRequest

@@ -1,6 +1,6 @@
 # Web interface guidelines
 
-Adapted for Horizon New Dawn from Vercel Labs' MIT-licensed Web Interface Guidelines at commit `4e799d45c17aec1498c269287a83b9dba22b966b`:
+Adapted for Zenith from Vercel Labs' MIT-licensed Web Interface Guidelines at commit `4e799d45c17aec1498c269287a83b9dba22b966b`:
 
 - https://github.com/vercel-labs/web-interface-guidelines
 - https://raw.githubusercontent.com/vercel-labs/web-interface-guidelines/4e799d45c17aec1498c269287a83b9dba22b966b/command.md
@@ -61,7 +61,7 @@ Do not apply `autocomplete="off"`, placeholder ellipses, or `autoFocus` as blank
 
 ## Performance calibration
 
-- Measure before requiring virtualization. Horizon New Dawn already bounds and incrementally loads many lists through Inertia.
+- Measure before requiring virtualization. Zenith already bounds and incrementally loads many lists through Inertia.
 - Use `content-visibility`, virtualization, or component splitting when rendered volume or profiling demonstrates a real cost.
 - Avoid layout thrashing, repeated global listeners, oversized assets, and work on every keystroke that can be derived or deferred.
 - Audit the consuming bundle and network, not only source imports.

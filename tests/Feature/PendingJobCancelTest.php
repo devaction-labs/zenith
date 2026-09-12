@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-use DevactionLabs\HorizonNewDawn\BulkOperations\Jobs\CancelPendingJobsJob;
-use DevactionLabs\HorizonNewDawn\Jobs\PendingJobCancellationScope;
+use DevactionLabs\Zenith\BulkOperations\Jobs\CancelPendingJobsJob;
+use DevactionLabs\Zenith\Jobs\PendingJobCancellationScope;
 use Illuminate\Contracts\Queue\Queue;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
@@ -15,19 +15,19 @@ use Illuminate\Support\Facades\Exceptions;
 use Laravel\Horizon\Contracts\JobRepository;
 use Laravel\Horizon\Horizon;
 
-use function DevactionLabs\HorizonNewDawn\Tests\Support\bindBrowserPageFixtures;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardExpects;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturns;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\horizonJob;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\Zenith\Tests\Support\bindBrowserPageFixtures;
+use function DevactionLabs\Zenith\Tests\Support\dashboardExpects;
+use function DevactionLabs\Zenith\Tests\Support\dashboardReturns;
+use function DevactionLabs\Zenith\Tests\Support\horizonJob;
+use function DevactionLabs\Zenith\Tests\Support\mockDashboardContract;
 use function Pest\Laravel\delete;
 use function Pest\Laravel\withoutMiddleware;
 
 /** @param 'never'|'once'|'twice'|'zeroOrMoreTimes' $times */
 function bindPendingCancellationAsyncBulkQueue(string $times = 'once'): void
 {
-    config()->set('horizon-new-dawn.bulk_operations.connection', 'operations');
-    config()->set('horizon-new-dawn.bulk_operations.queue', 'horizon-maintenance');
+    config()->set('zenith.bulk_operations.connection', 'operations');
+    config()->set('zenith.bulk_operations.queue', 'horizon-maintenance');
 
     $manager = Mockery::mock(QueueManager::class);
     dashboardExpects($manager, 'connection', ['operations'], times: $times, value: Mockery::mock(Queue::class));
@@ -36,8 +36,8 @@ function bindPendingCancellationAsyncBulkQueue(string $times = 'once'): void
 
 function bindPendingCancellationSyncBulkQueue(): void
 {
-    config()->set('horizon-new-dawn.bulk_operations.connection', 'sync');
-    config()->set('horizon-new-dawn.bulk_operations.queue', null);
+    config()->set('zenith.bulk_operations.connection', 'sync');
+    config()->set('zenith.bulk_operations.queue', null);
 
     $manager = Mockery::mock(QueueManager::class);
     dashboardExpects($manager, 'connection', ['sync'], value: new SyncQueue);

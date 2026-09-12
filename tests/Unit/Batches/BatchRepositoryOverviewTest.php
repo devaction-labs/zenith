@@ -2,22 +2,22 @@
 
 declare(strict_types=1);
 
-use DevactionLabs\HorizonNewDawn\Batches\BatchRepositoryOverview;
+use DevactionLabs\Zenith\Batches\BatchRepositoryOverview;
 use Illuminate\Bus\BatchRepository;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Illuminate\Contracts\Cache\Repository as CacheRepository;
 
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardExpects;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturnsUsing;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\horizonBatch;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\Zenith\Tests\Support\dashboardExpects;
+use function DevactionLabs\Zenith\Tests\Support\dashboardReturnsUsing;
+use function DevactionLabs\Zenith\Tests\Support\horizonBatch;
+use function DevactionLabs\Zenith\Tests\Support\mockDashboardContract;
 
 afterEach(function (): void {
     app(CacheFactory::class)->store()->clear();
 });
 
 it('shares one repository scan for batch counts and previews during a poll interval', function (): void {
-    config()->set('horizon-new-dawn.poll_interval', 5000);
+    config()->set('zenith.poll_interval', 5000);
     app(CacheFactory::class)->store()->clear();
 
     $active = horizonBatch(
@@ -74,7 +74,7 @@ it('uses the configured or default poll interval for its cache ttl', function (
     int $expectedCacheSeconds,
 ): void {
     config()->set(
-        'horizon-new-dawn',
+        'zenith',
         $pollInterval === null ? [] : ['poll_interval' => $pollInterval],
     );
 
@@ -103,7 +103,7 @@ it('uses the configured or default poll interval for its cache ttl', function (
         $cache,
         'remember',
         [
-            'horizon-new-dawn:batch-repository-overview:v1',
+            'zenith:batch-repository-overview:v1',
             $expectedCacheSeconds,
             Mockery::type(Closure::class),
         ],
@@ -128,7 +128,7 @@ it('uses the configured or default poll interval for its cache ttl', function (
 ]);
 
 it('bypasses batch repository overview caching for subsecond poll intervals', function (): void {
-    config()->set('horizon-new-dawn.poll_interval', 999);
+    config()->set('zenith.poll_interval', 999);
 
     $active = horizonBatch(
         'batch-2',
@@ -163,9 +163,9 @@ it('bypasses batch repository overview caching for subsecond poll intervals', fu
 });
 
 it('counts every retained batch across repository pages', function (): void {
-    config()->set('horizon-new-dawn.poll_interval', 0);
+    config()->set('zenith.poll_interval', 0);
     // Former public default was 1000; page size is 100, so this forces 11 repository pages.
-    config()->set('horizon-new-dawn.retained_batch_scan_limit', 1000);
+    config()->set('zenith.retained_batch_scan_limit', 1000);
 
     $calls = 0;
     $repository = mockDashboardContract(BatchRepository::class);
@@ -220,7 +220,7 @@ it('counts every retained batch across repository pages', function (): void {
 });
 
 it('fails closed when the batch repository does not advance its cursor', function (): void {
-    config()->set('horizon-new-dawn.poll_interval', 0);
+    config()->set('zenith.poll_interval', 0);
 
     $repository = mockDashboardContract(BatchRepository::class);
     dashboardReturnsUsing(
@@ -238,7 +238,7 @@ it('fails closed when the batch repository does not advance its cursor', functio
 });
 
 it('previews only the best three active batches by progress descending with id tie-break', function (): void {
-    config()->set('horizon-new-dawn.poll_interval', 0);
+    config()->set('zenith.poll_interval', 0);
 
     $newestZero = horizonBatch(
         'preview-new-zero',

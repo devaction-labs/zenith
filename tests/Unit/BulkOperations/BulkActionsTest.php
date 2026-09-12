@@ -2,22 +2,22 @@
 
 declare(strict_types=1);
 
-use DevactionLabs\HorizonNewDawn\BulkOperations\BulkOperationSnapshot;
-use DevactionLabs\HorizonNewDawn\FailedJobs\Actions\RetryAllFailedJobs;
-use DevactionLabs\HorizonNewDawn\FailedJobs\Actions\RetryFailedJob;
-use DevactionLabs\HorizonNewDawn\FailedJobs\FailedJobRetryLock;
-use DevactionLabs\HorizonNewDawn\Jobs\Actions\CancelPendingJobs;
-use DevactionLabs\HorizonNewDawn\Jobs\Actions\ClearPendingJobs;
-use DevactionLabs\HorizonNewDawn\Queues\ClearsQueueMetadata;
+use DevactionLabs\Zenith\BulkOperations\BulkOperationSnapshot;
+use DevactionLabs\Zenith\FailedJobs\Actions\RetryAllFailedJobs;
+use DevactionLabs\Zenith\FailedJobs\Actions\RetryFailedJob;
+use DevactionLabs\Zenith\FailedJobs\FailedJobRetryLock;
+use DevactionLabs\Zenith\Jobs\Actions\CancelPendingJobs;
+use DevactionLabs\Zenith\Jobs\Actions\ClearPendingJobs;
+use DevactionLabs\Zenith\Queues\ClearsQueueMetadata;
 use Illuminate\Contracts\Queue\ClearableQueue;
 use Illuminate\Queue\QueueManager;
 use Laravel\Horizon\Contracts\JobRepository;
 use Laravel\Horizon\Contracts\SupervisorRepository;
 
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardExpects;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturns;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardThrowsFor;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\Zenith\Tests\Support\dashboardExpects;
+use function DevactionLabs\Zenith\Tests\Support\dashboardReturns;
+use function DevactionLabs\Zenith\Tests\Support\dashboardThrowsFor;
+use function DevactionLabs\Zenith\Tests\Support\mockDashboardContract;
 
 it('resolves bulk actions with their production snapshot dependencies', function (): void {
     $cancel = app(CancelPendingJobs::class);
@@ -36,8 +36,8 @@ it('never clears the queue running bulk operations', function (
     ?string $bulkConnection,
     ?string $bulkQueue,
 ): void {
-    config()->set('horizon-new-dawn.bulk_operations.connection', $bulkConnection);
-    config()->set('horizon-new-dawn.bulk_operations.queue', $bulkQueue);
+    config()->set('zenith.bulk_operations.connection', $bulkConnection);
+    config()->set('zenith.bulk_operations.queue', $bulkQueue);
     config()->set('queue.default', 'redis');
     config()->set('queue.connections.redis.queue', 'horizon-maintenance');
 

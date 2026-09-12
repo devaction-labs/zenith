@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use DevactionLabs\HorizonNewDawn\Support\FrameworkCapabilities;
+use DevactionLabs\Zenith\Support\FrameworkCapabilities;
 use Illuminate\Queue\Worker;
 
 describe('FrameworkCapabilities', function (): void {

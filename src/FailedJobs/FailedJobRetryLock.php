@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\FailedJobs;
+namespace DevactionLabs\Zenith\FailedJobs;
 
 use Closure;
-use DevactionLabs\HorizonNewDawn\Support\RedisScript;
+use DevactionLabs\Zenith\Support\RedisScript;
 use Illuminate\Contracts\Redis\Factory as RedisFactory;
 use Throwable;
 
@@ -76,7 +76,7 @@ LUA;
 
     private function key(string $id): string
     {
-        return "\x1fhorizon-new-dawn:v1:failed-job-retry-lock:"
+        return "\x1fzenith:v1:failed-job-retry-lock:"
             .hash('sha256', $id);
     }
 }

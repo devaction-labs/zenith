@@ -13,7 +13,7 @@ import { ResponsiveTabsHeader } from "@/components/responsive-tabs-header";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs } from "@/components/ui/tabs";
-import { show as queueShow } from "@/generated/routes/horizon-new-dawn/queues";
+import { show as queueShow } from "@/generated/routes/zenith/queues";
 import { useSortableRows, type SortColumn } from "@/hooks/use-sortable-rows";
 import { formatCount } from "@/lib/format-count";
 import { resolveHorizonRoute } from "@/lib/horizon-route";

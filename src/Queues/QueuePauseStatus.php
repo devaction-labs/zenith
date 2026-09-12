@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Queues;
+namespace DevactionLabs\Zenith\Queues;
 
-use DevactionLabs\HorizonNewDawn\Queues\Data\QueuePauseStateData;
-use DevactionLabs\HorizonNewDawn\Support\FrameworkCapabilities;
+use DevactionLabs\Zenith\Queues\Data\QueuePauseStateData;
+use DevactionLabs\Zenith\Support\FrameworkCapabilities;
 use Illuminate\Queue\QueueManager;
 
 final readonly class QueuePauseStatus

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Queues;
+namespace DevactionLabs\Zenith\Queues;
 
 use Closure;
-use DevactionLabs\HorizonNewDawn\Queues\Data\QueueActivityPageData;
+use DevactionLabs\Zenith\Queues\Data\QueueActivityPageData;
 
 final readonly class QueueActivityData
 {

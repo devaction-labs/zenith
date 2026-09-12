@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Batches\Actions;
+namespace DevactionLabs\Zenith\Batches\Actions;
 
 use Illuminate\Bus\BatchRepository;
 

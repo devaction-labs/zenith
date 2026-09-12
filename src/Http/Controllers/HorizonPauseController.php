@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Http\Controllers;
+namespace DevactionLabs\Zenith\Http\Controllers;
 
 use Closure;
-use DevactionLabs\HorizonNewDawn\Instances\Actions\ContinueHorizon;
-use DevactionLabs\HorizonNewDawn\Instances\Actions\PauseHorizon;
+use DevactionLabs\Zenith\Instances\Actions\ContinueHorizon;
+use DevactionLabs\Zenith\Instances\Actions\PauseHorizon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use DevactionLabs\HorizonNewDawn\BulkOperations\Jobs\RetryQueueBatchesJob;
+use DevactionLabs\Zenith\BulkOperations\Jobs\RetryQueueBatchesJob;
 use Illuminate\Bus\BatchFactory;
 use Illuminate\Bus\BatchRepository;
 use Illuminate\Bus\DatabaseBatchRepository;
@@ -18,15 +18,15 @@ use Illuminate\Support\Facades\Exceptions;
 use Illuminate\Support\Facades\Schema;
 use Laravel\Horizon\Horizon;
 
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardExpects;
+use function DevactionLabs\Zenith\Tests\Support\dashboardExpects;
 use function Pest\Laravel\post;
 use function Pest\Laravel\withoutMiddleware;
 
 /** @param 'never'|'once'|'twice'|'zeroOrMoreTimes' $times */
 function bindQueueBatchRetryAsyncBulkQueue(string $times = 'once'): void
 {
-    config()->set('horizon-new-dawn.bulk_operations.connection', 'operations');
-    config()->set('horizon-new-dawn.bulk_operations.queue', 'horizon-maintenance');
+    config()->set('zenith.bulk_operations.connection', 'operations');
+    config()->set('zenith.bulk_operations.queue', 'horizon-maintenance');
 
     $manager = Mockery::mock(QueueManager::class);
     dashboardExpects($manager, 'connection', ['operations'], times: $times, value: Mockery::mock(Queue::class));
@@ -35,8 +35,8 @@ function bindQueueBatchRetryAsyncBulkQueue(string $times = 'once'): void
 
 function bindQueueBatchRetrySyncBulkQueue(): void
 {
-    config()->set('horizon-new-dawn.bulk_operations.connection', 'sync');
-    config()->set('horizon-new-dawn.bulk_operations.queue', null);
+    config()->set('zenith.bulk_operations.connection', 'sync');
+    config()->set('zenith.bulk_operations.queue', null);
 
     $manager = Mockery::mock(QueueManager::class);
     dashboardExpects($manager, 'connection', ['sync'], value: new SyncQueue);
@@ -49,7 +49,7 @@ beforeEach(function (): void {
     config()->set('queue.batching.database', null);
     config()->set('queue.batching.table', 'job_batches');
 
-    Schema::dropIfExists('horizon_new_dawn_batch_metadata');
+    Schema::dropIfExists('zenith_batch_metadata');
     Schema::dropIfExists('job_batches');
     Schema::create('job_batches', function (Blueprint $table): void {
         $table->string('id')->primary();
@@ -63,7 +63,7 @@ beforeEach(function (): void {
         $table->integer('created_at');
         $table->integer('finished_at')->nullable();
     });
-    $migration = require __DIR__.'/../../database/migrations/2026_07_26_000000_create_horizon_new_dawn_batch_metadata_table.php';
+    $migration = require __DIR__.'/../../database/migrations/2026_07_26_000000_create_zenith_batch_metadata_table.php';
     $migration->up();
 
     app()->instance(BatchRepository::class, new DatabaseBatchRepository(
@@ -75,7 +75,7 @@ beforeEach(function (): void {
 
 afterEach(function (): void {
     Horizon::auth(static fn (): bool => true);
-    Schema::dropIfExists('horizon_new_dawn_batch_metadata');
+    Schema::dropIfExists('zenith_batch_metadata');
     Schema::dropIfExists('job_batches');
 });
 
@@ -142,7 +142,7 @@ it('queues a queue batch retry when the scoped failures exceed the former ceilin
 
 it('hides direct queue batch retries until attribution storage is migrated', function (): void {
     Bus::fake();
-    Schema::drop('horizon_new_dawn_batch_metadata');
+    Schema::drop('zenith_batch_metadata');
 
     post('/horizon/queues/reports/batches/retry-failed-jobs')->assertNotFound();
 

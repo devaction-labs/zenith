@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Metrics\Data;
+namespace DevactionLabs\Zenith\Metrics\Data;
 
 use Spatie\LaravelData\Data;
 

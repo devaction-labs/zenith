@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Assets;
+namespace DevactionLabs\Zenith\Assets;
 
 use Illuminate\Foundation\Vite;
 use Illuminate\Foundation\ViteException;
@@ -44,7 +44,7 @@ final readonly class AssetManifest
 
         if (! is_string($hash) || $hash === '') {
             throw new RuntimeException(
-                'Horizon New Dawn assets are not published. Run `php artisan horizon-new-dawn:install`.',
+                'Zenith assets are not published. Run `php artisan zenith:install`.',
             );
         }
 
@@ -84,13 +84,13 @@ final readonly class AssetManifest
             || str_contains($exception->getMessage(), 'Vite manifest not found')
         ) {
             return new RuntimeException(
-                'Horizon New Dawn assets are not published. Run `php artisan horizon-new-dawn:install`.',
+                'Zenith assets are not published. Run `php artisan zenith:install`.',
                 previous: $exception,
             );
         }
 
         return new RuntimeException(
-            'The published Horizon New Dawn asset manifest is invalid. Run `php artisan horizon-new-dawn:install --force`.',
+            'The published Zenith asset manifest is invalid. Run `php artisan zenith:install --force`.',
             previous: $exception,
         );
     }

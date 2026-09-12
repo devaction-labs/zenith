@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-use DevactionLabs\HorizonNewDawn\Queues\QueueWaitThreshold;
-use DevactionLabs\HorizonNewDawn\Queues\QueueWaitThresholdStatus;
+use DevactionLabs\Zenith\Queues\QueueWaitThreshold;
+use DevactionLabs\Zenith\Queues\QueueWaitThresholdStatus;
 use Illuminate\Contracts\Config\Repository;
 
 it('classifies waits against the effective Horizon threshold', function (): void {

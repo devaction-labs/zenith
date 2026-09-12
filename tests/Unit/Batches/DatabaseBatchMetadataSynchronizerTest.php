@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-use DevactionLabs\HorizonNewDawn\Batches\DatabaseBatchCapability;
-use DevactionLabs\HorizonNewDawn\Batches\DatabaseBatchMetadataSynchronizer;
+use DevactionLabs\Zenith\Batches\DatabaseBatchCapability;
+use DevactionLabs\Zenith\Batches\DatabaseBatchMetadataSynchronizer;
 use Illuminate\Bus\BatchFactory;
 use Illuminate\Bus\BatchRepository;
 use Illuminate\Bus\DatabaseBatchRepository;
@@ -12,8 +12,8 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Schema\Builder;
 use Illuminate\Support\Facades\Schema;
 
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardExpects;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\Zenith\Tests\Support\dashboardExpects;
+use function DevactionLabs\Zenith\Tests\Support\mockDashboardContract;
 
 beforeEach(function (): void {
     config()->set('queue.batching.database', null);
@@ -22,7 +22,7 @@ beforeEach(function (): void {
     config()->set('queue.connections.redis.queue', 'default');
     config()->set('queue.connections.sqs.queue', 'inferred-sqs');
 
-    Schema::dropIfExists('horizon_new_dawn_batch_metadata');
+    Schema::dropIfExists('zenith_batch_metadata');
     Schema::dropIfExists('job_batches');
 
     Schema::create('job_batches', function (Blueprint $table): void {
@@ -38,12 +38,12 @@ beforeEach(function (): void {
         $table->integer('finished_at')->nullable();
     });
 
-    $migration = require __DIR__.'/../../../database/migrations/2026_07_26_000000_create_horizon_new_dawn_batch_metadata_table.php';
+    $migration = require __DIR__.'/../../../database/migrations/2026_07_26_000000_create_zenith_batch_metadata_table.php';
     $migration->up();
 });
 
 afterEach(function (): void {
-    Schema::dropIfExists('horizon_new_dawn_batch_metadata');
+    Schema::dropIfExists('zenith_batch_metadata');
     Schema::dropIfExists('job_batches');
 });
 
@@ -62,8 +62,8 @@ it('captures immutable explicit and inferred attribution once and reconciles eve
     $synchronizer = databaseBatchMetadataSynchronizer();
 
     expect($synchronizer->sync())->toBe(101)
-        ->and(app('db')->table('horizon_new_dawn_batch_metadata')->count())->toBe(101)
-        ->and((array) app('db')->table('horizon_new_dawn_batch_metadata')->where('batch_id', 'batch-001')->first())
+        ->and(app('db')->table('zenith_batch_metadata')->count())->toBe(101)
+        ->and((array) app('db')->table('zenith_batch_metadata')->where('batch_id', 'batch-001')->first())
         ->toMatchArray([
             'batch_id' => 'batch-001',
             'queue' => 'imports',
@@ -71,7 +71,7 @@ it('captures immutable explicit and inferred attribution once and reconciles eve
             'queue_is_explicit' => 1,
             'connection_is_explicit' => 1,
         ])
-        ->and((array) app('db')->table('horizon_new_dawn_batch_metadata')->where('batch_id', 'batch-002')->first())
+        ->and((array) app('db')->table('zenith_batch_metadata')->where('batch_id', 'batch-002')->first())
         ->toMatchArray([
             'batch_id' => 'batch-002',
             'queue' => 'inferred-sqs',
@@ -79,7 +79,7 @@ it('captures immutable explicit and inferred attribution once and reconciles eve
             'queue_is_explicit' => 0,
             'connection_is_explicit' => 1,
         ])
-        ->and((array) app('db')->table('horizon_new_dawn_batch_metadata')->where('batch_id', 'batch-003')->first())
+        ->and((array) app('db')->table('zenith_batch_metadata')->where('batch_id', 'batch-003')->first())
         ->toMatchArray([
             'batch_id' => 'batch-003',
             'queue' => 'default',
@@ -98,26 +98,26 @@ it('captures immutable explicit and inferred attribution once and reconciles eve
     $synchronizer = databaseBatchMetadataSynchronizer();
 
     expect($synchronizer->sync())->toBe(2)
-        ->and((array) app('db')->table('horizon_new_dawn_batch_metadata')->where('batch_id', 'batch-001')->first())
+        ->and((array) app('db')->table('zenith_batch_metadata')->where('batch_id', 'batch-001')->first())
         ->toMatchArray([
             'queue' => 'imports',
             'connection' => 'redis',
         ])
-        ->and((array) app('db')->table('horizon_new_dawn_batch_metadata')->where('batch_id', 'batch-003')->first())
+        ->and((array) app('db')->table('zenith_batch_metadata')->where('batch_id', 'batch-003')->first())
         ->toMatchArray([
             'queue' => 'default',
             'connection' => 'redis',
             'queue_is_explicit' => 0,
             'connection_is_explicit' => 0,
         ])
-        ->and((array) app('db')->table('horizon_new_dawn_batch_metadata')->where('batch_id', 'batch-102')->first())
+        ->and((array) app('db')->table('zenith_batch_metadata')->where('batch_id', 'batch-102')->first())
         ->toMatchArray([
             'queue' => 'reports',
             'connection' => 'database',
             'queue_is_explicit' => 1,
             'connection_is_explicit' => 0,
         ])
-        ->and((array) app('db')->table('horizon_new_dawn_batch_metadata')->where('batch_id', 'batch-103')->first())
+        ->and((array) app('db')->table('zenith_batch_metadata')->where('batch_id', 'batch-103')->first())
         ->toMatchArray([
             'queue' => 'later-default',
             'connection' => 'database',
@@ -136,17 +136,17 @@ it('captures immutable explicit and inferred attribution once and reconciles eve
         ],
         range(1, 501),
     );
-    app('db')->table('horizon_new_dawn_batch_metadata')->insert($staleRows);
+    app('db')->table('zenith_batch_metadata')->insert($staleRows);
     $synchronizer = databaseBatchMetadataSynchronizer();
 
     expect($synchronizer->sync())->toBe(0)
-        ->and(app('db')->table('horizon_new_dawn_batch_metadata')
+        ->and(app('db')->table('zenith_batch_metadata')
             ->where('batch_id', 'batch-001')
             ->exists())->toBeFalse()
-        ->and(app('db')->table('horizon_new_dawn_batch_metadata')
+        ->and(app('db')->table('zenith_batch_metadata')
             ->where('batch_id', 'like', 'stale-%')
             ->count())->toBe(0)
-        ->and(app('db')->table('horizon_new_dawn_batch_metadata')->count())
+        ->and(app('db')->table('zenith_batch_metadata')->count())
         ->toBe(app('db')->table('job_batches')->count());
 });
 
@@ -192,7 +192,7 @@ it('supports database batch repository subclasses', function (): void {
 it('rejects database drivers without verified exact query support after confirming the source table', function (): void {
     $schema = mockDashboardContract(Builder::class);
     dashboardExpects($schema, 'hasTable', ['job_batches'], value: true);
-    dashboardExpects($schema, 'hasTable', ['horizon_new_dawn_batch_metadata'], times: 'never');
+    dashboardExpects($schema, 'hasTable', ['zenith_batch_metadata'], times: 'never');
     $connection = mockDashboardContract(Connection::class);
     dashboardExpects($connection, 'getDriverName', value: 'sqlsrv');
     dashboardExpects($connection, 'getSchemaBuilder', value: $schema);
@@ -223,7 +223,7 @@ it('inspects supported database schema capability once per scoped instance', fun
     dashboardExpects(
         $schema,
         'hasTable',
-        ['horizon_new_dawn_batch_metadata'],
+        ['zenith_batch_metadata'],
         value: true,
     );
     $connection = mockDashboardContract(Connection::class);
@@ -255,13 +255,13 @@ it('reports the exact missing database capability', function (): void {
     );
     $capability = new DatabaseBatchCapability($repository);
 
-    Schema::drop('horizon_new_dawn_batch_metadata');
+    Schema::drop('zenith_batch_metadata');
 
     expect($capability->supported())->toBeTrue()
         ->and($capability->message())->toBeNull()
         ->and($capability->attributionSupported())->toBeFalse()
         ->and($capability->attributionMessage())->toBe(
-            'Run the Horizon New Dawn batch metadata migration to enable queue and connection attribution.',
+            'Run the Zenith batch metadata migration to enable queue and connection attribution.',
         );
 
     Schema::drop('job_batches');

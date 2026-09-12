@@ -1,6 +1,6 @@
 # Project-specific UI review criteria
 
-This file contains project-specific UI review criteria used when reviewing Horizon New Dawn UI changes. Apply each criterion without preserving one-off copy, record-specific dimensions, or obsolete pixel values.
+This file contains project-specific UI review criteria used when reviewing Zenith UI changes. Apply each criterion without preserving one-off copy, record-specific dimensions, or obsolete pixel values.
 
 ## Fidelity before invention
 
@@ -88,6 +88,6 @@ Use the existing primitive that owns each seam. Do not repeat its internal Tailw
 ## Prove the consumer
 
 - The package owns source and compiled assets, while a consuming Laravel application serves the UI. Rebuild, run the package installer in the consumer, and reload the exact named URL.
-- When no other consumer is named, prove `https://horizon-demo.nmbp/horizon/` after `php artisan horizon-new-dawn:install --force --no-interaction` in `/Users/nckrtl/apps/horizon-demo`.
+- When no other consumer is named, prove `https://horizon-demo.nmbp/horizon/` after `php artisan zenith:install --force --no-interaction` in `/Users/nckrtl/apps/horizon-demo`.
 - Confirm the browser loaded the new asset hashes. Inspect console and network failures and retest routes across at least one polling/cache interval.
 - A green package build, Workbench page, or stale browser tab is not final UI evidence.

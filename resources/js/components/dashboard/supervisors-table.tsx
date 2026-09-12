@@ -36,7 +36,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { show as supervisorShow } from "@/generated/routes/horizon-new-dawn/supervisors";
+import { show as supervisorShow } from "@/generated/routes/zenith/supervisors";
 import {
   sortRows,
   useSortableRows,

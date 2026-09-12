@@ -1,13 +1,13 @@
 ---
 name: optimizing-horizon-react
-description: Use when writing, reviewing, or refactoring Horizon New Dawn's client-only React code for performance or state correctness, especially Inertia polling, infinite lists, filters, page props, rerenders, local storage, charts, and bundle behavior.
+description: Use when writing, reviewing, or refactoring Zenith's client-only React code for performance or state correctness, especially Inertia polling, infinite lists, filters, page props, rerenders, local storage, charts, and bundle behavior.
 ---
 
 # Optimizing Horizon React
 
 ## Overview
 
-Apply portable React performance practices inside Horizon New Dawn's Laravel/Inertia architecture. React is a browser-only presentation and interaction layer in this package. Optimize the largest proven cost first while preserving Laravel and Inertia's ownership of the server lifecycle, routing, page data, navigation, polling transport, prop merging, and history state.
+Apply portable React performance practices inside Zenith's Laravel/Inertia architecture. React is a browser-only presentation and interaction layer in this package. Optimize the largest proven cost first while preserving Laravel and Inertia's ownership of the server lifecycle, routing, page data, navigation, polling transport, prop merging, and history state.
 
 ## Runtime boundary
 

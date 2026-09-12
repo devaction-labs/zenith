@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
-use DevactionLabs\HorizonNewDawn\FailedJobs\FailedJobRetryEligibility;
-use DevactionLabs\HorizonNewDawn\FailedJobs\FailedJobsData;
-use DevactionLabs\HorizonNewDawn\Jobs\Data\JobIndexFiltersData;
-use DevactionLabs\HorizonNewDawn\Jobs\JobListType;
-use DevactionLabs\HorizonNewDawn\Jobs\JobsData;
-use DevactionLabs\HorizonNewDawn\Jobs\PendingJobStateIndex;
-use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobFilterCatalog;
-use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobIndex;
-use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobIndexWarming;
-use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobQuery;
-use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobType;
-use DevactionLabs\HorizonNewDawn\Queues\QueueActivityTab;
-use DevactionLabs\HorizonNewDawn\Queues\QueueJobsData;
+use DevactionLabs\Zenith\FailedJobs\FailedJobRetryEligibility;
+use DevactionLabs\Zenith\FailedJobs\FailedJobsData;
+use DevactionLabs\Zenith\Jobs\Data\JobIndexFiltersData;
+use DevactionLabs\Zenith\Jobs\JobListType;
+use DevactionLabs\Zenith\Jobs\JobsData;
+use DevactionLabs\Zenith\Jobs\PendingJobStateIndex;
+use DevactionLabs\Zenith\Jobs\RetainedJobFilterCatalog;
+use DevactionLabs\Zenith\Jobs\RetainedJobIndex;
+use DevactionLabs\Zenith\Jobs\RetainedJobIndexWarming;
+use DevactionLabs\Zenith\Jobs\RetainedJobQuery;
+use DevactionLabs\Zenith\Jobs\RetainedJobType;
+use DevactionLabs\Zenith\Queues\QueueActivityTab;
+use DevactionLabs\Zenith\Queues\QueueJobsData;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Illuminate\Contracts\Queue\Factory as QueueFactory;
 use Illuminate\Contracts\Redis\Factory as RedisFactory;
@@ -28,12 +28,12 @@ use Laravel\Horizon\Contracts\TagRepository;
 use Mockery\MockInterface;
 use Predis\Client;
 
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardNeverReceives;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturns;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturnsFor;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturnsUsing;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\horizonJob;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\Zenith\Tests\Support\dashboardNeverReceives;
+use function DevactionLabs\Zenith\Tests\Support\dashboardReturns;
+use function DevactionLabs\Zenith\Tests\Support\dashboardReturnsFor;
+use function DevactionLabs\Zenith\Tests\Support\dashboardReturnsUsing;
+use function DevactionLabs\Zenith\Tests\Support\horizonJob;
+use function DevactionLabs\Zenith\Tests\Support\mockDashboardContract;
 
 final class RetainedJobQueryRedisClient extends Client
 {
@@ -2687,14 +2687,14 @@ describe('RetainedJobQuery', function (): void {
             ],
             static fn (string $key): bool => str_contains(
                 $key,
-                ':horizon-new-dawn:pending-snapshot:',
+                ':zenith:pending-snapshot:',
             ),
         ));
         $renewedSnapshotKeys = array_values(array_filter(
             $queueRedis->expiredKeys,
             static fn (string $key): bool => str_contains(
                 $key,
-                ':horizon-new-dawn:pending-snapshot:',
+                ':zenith:pending-snapshot:',
             ),
         ));
 
@@ -2721,7 +2721,7 @@ describe('RetainedJobQuery', function (): void {
                 if (
                     str_contains(
                         $key,
-                        ':horizon-new-dawn:pending-snapshot:',
+                        ':zenith:pending-snapshot:',
                     )
                 ) {
                     unset($client->strings[$key]);
@@ -2744,7 +2744,7 @@ describe('RetainedJobQuery', function (): void {
             ],
             static fn (string $key): bool => str_contains(
                 $key,
-                ':horizon-new-dawn:pending-snapshot:',
+                ':zenith:pending-snapshot:',
             ),
         )))->toBe([]);
     });
@@ -2771,7 +2771,7 @@ describe('RetainedJobQuery', function (): void {
             ],
             static fn (string $key): bool => str_contains(
                 $key,
-                ':horizon-new-dawn:pending-snapshot:',
+                ':zenith:pending-snapshot:',
             ),
         )))->toBe([]);
     });
@@ -2867,7 +2867,7 @@ describe('RetainedJobQuery', function (): void {
             json_encode(['uuid' => 'ready'], JSON_THROW_ON_ERROR),
             json_encode([
                 'uuid' => 'made-available',
-                'horizonNewDawn' => ['madeAvailableAt' => Date::now()->getTimestamp() - 30],
+                'zenith' => ['madeAvailableAt' => Date::now()->getTimestamp() - 30],
                 'createdAt' => Date::now()->getTimestamp() - 120,
                 'delay' => 60,
             ], JSON_THROW_ON_ERROR),
@@ -2956,9 +2956,9 @@ describe('RetainedJobQuery', function (): void {
             'queue',
         );
 
-        expect($catalogKey)->toStartWith("\x1fhorizon-new-dawn:v2:")
+        expect($catalogKey)->toStartWith("\x1fzenith:v2:")
             ->and($catalogKey)->not->toBe(
-                'horizon_new_dawn:jobs:completed:catalog:queue',
+                'zenith:jobs:completed:catalog:queue',
             )
             ->and($redis->sets)->toHaveKey($catalogKey);
     });
@@ -3123,7 +3123,7 @@ describe('RetainedJobQuery', function (): void {
     });
 
     it('invalidates a queue page cache from the published revision without scanning retained sources', function (): void {
-        config()->set('horizon-new-dawn.poll_interval', 0);
+        config()->set('zenith.poll_interval', 0);
         $redis = new RetainedJobQueryRedisClient;
         $redis->seedSortedSet('completed_jobs', [
             'completed-0' => -1,
@@ -3174,7 +3174,7 @@ describe('RetainedJobQuery', function (): void {
     });
 
     it('serves the last cached queue page while its published pointer is temporarily missing', function (): void {
-        config()->set('horizon-new-dawn.poll_interval', 0);
+        config()->set('zenith.poll_interval', 0);
         config()->set('horizon.prefix', 'queue-last-good-page:');
         app(CacheFactory::class)->store()->clear();
         $redis = new RetainedJobQueryRedisClient;
@@ -3219,7 +3219,7 @@ describe('RetainedJobQuery', function (): void {
     });
 
     it('deduplicates retained reconciliation globally by Horizon prefix and job type', function (): void {
-        config()->set('horizon-new-dawn.poll_interval', 0);
+        config()->set('zenith.poll_interval', 0);
         $redis = new RetainedJobQueryRedisClient;
         $redis->seedSortedSet('completed_jobs', [
             'completed-default' => -1,
@@ -3273,7 +3273,7 @@ describe('RetainedJobQuery', function (): void {
     });
 
     it('serves a stale queue page immediately and refreshes it after the response', function (): void {
-        config()->set('horizon-new-dawn.poll_interval', 5_000);
+        config()->set('zenith.poll_interval', 5_000);
         Date::setTestNow('2026-07-20 12:00:00 UTC');
         $redis = new RetainedJobQueryRedisClient;
         $redis->seedSortedSet('completed_jobs', [
@@ -3330,7 +3330,7 @@ describe('RetainedJobQuery', function (): void {
     });
 
     it('returns neutral warming queue data until a cold index is published', function (): void {
-        config()->set('horizon-new-dawn.poll_interval', 0);
+        config()->set('zenith.poll_interval', 0);
         $redis = new RetainedJobQueryRedisClient;
         $redis->seedSortedSet('completed_jobs', [
             'completed-0' => -1,
@@ -3372,7 +3372,7 @@ describe('RetainedJobQuery', function (): void {
     });
 
     it('serves a stale queue summary immediately and replaces it after reconciliation', function (): void {
-        config()->set('horizon-new-dawn.poll_interval', 5_000);
+        config()->set('zenith.poll_interval', 5_000);
         Date::setTestNow('2026-07-20 12:00:00 UTC');
         $redis = new RetainedJobQueryRedisClient;
         $redis->seedSortedSet('completed_jobs', [
@@ -3433,7 +3433,7 @@ describe('RetainedJobQuery', function (): void {
     });
 
     it('serves a prior cached queue summary while a published pointer is temporarily missing', function (): void {
-        config()->set('horizon-new-dawn.poll_interval', 0);
+        config()->set('zenith.poll_interval', 0);
         config()->set('horizon.prefix', 'queue-last-good-summary:');
         app(CacheFactory::class)->store()->clear();
         $redis = new RetainedJobQueryRedisClient;
@@ -3467,7 +3467,7 @@ describe('RetainedJobQuery', function (): void {
 
         $initial = $queues->summary('default');
         $cache = app(CacheFactory::class)->store();
-        $cacheKey = 'horizon-new-dawn:queue-jobs:'.hash(
+        $cacheKey = 'zenith:queue-jobs:'.hash(
             'sha256',
             "queue-last-good-summary:\0default",
         );
@@ -3495,7 +3495,7 @@ describe('RetainedJobQuery', function (): void {
     });
 
     it('returns a neutral queue summary while its retained indexes warm', function (): void {
-        config()->set('horizon-new-dawn.poll_interval', 0);
+        config()->set('zenith.poll_interval', 0);
         $redis = new RetainedJobQueryRedisClient;
         $redis->seedSortedSet('completed_jobs', [
             'completed-0' => -1,

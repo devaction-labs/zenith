@@ -26,6 +26,6 @@ it('initializes the sqlite database file and migrates package batch metadata', f
             || str_contains($database, 'mode=memory')
             || is_file($database),
         )->toBeTrue()
-        ->and(Schema::connection($connection)->hasTable('horizon_new_dawn_batch_metadata'))
+        ->and(Schema::connection($connection)->hasTable('zenith_batch_metadata'))
         ->toBeTrue();
 });

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Dashboard\Data;
+namespace DevactionLabs\Zenith\Dashboard\Data;
 
-use DevactionLabs\HorizonNewDawn\Dashboard\HorizonStatus;
+use DevactionLabs\Zenith\Dashboard\HorizonStatus;
 use Spatie\LaravelData\Data;
 
 final class DashboardSummaryData extends Data

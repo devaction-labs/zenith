@@ -3,23 +3,23 @@
 declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
-use DevactionLabs\HorizonNewDawn\Batches\BatchesData;
-use DevactionLabs\HorizonNewDawn\Batches\BatchJobsData;
-use DevactionLabs\HorizonNewDawn\FailedJobs\FailedJobRetryEligibility;
-use DevactionLabs\HorizonNewDawn\FailedJobs\FailedJobsData;
-use DevactionLabs\HorizonNewDawn\Jobs\JobsData;
-use DevactionLabs\HorizonNewDawn\Metrics\SnapshotJobsPerMinute;
-use DevactionLabs\HorizonNewDawn\Queues\Data\QueuePauseTargetData;
-use DevactionLabs\HorizonNewDawn\Queues\Data\QueueRetainedJobsData;
-use DevactionLabs\HorizonNewDawn\Queues\Data\QueueRowData;
-use DevactionLabs\HorizonNewDawn\Queues\Data\QueueWaitThresholdData;
-use DevactionLabs\HorizonNewDawn\Queues\Data\QueueWaitThresholdTargetData;
-use DevactionLabs\HorizonNewDawn\Queues\QueueBatchesData;
-use DevactionLabs\HorizonNewDawn\Queues\QueueJobsData;
-use DevactionLabs\HorizonNewDawn\Queues\QueuePauseMetadata;
-use DevactionLabs\HorizonNewDawn\Queues\QueuePauseStatus;
-use DevactionLabs\HorizonNewDawn\Queues\QueueSummary;
-use DevactionLabs\HorizonNewDawn\Queues\QueueWaitThresholdStatus;
+use DevactionLabs\Zenith\Batches\BatchesData;
+use DevactionLabs\Zenith\Batches\BatchJobsData;
+use DevactionLabs\Zenith\FailedJobs\FailedJobRetryEligibility;
+use DevactionLabs\Zenith\FailedJobs\FailedJobsData;
+use DevactionLabs\Zenith\Jobs\JobsData;
+use DevactionLabs\Zenith\Metrics\SnapshotJobsPerMinute;
+use DevactionLabs\Zenith\Queues\Data\QueuePauseTargetData;
+use DevactionLabs\Zenith\Queues\Data\QueueRetainedJobsData;
+use DevactionLabs\Zenith\Queues\Data\QueueRowData;
+use DevactionLabs\Zenith\Queues\Data\QueueWaitThresholdData;
+use DevactionLabs\Zenith\Queues\Data\QueueWaitThresholdTargetData;
+use DevactionLabs\Zenith\Queues\QueueBatchesData;
+use DevactionLabs\Zenith\Queues\QueueJobsData;
+use DevactionLabs\Zenith\Queues\QueuePauseMetadata;
+use DevactionLabs\Zenith\Queues\QueuePauseStatus;
+use DevactionLabs\Zenith\Queues\QueueSummary;
+use DevactionLabs\Zenith\Queues\QueueWaitThresholdStatus;
 use Illuminate\Bus\BatchRepository;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Illuminate\Contracts\Redis\Factory as RedisFactory;
@@ -29,13 +29,13 @@ use Laravel\Horizon\Contracts\JobRepository;
 use Laravel\Horizon\Contracts\MetricsRepository;
 use Laravel\Horizon\Contracts\TagRepository;
 
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardExpects;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturns;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturnsFor;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardThrows;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\horizonBatch;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\horizonJob;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\Zenith\Tests\Support\dashboardExpects;
+use function DevactionLabs\Zenith\Tests\Support\dashboardReturns;
+use function DevactionLabs\Zenith\Tests\Support\dashboardReturnsFor;
+use function DevactionLabs\Zenith\Tests\Support\dashboardThrows;
+use function DevactionLabs\Zenith\Tests\Support\horizonBatch;
+use function DevactionLabs\Zenith\Tests\Support\horizonJob;
+use function DevactionLabs\Zenith\Tests\Support\mockDashboardContract;
 
 function queueSummaryCoordinator(
     JobRepository $jobRepository,
@@ -182,7 +182,7 @@ function queueSummaryRow(): QueueRowData
 
 beforeEach(function (): void {
     app(CacheFactory::class)->store()->clear();
-    config()->set('horizon-new-dawn.poll_interval', 0);
+    config()->set('zenith.poll_interval', 0);
     CarbonImmutable::setTestNow('2026-07-18 12:00:00 UTC');
 
     if (queuePausingIsSupported()) {
@@ -477,11 +477,11 @@ it('keeps a completed-only calculation failure quiet without inventing a zero', 
 });
 
 it('maps a warming retained summary to unknown counts without making the queue unavailable', function (): void {
-    config()->set('horizon-new-dawn.poll_interval', 5_000);
+    config()->set('zenith.poll_interval', 5_000);
 
     $prefix = config('horizon.prefix', 'horizon:');
     $prefix = is_string($prefix) ? $prefix : 'horizon:';
-    $cacheKey = 'horizon-new-dawn:queue-jobs:'.hash(
+    $cacheKey = 'zenith:queue-jobs:'.hash(
         'sha256',
         $prefix."\0reports",
     );

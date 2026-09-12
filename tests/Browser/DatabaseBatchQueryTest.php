@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-use DevactionLabs\HorizonNewDawn\Batches\BatchesData;
-use DevactionLabs\HorizonNewDawn\Batches\BatchJobsData;
-use DevactionLabs\HorizonNewDawn\Batches\DatabaseBatchQuery;
-use DevactionLabs\HorizonNewDawn\Jobs\JobsData;
+use DevactionLabs\Zenith\Batches\BatchesData;
+use DevactionLabs\Zenith\Batches\BatchJobsData;
+use DevactionLabs\Zenith\Batches\DatabaseBatchQuery;
+use DevactionLabs\Zenith\Jobs\JobsData;
 use Illuminate\Bus\BatchFactory;
 use Illuminate\Bus\BatchRepository;
 use Illuminate\Bus\DatabaseBatchRepository;
@@ -14,17 +14,17 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Laravel\Horizon\Contracts\JobRepository;
 
-use function DevactionLabs\HorizonNewDawn\Tests\Support\bindBrowserPageFixtures;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturnsUsing;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\horizonBatch;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\Zenith\Tests\Support\bindBrowserPageFixtures;
+use function DevactionLabs\Zenith\Tests\Support\dashboardReturnsUsing;
+use function DevactionLabs\Zenith\Tests\Support\horizonBatch;
+use function DevactionLabs\Zenith\Tests\Support\mockDashboardContract;
 
 it('filters statuses and sorts the complete retained database batch set', function (): void {
     bindBrowserPageFixtures();
     config()->set('queue.batching.database', null);
     config()->set('queue.batching.table', 'job_batches');
 
-    Schema::dropIfExists('horizon_new_dawn_batch_metadata');
+    Schema::dropIfExists('zenith_batch_metadata');
     Schema::dropIfExists('job_batches');
     Schema::create('job_batches', function (Blueprint $table): void {
         $table->string('id')->primary();
@@ -39,7 +39,7 @@ it('filters statuses and sorts the complete retained database batch set', functi
         $table->integer('finished_at')->nullable();
     });
 
-    $migration = require __DIR__.'/../../database/migrations/2026_07_26_000000_create_horizon_new_dawn_batch_metadata_table.php';
+    $migration = require __DIR__.'/../../database/migrations/2026_07_26_000000_create_zenith_batch_metadata_table.php';
     $migration->up();
 
     $longBatchName = 'Large export batch for every European customer and accounting period that must stay inside its table column';
@@ -296,7 +296,7 @@ it('keeps source-backed batch queries while hiding destination filters before mi
     config()->set('queue.batching.database', null);
     config()->set('queue.batching.table', 'job_batches');
 
-    Schema::dropIfExists('horizon_new_dawn_batch_metadata');
+    Schema::dropIfExists('zenith_batch_metadata');
     Schema::dropIfExists('job_batches');
     Schema::create('job_batches', function (Blueprint $table): void {
         $table->string('id')->primary();
@@ -337,7 +337,7 @@ it('keeps source-backed batch queries while hiding destination filters before mi
         app(DatabaseBatchQuery::class),
     ));
 
-    expect(Schema::hasTable('horizon_new_dawn_batch_metadata'))->toBeFalse();
+    expect(Schema::hasTable('zenith_batch_metadata'))->toBeFalse();
 
     $page = visit('/horizon/batches?queue=stale-default&connection=stale-connection')
         ->assertSee('Queryable before migration')
@@ -346,7 +346,7 @@ it('keeps source-backed batch queries while hiding destination filters before mi
         ->assertPresent('button[aria-label^="Sort by"]')
         ->click('button[aria-label^="Filter batches"]')
         ->assertSee(
-            'Run the Horizon New Dawn batch metadata migration to enable queue and connection attribution.',
+            'Run the Zenith batch metadata migration to enable queue and connection attribution.',
         )
         ->assertSee('Created');
     $labels = $page->script(<<<'JS'

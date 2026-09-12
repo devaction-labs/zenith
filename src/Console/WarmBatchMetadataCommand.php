@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Console;
+namespace DevactionLabs\Zenith\Console;
 
-use DevactionLabs\HorizonNewDawn\Batches\DatabaseBatchCapability;
-use DevactionLabs\HorizonNewDawn\Batches\DatabaseBatchMetadataSynchronizer;
+use DevactionLabs\Zenith\Batches\DatabaseBatchCapability;
+use DevactionLabs\Zenith\Batches\DatabaseBatchMetadataSynchronizer;
 use Illuminate\Console\Command;
 
 final class WarmBatchMetadataCommand extends Command
 {
-    protected $signature = 'horizon-new-dawn:warm-batch-metadata';
+    protected $signature = 'zenith:warm-batch-metadata';
 
     protected $description = 'Warm immutable queue and connection metadata for retained batches';
 

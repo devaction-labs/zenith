@@ -29,15 +29,15 @@ import {
   SidebarMenuSubItem,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { dashboard } from "@/generated/routes/horizon-new-dawn";
-import { index as auditIndex } from "@/generated/routes/horizon-new-dawn/audit";
-import { index as batchesIndex } from "@/generated/routes/horizon-new-dawn/batches";
-import { index as failedJobsIndex } from "@/generated/routes/horizon-new-dawn/failed-jobs";
-import { index as jobsIndex } from "@/generated/routes/horizon-new-dawn/jobs";
-import { index as metricsIndex } from "@/generated/routes/horizon-new-dawn/metrics";
-import { index as monitoringIndex } from "@/generated/routes/horizon-new-dawn/monitoring";
-import { index as runningInstancesIndex } from "@/generated/routes/horizon-new-dawn/instances";
-import { index as queuesIndex } from "@/generated/routes/horizon-new-dawn/queues";
+import { dashboard } from "@/generated/routes/zenith";
+import { index as auditIndex } from "@/generated/routes/zenith/audit";
+import { index as batchesIndex } from "@/generated/routes/zenith/batches";
+import { index as failedJobsIndex } from "@/generated/routes/zenith/failed-jobs";
+import { index as jobsIndex } from "@/generated/routes/zenith/jobs";
+import { index as metricsIndex } from "@/generated/routes/zenith/metrics";
+import { index as monitoringIndex } from "@/generated/routes/zenith/monitoring";
+import { index as runningInstancesIndex } from "@/generated/routes/zenith/instances";
+import { index as queuesIndex } from "@/generated/routes/zenith/queues";
 import { formatCount } from "@/lib/format-count";
 import { resolveHorizonRoute } from "@/lib/horizon-route";
 import type { HorizonStatus as HorizonStatusValue } from "@/types/dashboard";

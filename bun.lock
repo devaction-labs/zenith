@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "horizon-new-dawn",
+      "name": "zenith",
       "dependencies": {
         "@base-ui/react": "^1.6.0",
         "@inertiajs/core": "^3.6.1",

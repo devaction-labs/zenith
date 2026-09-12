@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Jobs;
+namespace DevactionLabs\Zenith\Jobs;
 
 /**
  * Pagination state for retained job pages.

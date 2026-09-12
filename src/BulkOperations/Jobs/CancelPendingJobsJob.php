@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\BulkOperations\Jobs;
+namespace DevactionLabs\Zenith\BulkOperations\Jobs;
 
-use DevactionLabs\HorizonNewDawn\BulkOperations\BulkOperationJob;
-use DevactionLabs\HorizonNewDawn\Jobs\Actions\CancelPendingJobs;
-use DevactionLabs\HorizonNewDawn\Jobs\PendingJobCancellationScope;
+use DevactionLabs\Zenith\BulkOperations\BulkOperationJob;
+use DevactionLabs\Zenith\Jobs\Actions\CancelPendingJobs;
+use DevactionLabs\Zenith\Jobs\PendingJobCancellationScope;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Log;
 
@@ -45,7 +45,7 @@ final class CancelPendingJobsJob extends BulkOperationJob
             return;
         }
 
-        Log::info('Horizon New Dawn bulk operation completed.', [
+        Log::info('Zenith bulk operation completed.', [
             'operation' => 'cancel-pending-jobs',
             'affected' => $result->totalCancelled,
             'scope' => $this->scope->value,
@@ -59,7 +59,7 @@ final class CancelPendingJobsJob extends BulkOperationJob
     /** @return list<string> */
     public function tags(): array
     {
-        $tags = ['horizon-new-dawn', 'bulk:cancel-pending-jobs', 'scope:'.$this->scope->value];
+        $tags = ['zenith', 'bulk:cancel-pending-jobs', 'scope:'.$this->scope->value];
 
         if ($this->queueName !== null) {
             $tags[] = 'queue:'.$this->queueName;

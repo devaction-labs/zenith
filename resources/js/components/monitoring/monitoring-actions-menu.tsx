@@ -23,9 +23,9 @@ import {
 import {
   destroy as stopMonitoring,
   index as monitoringIndex,
-} from "@/generated/routes/horizon-new-dawn/monitoring";
-import { destroy as clearRecentJobs } from "@/generated/routes/horizon-new-dawn/monitoring/jobs";
-import { store as retryFailedJobs } from "@/generated/routes/horizon-new-dawn/monitoring/retry-failed";
+} from "@/generated/routes/zenith/monitoring";
+import { destroy as clearRecentJobs } from "@/generated/routes/zenith/monitoring/jobs";
+import { store as retryFailedJobs } from "@/generated/routes/zenith/monitoring/retry-failed";
 import { resolveHorizonRoute } from "@/lib/horizon-route";
 
 type MonitoringAction = "clear" | "retry" | "stop";

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Batches\Actions;
+namespace DevactionLabs\Zenith\Batches\Actions;
 
-use DevactionLabs\HorizonNewDawn\Batches\BatchClearScope;
-use DevactionLabs\HorizonNewDawn\Batches\ClearableBatches;
+use DevactionLabs\Zenith\Batches\BatchClearScope;
+use DevactionLabs\Zenith\Batches\ClearableBatches;
 use Illuminate\Bus\BatchRepository;
 
 /**

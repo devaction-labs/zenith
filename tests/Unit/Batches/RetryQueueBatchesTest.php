@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-use DevactionLabs\HorizonNewDawn\Batches\Actions\RetryQueueBatches;
-use DevactionLabs\HorizonNewDawn\Batches\BatchesData;
-use DevactionLabs\HorizonNewDawn\Batches\BatchJobsData;
-use DevactionLabs\HorizonNewDawn\Batches\DatabaseBatchCapability;
-use DevactionLabs\HorizonNewDawn\Batches\DatabaseBatchMetadataSynchronizer;
-use DevactionLabs\HorizonNewDawn\Batches\DatabaseBatchQuery;
-use DevactionLabs\HorizonNewDawn\BulkOperations\BulkOperationSnapshot;
-use DevactionLabs\HorizonNewDawn\FailedJobs\Actions\RetryFailedJob;
-use DevactionLabs\HorizonNewDawn\FailedJobs\FailedJobRetryEligibility;
-use DevactionLabs\HorizonNewDawn\Jobs\JobsData;
+use DevactionLabs\Zenith\Batches\Actions\RetryQueueBatches;
+use DevactionLabs\Zenith\Batches\BatchesData;
+use DevactionLabs\Zenith\Batches\BatchJobsData;
+use DevactionLabs\Zenith\Batches\DatabaseBatchCapability;
+use DevactionLabs\Zenith\Batches\DatabaseBatchMetadataSynchronizer;
+use DevactionLabs\Zenith\Batches\DatabaseBatchQuery;
+use DevactionLabs\Zenith\BulkOperations\BulkOperationSnapshot;
+use DevactionLabs\Zenith\FailedJobs\Actions\RetryFailedJob;
+use DevactionLabs\Zenith\FailedJobs\FailedJobRetryEligibility;
+use DevactionLabs\Zenith\Jobs\JobsData;
 use Illuminate\Bus\BatchFactory;
 use Illuminate\Bus\BatchRepository;
 use Illuminate\Bus\DatabaseBatchRepository;
@@ -23,13 +23,13 @@ use Illuminate\Support\Facades\Schema;
 use Laravel\Horizon\Contracts\JobRepository;
 use Laravel\Horizon\Jobs\RetryFailedJob as HorizonRetryFailedJob;
 
-use function DevactionLabs\HorizonNewDawn\Tests\Support\bulkSnapshotRedis;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardNeverReceives;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturnsFor;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturnsUsing;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\horizonBatch;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\horizonJob;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\Zenith\Tests\Support\bulkSnapshotRedis;
+use function DevactionLabs\Zenith\Tests\Support\dashboardNeverReceives;
+use function DevactionLabs\Zenith\Tests\Support\dashboardReturnsFor;
+use function DevactionLabs\Zenith\Tests\Support\dashboardReturnsUsing;
+use function DevactionLabs\Zenith\Tests\Support\horizonBatch;
+use function DevactionLabs\Zenith\Tests\Support\horizonJob;
+use function DevactionLabs\Zenith\Tests\Support\mockDashboardContract;
 
 function queueBatchRetryAction(
     BatchRepository $batches,
@@ -157,7 +157,7 @@ it('uses stored first-observed attribution instead of rescanning live batch defa
     config()->set('queue.default', 'redis');
     config()->set('queue.connections.redis.queue', 'default');
 
-    Schema::dropIfExists('horizon_new_dawn_batch_metadata');
+    Schema::dropIfExists('zenith_batch_metadata');
     Schema::dropIfExists('job_batches');
     Schema::create('job_batches', function (Blueprint $table): void {
         $table->string('id')->primary();
@@ -171,7 +171,7 @@ it('uses stored first-observed attribution instead of rescanning live batch defa
         $table->integer('created_at');
         $table->integer('finished_at')->nullable();
     });
-    $migration = require __DIR__.'/../../../database/migrations/2026_07_26_000000_create_horizon_new_dawn_batch_metadata_table.php';
+    $migration = require __DIR__.'/../../../database/migrations/2026_07_26_000000_create_zenith_batch_metadata_table.php';
     $migration->up();
 
     try {
@@ -234,7 +234,7 @@ it('uses stored first-observed attribution instead of rescanning live batch defa
             fn (HorizonRetryFailedJob $job): bool => $job->id === 'failed-priority',
         );
     } finally {
-        Schema::dropIfExists('horizon_new_dawn_batch_metadata');
+        Schema::dropIfExists('zenith_batch_metadata');
         Schema::dropIfExists('job_batches');
     }
 });

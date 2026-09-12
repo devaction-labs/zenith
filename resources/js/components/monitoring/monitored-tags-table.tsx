@@ -8,7 +8,7 @@ import { MonitoringNavigationIcon } from "@/components/navigation-icons";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
-import { show as monitoringShow } from "@/generated/routes/horizon-new-dawn/monitoring";
+import { show as monitoringShow } from "@/generated/routes/zenith/monitoring";
 import { useSortableRows, type SortColumn } from "@/hooks/use-sortable-rows";
 import { resolveHorizonRoute } from "@/lib/horizon-route";
 import { isInteractiveTarget } from "@/lib/interactive-target";

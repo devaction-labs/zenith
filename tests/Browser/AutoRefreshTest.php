@@ -6,9 +6,9 @@ use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
-use function DevactionLabs\HorizonNewDawn\Tests\Support\bindBrowserInfiniteScrollRefreshFixtures;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\bindBrowserPageFixtures;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\bindBrowserQueueCompletedSummaryRefreshFixtures;
+use function DevactionLabs\Zenith\Tests\Support\bindBrowserInfiniteScrollRefreshFixtures;
+use function DevactionLabs\Zenith\Tests\Support\bindBrowserPageFixtures;
+use function DevactionLabs\Zenith\Tests\Support\bindBrowserQueueCompletedSummaryRefreshFixtures;
 
 describe('automatic refresh', function (): void {
     it('intercepts asset-version changes in the rendered interface', function (): void {
@@ -534,7 +534,7 @@ describe('automatic refresh', function (): void {
 
     it('keeps newer queue query navigation when an older poll response finishes', function (): void {
         bindBrowserPageFixtures();
-        config()->set('horizon-new-dawn.poll_interval', 200);
+        config()->set('zenith.poll_interval', 200);
 
         $page = visit('/horizon/queues/reports')
             ->waitForText('Retained Pending Jobs');
@@ -710,8 +710,8 @@ describe('automatic refresh', function (): void {
     it('shows a restrained failed auto-refresh state until the next successful poll', function (): void {
         // Slow interval so the script can disable any default-enabled polling and attach
         // the observer before the enable-time reload consumes the one-shot 503.
-        config()->set('horizon-new-dawn.poll_interval', 1000);
-        config()->set('horizon-new-dawn.testing.fail_next_tracked_list_refresh', true);
+        config()->set('zenith.poll_interval', 1000);
+        config()->set('zenith.testing.fail_next_tracked_list_refresh', true);
         app(Kernel::class)->pushMiddleware(FailNextTrackedListRefreshOnce::class);
 
         $page = visit('/horizon/jobs/pending')
@@ -954,11 +954,11 @@ final class FailNextTrackedListRefreshOnce
         $partialData = (string) $request->headers->get('X-Inertia-Partial-Data', '');
 
         if (
-            (bool) config('horizon-new-dawn.testing.fail_next_tracked_list_refresh')
+            (bool) config('zenith.testing.fail_next_tracked_list_refresh')
             && $request->headers->get('X-Inertia') === 'true'
             && str_contains($partialData, 'listRevision')
         ) {
-            config()->set('horizon-new-dawn.testing.fail_next_tracked_list_refresh', false);
+            config()->set('zenith.testing.fail_next_tracked_list_refresh', false);
 
             return response('Automatic refresh temporarily unavailable.', 503);
         }

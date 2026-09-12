@@ -80,10 +80,10 @@ export function BatchFilters({
           <DialogTitle>Filter batches</DialogTitle>
           <DialogDescription>
             {attributionAvailable
-              ? "Narrow retained batches by queue, connection, or creation time. Historical batches without a recorded destination are inferred once from the queue configuration active when New Dawn first discovers them."
+              ? "Narrow retained batches by queue, connection, or creation time. Historical batches without a recorded destination are inferred once from the queue configuration active when Zenith first discovers them."
               : `Narrow retained batches by creation time. ${
                   attributionMessage ??
-                  "Run the Horizon New Dawn migration to enable queue and connection filters."
+                  "Run the Zenith migration to enable queue and connection filters."
                 }`}
           </DialogDescription>
         </DialogHeader>

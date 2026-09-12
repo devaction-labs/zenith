@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Monitoring;
+namespace DevactionLabs\Zenith\Monitoring;
 
 enum MonitoringStatus: string
 {

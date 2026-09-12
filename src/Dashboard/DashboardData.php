@@ -2,21 +2,21 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Dashboard;
+namespace DevactionLabs\Zenith\Dashboard;
 
 use Carbon\CarbonImmutable;
-use DevactionLabs\HorizonNewDawn\Dashboard\Data\DashboardSummaryData;
-use DevactionLabs\HorizonNewDawn\Dashboard\Data\DashboardSupervisorsData;
-use DevactionLabs\HorizonNewDawn\Dashboard\Data\DashboardWorkloadData;
-use DevactionLabs\HorizonNewDawn\Dashboard\Data\SupervisorData;
-use DevactionLabs\HorizonNewDawn\Dashboard\Data\SupervisorGroupData;
-use DevactionLabs\HorizonNewDawn\Dashboard\Data\SupervisorScalingData;
-use DevactionLabs\HorizonNewDawn\Dashboard\Data\WorkloadItemData;
-use DevactionLabs\HorizonNewDawn\Dashboard\Data\WorkloadSplitData;
-use DevactionLabs\HorizonNewDawn\Instances\LocalInstanceName;
-use DevactionLabs\HorizonNewDawn\Metrics\SnapshotJobsPerMinute;
-use DevactionLabs\HorizonNewDawn\Queues\QueuePauseStatus;
-use DevactionLabs\HorizonNewDawn\Queues\QueueWaitThreshold;
+use DevactionLabs\Zenith\Dashboard\Data\DashboardSummaryData;
+use DevactionLabs\Zenith\Dashboard\Data\DashboardSupervisorsData;
+use DevactionLabs\Zenith\Dashboard\Data\DashboardWorkloadData;
+use DevactionLabs\Zenith\Dashboard\Data\SupervisorData;
+use DevactionLabs\Zenith\Dashboard\Data\SupervisorGroupData;
+use DevactionLabs\Zenith\Dashboard\Data\SupervisorScalingData;
+use DevactionLabs\Zenith\Dashboard\Data\WorkloadItemData;
+use DevactionLabs\Zenith\Dashboard\Data\WorkloadSplitData;
+use DevactionLabs\Zenith\Instances\LocalInstanceName;
+use DevactionLabs\Zenith\Metrics\SnapshotJobsPerMinute;
+use DevactionLabs\Zenith\Queues\QueuePauseStatus;
+use DevactionLabs\Zenith\Queues\QueueWaitThreshold;
 use Illuminate\Contracts\Queue\Factory as QueueFactory;
 use Illuminate\Contracts\Queue\Queue;
 use Illuminate\Contracts\Redis\Factory as RedisFactory;

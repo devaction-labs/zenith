@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-use DevactionLabs\HorizonNewDawn\Batches\BatchesData;
-use DevactionLabs\HorizonNewDawn\Batches\BatchJobsData;
-use DevactionLabs\HorizonNewDawn\Dashboard\Data\DashboardBatchPreviewData;
-use DevactionLabs\HorizonNewDawn\Jobs\JobsData;
-use DevactionLabs\HorizonNewDawn\Queues\Data\QueueRetainedBatchesData;
-use DevactionLabs\HorizonNewDawn\Queues\QueueBatchesData;
+use DevactionLabs\Zenith\Batches\BatchesData;
+use DevactionLabs\Zenith\Batches\BatchJobsData;
+use DevactionLabs\Zenith\Dashboard\Data\DashboardBatchPreviewData;
+use DevactionLabs\Zenith\Jobs\JobsData;
+use DevactionLabs\Zenith\Queues\Data\QueueRetainedBatchesData;
+use DevactionLabs\Zenith\Queues\QueueBatchesData;
 use Illuminate\Bus\Batch;
 use Illuminate\Bus\BatchRepository;
 use Illuminate\Cache\CacheManager;
@@ -15,11 +15,11 @@ use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Laravel\Horizon\Contracts\JobRepository;
 
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardExpects;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturnsFor;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardThrowsFor;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\horizonBatch;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\Zenith\Tests\Support\dashboardExpects;
+use function DevactionLabs\Zenith\Tests\Support\dashboardReturnsFor;
+use function DevactionLabs\Zenith\Tests\Support\dashboardThrowsFor;
+use function DevactionLabs\Zenith\Tests\Support\horizonBatch;
+use function DevactionLabs\Zenith\Tests\Support\mockDashboardContract;
 
 function retainedQueueBatchesData(BatchRepository $repository): QueueBatchesData
 {
@@ -64,7 +64,7 @@ function retainedBatchId(int $index): string
 
 beforeEach(function (): void {
     app(CacheFactory::class)->store()->clear();
-    config()->set('horizon-new-dawn.poll_interval', 0);
+    config()->set('zenith.poll_interval', 0);
     config()->set('horizon.prefix', 'queue-batch-tests:');
     config()->set('queue.default', 'redis');
     config()->set('queue.connections.redis.queue', 'default');
@@ -155,11 +155,11 @@ it('replaces unserializable legacy summary objects with scalar cache payloads', 
 
     config()->set('cache.stores.array.serialize', true);
     config()->set('cache.serializable_classes', false);
-    config()->set('horizon-new-dawn.poll_interval', 5_000);
+    config()->set('zenith.poll_interval', 5_000);
     app(CacheManager::class)->purge();
 
     $cache = app(CacheFactory::class)->store();
-    $cacheKey = 'horizon-new-dawn:queue-batches:'.hash(
+    $cacheKey = 'zenith:queue-batches:'.hash(
         'sha256',
         "queue-batch-tests:\0reports",
     );
@@ -195,7 +195,7 @@ it('uses the configured or default poll interval for its summary cache ttl', fun
     int $expectedCacheSeconds,
 ): void {
     config()->set(
-        'horizon-new-dawn',
+        'zenith',
         $pollInterval === null ? [] : ['poll_interval' => $pollInterval],
     );
 
@@ -301,7 +301,7 @@ it('marks a capped retained batch summary as incomplete', function (): void {
 });
 
 it('bypasses retained batch summary caching for subsecond poll intervals', function (): void {
-    config()->set('horizon-new-dawn.poll_interval', 999);
+    config()->set('zenith.poll_interval', 999);
 
     $repository = mockDashboardContract(BatchRepository::class);
 

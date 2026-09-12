@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Jobs;
+namespace DevactionLabs\Zenith\Jobs;
 
-use DevactionLabs\HorizonNewDawn\Support\NavigationItem;
+use DevactionLabs\Zenith\Support\NavigationItem;
 
 enum JobListType: string
 {

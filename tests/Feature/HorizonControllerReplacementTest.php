@@ -2,24 +2,24 @@
 
 declare(strict_types=1);
 
-use DevactionLabs\HorizonNewDawn\Assets\AssetManifest;
-use DevactionLabs\HorizonNewDawn\Batches\BatchRepositoryOverview;
-use DevactionLabs\HorizonNewDawn\Batches\DatabaseBatchCapability;
-use DevactionLabs\HorizonNewDawn\BulkOperations\Jobs\RetryBatchJob;
-use DevactionLabs\HorizonNewDawn\Dashboard\DashboardBatchSummary;
-use DevactionLabs\HorizonNewDawn\Dashboard\DashboardData;
-use DevactionLabs\HorizonNewDawn\Dashboard\DashboardPendingState;
-use DevactionLabs\HorizonNewDawn\Http\Controllers\BatchesApiController;
-use DevactionLabs\HorizonNewDawn\Http\Controllers\HomeController;
-use DevactionLabs\HorizonNewDawn\Http\Controllers\MonitoringApiController;
-use DevactionLabs\HorizonNewDawn\Http\Middleware\HandleInertiaRequests;
-use DevactionLabs\HorizonNewDawn\Metrics\SnapshotJobsPerMinute;
-use DevactionLabs\HorizonNewDawn\Queues\QueuePauseMetadata;
-use DevactionLabs\HorizonNewDawn\Queues\QueuePauseStatus;
-use DevactionLabs\HorizonNewDawn\Queues\QueueWaitThreshold;
-use DevactionLabs\HorizonNewDawn\Support\FrameworkCapabilities;
-use DevactionLabs\HorizonNewDawn\Support\HorizonRuntime;
-use DevactionLabs\HorizonNewDawn\Tests\TestCase;
+use DevactionLabs\Zenith\Assets\AssetManifest;
+use DevactionLabs\Zenith\Batches\BatchRepositoryOverview;
+use DevactionLabs\Zenith\Batches\DatabaseBatchCapability;
+use DevactionLabs\Zenith\BulkOperations\Jobs\RetryBatchJob;
+use DevactionLabs\Zenith\Dashboard\DashboardBatchSummary;
+use DevactionLabs\Zenith\Dashboard\DashboardData;
+use DevactionLabs\Zenith\Dashboard\DashboardPendingState;
+use DevactionLabs\Zenith\Http\Controllers\BatchesApiController;
+use DevactionLabs\Zenith\Http\Controllers\HomeController;
+use DevactionLabs\Zenith\Http\Controllers\MonitoringApiController;
+use DevactionLabs\Zenith\Http\Middleware\HandleInertiaRequests;
+use DevactionLabs\Zenith\Metrics\SnapshotJobsPerMinute;
+use DevactionLabs\Zenith\Queues\QueuePauseMetadata;
+use DevactionLabs\Zenith\Queues\QueuePauseStatus;
+use DevactionLabs\Zenith\Queues\QueueWaitThreshold;
+use DevactionLabs\Zenith\Support\FrameworkCapabilities;
+use DevactionLabs\Zenith\Support\HorizonRuntime;
+use DevactionLabs\Zenith\Tests\TestCase;
 use Illuminate\Bus\BatchRepository;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Illuminate\Contracts\Queue\Factory as QueueFactory;
@@ -50,10 +50,10 @@ use Laravel\Horizon\Jobs\RetryFailedJob as HorizonRetryFailedJob;
 use Laravel\Horizon\Jobs\StopMonitoringTag as HorizonStopMonitoringTag;
 use Laravel\Horizon\WaitTimeCalculator;
 
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardExpects;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturns;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturnsFor;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\Zenith\Tests\Support\dashboardExpects;
+use function DevactionLabs\Zenith\Tests\Support\dashboardReturns;
+use function DevactionLabs\Zenith\Tests\Support\dashboardReturnsFor;
+use function DevactionLabs\Zenith\Tests\Support\mockDashboardContract;
 use function Pest\Laravel\deleteJson;
 use function Pest\Laravel\get;
 use function Pest\Laravel\postJson;
@@ -112,8 +112,8 @@ describe('Horizon controller replacement', function (): void {
         withoutMiddleware([PreventRequestForgery::class, ValidateCsrfToken::class]);
         Horizon::auth(static fn (): bool => true);
         Bus::fake();
-        config()->set('horizon-new-dawn.bulk_operations.connection', 'operations');
-        config()->set('horizon-new-dawn.bulk_operations.queue', 'horizon-maintenance');
+        config()->set('zenith.bulk_operations.connection', 'operations');
+        config()->set('zenith.bulk_operations.queue', 'horizon-maintenance');
 
         $manager = Mockery::mock(QueueManager::class);
         dashboardExpects($manager, 'connection', ['operations'], value: Mockery::mock(Queue::class));
@@ -142,8 +142,8 @@ describe('Horizon controller replacement', function (): void {
         Bus::assertDispatchedTimes(HorizonRetryFailedJob::class, 1);
     });
 
-    it('returns the New Dawn dashboard from the concrete package route', function (): void {
-        config()->set('horizon-new-dawn', []);
+    it('returns the Zenith dashboard from the concrete package route', function (): void {
+        config()->set('zenith', []);
 
         $jobs = mockDashboardContract(JobRepository::class);
         dashboardReturns($jobs, 'countFailed', 3);
@@ -312,7 +312,7 @@ describe('Horizon controller replacement', function (): void {
     });
 
     it('shares the enabled job navigation breakdown with the interface', function (): void {
-        config()->set('horizon-new-dawn.job_navigation_breakdown', true);
+        config()->set('zenith.job_navigation_breakdown', true);
 
         get('/horizon')
             ->assertOk()

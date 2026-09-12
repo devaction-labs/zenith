@@ -1,4 +1,4 @@
-# Horizon New Dawn React adjustments
+# Zenith React adjustments
 
 These gates capture recurring corrections from prior implementation, remediation, and browser sessions.
 

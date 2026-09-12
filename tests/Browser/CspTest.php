@@ -8,8 +8,8 @@ use Illuminate\Support\Facades\Vite;
 use Symfony\Component\HttpFoundation\Response;
 
 it('loads the compiled dashboard under a nonce-only content security policy', function (): void {
-    Vite::useCspNonce('horizon-new-dawn-browser-nonce');
-    app(Kernel::class)->pushMiddleware(HorizonNewDawnBrowserCsp::class);
+    Vite::useCspNonce('zenith-browser-nonce');
+    app(Kernel::class)->pushMiddleware(ZenithBrowserCsp::class);
 
     $page = visit('/horizon');
 
@@ -25,12 +25,12 @@ it('loads the compiled dashboard under a nonce-only content security policy', fu
     JS))->toBe([]);
 });
 
-final class HorizonNewDawnBrowserCsp
+final class ZenithBrowserCsp
 {
     public function handle(Request $request, Closure $next): Response
     {
         $response = $next($request);
-        $nonce = 'horizon-new-dawn-browser-nonce';
+        $nonce = 'zenith-browser-nonce';
 
         $response->headers->set(
             'Content-Security-Policy',

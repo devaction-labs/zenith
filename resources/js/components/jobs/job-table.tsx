@@ -28,8 +28,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { show as failedJobShow } from "@/generated/routes/horizon-new-dawn/failed-jobs";
-import { show as jobShow } from "@/generated/routes/horizon-new-dawn/jobs";
+import { show as failedJobShow } from "@/generated/routes/zenith/failed-jobs";
+import { show as jobShow } from "@/generated/routes/zenith/jobs";
 import { useScheduledJobClock } from "@/hooks/use-scheduled-job-clock";
 import { formatDuration } from "@/lib/format-duration";
 import { resolveHorizonRoute } from "@/lib/horizon-route";

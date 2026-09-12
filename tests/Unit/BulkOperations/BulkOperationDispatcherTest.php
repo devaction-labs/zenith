@@ -2,20 +2,20 @@
 
 declare(strict_types=1);
 
-use DevactionLabs\HorizonNewDawn\BulkOperations\BulkOperationDispatcher;
-use DevactionLabs\HorizonNewDawn\BulkOperations\Jobs\ClearFailedJobsJob;
+use DevactionLabs\Zenith\BulkOperations\BulkOperationDispatcher;
+use DevactionLabs\Zenith\BulkOperations\Jobs\ClearFailedJobsJob;
 use Illuminate\Contracts\Queue\Queue;
 use Illuminate\Queue\NullQueue;
 use Illuminate\Queue\QueueManager;
 use Illuminate\Queue\SyncQueue;
 use Illuminate\Support\Facades\Bus;
 
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardExpects;
+use function DevactionLabs\Zenith\Tests\Support\dashboardExpects;
 
 it('dispatches bulk operations onto the configured asynchronous queue', function (): void {
     Bus::fake();
-    config()->set('horizon-new-dawn.bulk_operations.connection', 'operations');
-    config()->set('horizon-new-dawn.bulk_operations.queue', 'horizon-maintenance');
+    config()->set('zenith.bulk_operations.connection', 'operations');
+    config()->set('zenith.bulk_operations.queue', 'horizon-maintenance');
 
     $queue = Mockery::mock(Queue::class);
     $manager = Mockery::mock(QueueManager::class);
@@ -33,7 +33,7 @@ it('dispatches bulk operations onto the configured asynchronous queue', function
 
 it('refuses to execute a bulk operation on the synchronous queue driver', function (): void {
     Bus::fake();
-    config()->set('horizon-new-dawn.bulk_operations.connection', 'sync');
+    config()->set('zenith.bulk_operations.connection', 'sync');
 
     $manager = Mockery::mock(QueueManager::class);
     dashboardExpects($manager, 'connection', ['sync'], value: new SyncQueue);
@@ -42,7 +42,7 @@ it('refuses to execute a bulk operation on the synchronous queue driver', functi
     expect(fn () => app(BulkOperationDispatcher::class)->dispatch(new ClearFailedJobsJob))
         ->toThrow(
             RuntimeException::class,
-            'Horizon New Dawn bulk operations require an asynchronous queue connection.',
+            'Zenith bulk operations require an asynchronous queue connection.',
         );
 
     Bus::assertNothingDispatched();
@@ -50,7 +50,7 @@ it('refuses to execute a bulk operation on the synchronous queue driver', functi
 
 it('refuses to execute a bulk operation on the null queue driver', function (): void {
     Bus::fake();
-    config()->set('horizon-new-dawn.bulk_operations.connection', 'null');
+    config()->set('zenith.bulk_operations.connection', 'null');
 
     $manager = Mockery::mock(QueueManager::class);
     dashboardExpects($manager, 'connection', ['null'], value: new NullQueue);
@@ -59,7 +59,7 @@ it('refuses to execute a bulk operation on the null queue driver', function (): 
     expect(fn () => app(BulkOperationDispatcher::class)->dispatch(new ClearFailedJobsJob))
         ->toThrow(
             RuntimeException::class,
-            'Horizon New Dawn bulk operations require an asynchronous queue connection.',
+            'Zenith bulk operations require an asynchronous queue connection.',
         );
 
     Bus::assertNothingDispatched();

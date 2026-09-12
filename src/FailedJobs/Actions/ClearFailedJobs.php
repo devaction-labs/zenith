@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\FailedJobs\Actions;
+namespace DevactionLabs\Zenith\FailedJobs\Actions;
 
-use DevactionLabs\HorizonNewDawn\BulkOperations\BulkOperationChunkResult;
-use DevactionLabs\HorizonNewDawn\BulkOperations\BulkOperationSnapshot;
+use DevactionLabs\Zenith\BulkOperations\BulkOperationChunkResult;
+use DevactionLabs\Zenith\BulkOperations\BulkOperationSnapshot;
 use Illuminate\Queue\Failed\FailedJobProviderInterface;
 use Laravel\Horizon\Contracts\JobRepository;
 use Throwable;

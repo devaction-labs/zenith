@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Audit;
+namespace DevactionLabs\Zenith\Audit;
 
-use DevactionLabs\HorizonNewDawn\Audit\Data\HorizonAuditEventData;
-use DevactionLabs\HorizonNewDawn\Audit\Data\HorizonAuditPageData;
+use DevactionLabs\Zenith\Audit\Data\HorizonAuditEventData;
+use DevactionLabs\Zenith\Audit\Data\HorizonAuditPageData;
 use Throwable;
 
 final readonly class HorizonAuditLog

@@ -1,5 +1,5 @@
 name: Bug report
-description: Report reproducible behavior in Horizon New Dawn.
+description: Report reproducible behavior in Zenith.
 title: "[Bug]: "
 labels:
   - bug
@@ -7,11 +7,11 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for helping improve Horizon New Dawn. Please test against the latest release before reporting an issue. For security vulnerabilities, use the private reporting link in SECURITY.md.
+        Thanks for helping improve Zenith. Please test against the latest release before reporting an issue. For security vulnerabilities, use the private reporting link in SECURITY.md.
   - type: input
     id: package-version
     attributes:
-      label: Horizon New Dawn version
+      label: Zenith version
       placeholder: 0.1.0
     validations:
       required: true

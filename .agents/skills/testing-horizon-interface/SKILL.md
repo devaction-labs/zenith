@@ -1,13 +1,13 @@
 ---
 name: testing-horizon-interface
-description: Use when adding, changing, fixing, or reviewing any user-visible Horizon New Dawn feature, page, interaction, responsive state, browser behavior, or UI test coverage.
+description: Use when adding, changing, fixing, or reviewing any user-visible Zenith feature, page, interaction, responsive state, browser behavior, or UI test coverage.
 ---
 
 # Testing the Horizon Interface
 
 ## Core contract
 
-Horizon New Dawn's product boundary is the rendered consumer UI. Every user-visible feature requires at least one focused Pest Browser acceptance test that proves its user outcome through Laravel routing, Inertia, compiled assets, and React.
+Zenith's product boundary is the rendered consumer UI. Every user-visible feature requires at least one focused Pest Browser acceptance test that proves its user outcome through Laravel routing, Inertia, compiled assets, and React.
 
 Lower-level tests, route smoke coverage, and manual browser checks support this boundary. None replaces the focused browser test.
 

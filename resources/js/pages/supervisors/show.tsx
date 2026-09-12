@@ -5,7 +5,7 @@ import { StatusBadge } from "@/components/dashboard/status-badge";
 import { DetailList, DetailListItem } from "@/components/detail-list";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { show as queueShow } from "@/generated/routes/horizon-new-dawn/queues";
+import { show as queueShow } from "@/generated/routes/zenith/queues";
 import { usePageRefresh } from "@/hooks/use-dashboard-refresh";
 import { useAutoLoadPreference } from "@/layouts/horizon-layout";
 import { formatDuration } from "@/lib/format-duration";

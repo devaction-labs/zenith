@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import { store as retryBatch } from "@/generated/routes/horizon-new-dawn/batches/retry";
-import { index as dashboardIndex } from "@/generated/routes/horizon-new-dawn/dashboard";
-import { store as retryAllFailed } from "@/generated/routes/horizon-new-dawn/failed-jobs/retry-all";
-import { store as retryFailed } from "@/generated/routes/horizon-new-dawn/failed-jobs/retry";
-import { show as jobShow } from "@/generated/routes/horizon-new-dawn/jobs";
-import { show as metricShow } from "@/generated/routes/horizon-new-dawn/metrics";
-import { show as monitoringShow } from "@/generated/routes/horizon-new-dawn/monitoring";
+import { store as retryBatch } from "@/generated/routes/zenith/batches/retry";
+import { index as dashboardIndex } from "@/generated/routes/zenith/dashboard";
+import { store as retryAllFailed } from "@/generated/routes/zenith/failed-jobs/retry-all";
+import { store as retryFailed } from "@/generated/routes/zenith/failed-jobs/retry";
+import { show as jobShow } from "@/generated/routes/zenith/jobs";
+import { show as metricShow } from "@/generated/routes/zenith/metrics";
+import { show as monitoringShow } from "@/generated/routes/zenith/monitoring";
 import { resolveHorizonRoute } from "@/lib/horizon-route";
 
 describe("resolveHorizonRoute", () => {

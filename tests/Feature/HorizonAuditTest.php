@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use DevactionLabs\HorizonNewDawn\Audit\HorizonAuditEvent;
+use DevactionLabs\Zenith\Audit\HorizonAuditEvent;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
@@ -16,8 +16,8 @@ use function Pest\Laravel\withoutMiddleware;
 beforeEach(function (): void {
     withoutMiddleware([PreventRequestForgery::class, ValidateCsrfToken::class]);
     Horizon::auth(static fn (): bool => true);
-    Schema::dropIfExists('horizon_new_dawn_audit_events');
-    Schema::create('horizon_new_dawn_audit_events', function (Blueprint $table): void {
+    Schema::dropIfExists('zenith_audit_events');
+    Schema::create('zenith_audit_events', function (Blueprint $table): void {
         $table->id();
         $table->timestamp('occurred_at')->index();
         $table->string('action', 128);
@@ -33,7 +33,7 @@ it('records successful mutations in the audit table', function (): void {
 
     post('/horizon/queues/redis/reports/pause')->assertRedirect();
 
-    expect(HorizonAuditEvent::query()->where('route', 'horizon-new-dawn.queues.pause.store')->count())
+    expect(HorizonAuditEvent::query()->where('route', 'zenith.queues.pause.store')->count())
         ->toBeGreaterThan(0);
 });
 

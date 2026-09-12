@@ -11,7 +11,7 @@ import {
   type JobFilterValues,
 } from "@/components/jobs/job-filters";
 import { JobsPage } from "@/components/jobs/jobs-page";
-import { index as failedJobsIndex } from "@/generated/routes/horizon-new-dawn/failed-jobs";
+import { index as failedJobsIndex } from "@/generated/routes/zenith/failed-jobs";
 import { useAutoLoad } from "@/hooks/use-auto-load";
 import { useJobFilterCatalogRefresh } from "@/hooks/use-job-filter-catalog-refresh";
 import { useJobQueryControls } from "@/hooks/use-job-query-controls";

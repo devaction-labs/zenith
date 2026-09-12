@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Http\Controllers;
+namespace DevactionLabs\Zenith\Http\Controllers;
 
-use DevactionLabs\HorizonNewDawn\BulkOperations\BulkOperationDispatcher;
-use DevactionLabs\HorizonNewDawn\BulkOperations\Jobs\RetryBatchJob;
+use DevactionLabs\Zenith\BulkOperations\BulkOperationDispatcher;
+use DevactionLabs\Zenith\BulkOperations\Jobs\RetryBatchJob;
 use Illuminate\Bus\BatchRepository;
 use Laravel\Horizon\Http\Controllers\BatchesController as HorizonBatchesController;
 

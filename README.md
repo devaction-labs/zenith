@@ -1,21 +1,21 @@
-# Horizon New Dawn
+# Zenith
 
 This is the DevAction Labs fork of [nckrtl/horizon-new-dawn](https://github.com/nckrtl/horizon-new-dawn). The original authors retain copyright in the MIT license.
 
 > [!IMPORTANT]
-> Horizon New Dawn is pre-1.0 software. Production use is supported only within
+> Zenith is pre-1.0 software. Production use is supported only within
 > the operating envelope documented below, and minor releases may contain
 > documented breaking changes.
 
-Horizon New Dawn replaces Laravel Horizon's bundled interface with a package-owned React 19 and Inertia 3 application while keeping Horizon's authorization, repositories, metrics, and queue workers in charge.
+Zenith replaces Laravel Horizon's bundled interface with a package-owned React 19 and Inertia 3 application while keeping Horizon's authorization, repositories, metrics, and queue workers in charge.
 
-The package reads Horizon data in PHP and sends structured page props through Inertia. It does not add a second general browser-facing API layer. Horizon's API routes remain available; where New Dawn wraps a mutating handler, it preserves Horizon's authorization and adds only the safety or execution behavior documented below.
+The package reads Horizon data in PHP and sends structured page props through Inertia. It does not add a second general browser-facing API layer. Horizon's API routes remain available; where Zenith wraps a mutating handler, it preserves Horizon's authorization and adds only the safety or execution behavior documented below.
 
-![Horizon New Dawn dashboard showing queue health, workload, and Horizon instances](docs/images/dashboard.jpg)
+![Zenith dashboard showing queue health, workload, and Horizon instances](docs/images/dashboard.jpg)
 
 ## Beyond the original Horizon interface
 
-Compared with Horizon's bundled interface, New Dawn adds:
+Compared with Horizon's bundled interface, Zenith adds:
 
 - full retained-source search for pending, completed, and silenced jobs by
   case-insensitive partial job class or exact retained ID, composable with exact
@@ -38,9 +38,9 @@ Compared with Horizon's bundled interface, New Dawn adds:
 
 These floors are deliberate:
 
-- PHP 8.5 is the lowest PHP version covered by the package's release matrix. New Dawn does not claim compatibility with runtimes it does not continuously test.
+- PHP 8.5 is the lowest PHP version covered by the package's release matrix. Zenith does not claim compatibility with runtimes it does not continuously test.
 - Laravel 13.23 is required by `pestphp/pest-plugin-laravel` 5. Laravel 12 is no longer part of the supported contract.
-- Horizon 5.46.0 is the oldest Horizon release exercised by New Dawn's full package suite, real Redis worker smoke test, and consuming-application browser checks. Older Horizon releases are not part of the supported contract.
+- Horizon 5.46.0 is the oldest Horizon release exercised by Zenith's full package suite, real Redis worker smoke test, and consuming-application browser checks. Older Horizon releases are not part of the supported contract.
 
 Queue pausing is available throughout the supported Laravel 13 matrix. Pausing or resuming every queue at once (`Queue::pauseAll()` / `Queue::resumeAll()`) additionally requires Laravel 13.25 or newer; earlier versions hide only those global controls.
 
@@ -50,7 +50,7 @@ sets into hash-tagged package keys before multi-key writes, so `ZDIFFSTORE`
 does not cross slots. Leave extra memory headroom for those snapshots.
 
 Use `maxmemory-policy noeviction` for the Redis or Valkey instance that stores
-Horizon queues and New Dawn's retained-job indexes, and provision enough memory
+Horizon queues and Zenith's retained-job indexes, and provision enough memory
 for the configured retention windows. An `allkeys-*` policy may silently remove
 queue or index keys under pressure. With `noeviction`, writes fail visibly
 instead; monitor memory use and command errors so capacity can be increased
@@ -59,14 +59,14 @@ reconciliation, search, and filtered queries use short-lived Redis union and
 intersection sorted sets, while pending-state requests may copy live queue
 structures into temporary snapshots.
 
-New Dawn reads and mutates batches through the application's configured
+Zenith reads and mutates batches through the application's configured
 `BatchRepository`, including Laravel's database and DynamoDB implementations.
 Exact full-history batch search, status and creation filters, counts, and
 sorting require Laravel's `DatabaseBatchRepository`. Queue and connection
 filters, queue-attributed batch summaries, and queue-level batch retry also
-require New Dawn's metadata migration; those destination-dependent features are
+require Zenith's metadata migration; those destination-dependent features are
 hidden until the migration has run, while the source-column SQL features remain
-available. With another repository, New Dawn keeps generic batch browsing and
+available. With another repository, Zenith keeps generic batch browsing and
 actions but hides the query controls it cannot make exact. This does not make
 DynamoDB a Horizon queue backend: Horizon still requires Redis for queues and
 supervisors. The exact SQL query path supports MariaDB, MySQL, PostgreSQL, and
@@ -75,7 +75,7 @@ generic fallback.
 
 Bulk mutations run as package-owned queued jobs. The configured bulk-operation
 connection must therefore use an asynchronous queue driver that is processed by
-Horizon. New Dawn refuses these operations on `sync` and `null` drivers.
+Horizon. Zenith refuses these operations on `sync` and `null` drivers.
 Retry all and Clear all on the failed-jobs page use Horizon's global retained
 failure set at the moment the coordinator job starts, not the current filter
 result. The HTTP request only authorizes, validates the bulk connection, and
@@ -84,68 +84,68 @@ bounded snapshot chunks with safe continuations.
 
 ## Installation
 
-Install and configure Laravel Horizon in the host application first. Then install New Dawn and publish its compiled assets:
+Install and configure Laravel Horizon in the host application first. Then install Zenith and publish its compiled assets:
 
 ```bash
-composer require devaction-labs/horizon-new-dawn:^0.1.0
-php artisan horizon-new-dawn:install
+composer require devaction-labs/zenith:^0.1.0
+php artisan zenith:install
 php artisan migrate
 ```
 
 The installer publishes configuration and compiled assets, and appends
-`@php artisan horizon-new-dawn:assets --ansi` to the root application's
+`@php artisan zenith:assets --ansi` to the root application's
 `scripts.post-autoload-dump` so later `composer install` and `composer update`
 runs refresh published assets automatically. Use `--no-composer-hook` to skip
 that edit. Pass `--force` only when you intentionally want to republish an
 otherwise current build.
 
-Visit the host application's existing Horizon path, which is `/horizon` by default. New Dawn honors Horizon's configured path and domain and uses Horizon's existing authorization callback and middleware.
+Visit the host application's existing Horizon path, which is `/horizon` by default. Zenith honors Horizon's configured path and domain and uses Horizon's existing authorization callback and middleware.
 
 After the first install, package updates usually need no extra asset step:
-Composer’s `post-autoload-dump` runs `horizon-new-dawn:assets` and replaces the
-package-owned `public/vendor/horizon-new-dawn/build` directory when the published
+Composer’s `post-autoload-dump` runs `zenith:assets` and replaces the
+package-owned `public/vendor/zenith/build` directory when the published
 build is missing, partial, stale, or contains files not present in the current
 package build. An exact match is a no-op. Republish config or re-check
 production prerequisites with the full installer:
 
 ```bash
-php artisan horizon-new-dawn:install
+php artisan zenith:install
 php artisan migrate
 ```
 
 Publish or refresh assets alone with:
 
 ```bash
-php artisan horizon-new-dawn:assets
+php artisan zenith:assets
 ```
 
 If Composer scripts are disabled (`--no-scripts`) or the hook was not added,
-run `php artisan horizon-new-dawn:assets` after installs and updates. No Node.js
+run `php artisan zenith:assets` after installs and updates. No Node.js
 or frontend build is required in the consuming application.
 
 ## Production deployment
 
-New Dawn's interface includes actions that mutate Horizon, Redis, and batch
+Zenith's interface includes actions that mutate Horizon, Redis, and batch
 state. Validate a release against a production-like environment and backup or
 retention policy before exposing those actions to operators.
 
-New Dawn uses Horizon's existing `Horizon::auth` callback, normally backed by
+Zenith uses Horizon's existing `Horizon::auth` callback, normally backed by
 the `viewHorizon` Gate, as the admission boundary. After that, optional Gates
 can restrict mutations:
 
 ```php
-Gate::define('horizon-new-dawn.pauseQueues', fn ($user) => $user->isAdmin());
-Gate::define('horizon-new-dawn.clearQueues', fn ($user) => $user->isAdmin());
-Gate::define('horizon-new-dawn.retryJobs', fn ($user) => $user->isOperator());
-Gate::define('horizon-new-dawn.cancelJobs', fn ($user) => $user->isAdmin());
-Gate::define('horizon-new-dawn.manageInstances', fn ($user) => $user->isAdmin());
-Gate::define('horizon-new-dawn.manageMonitoring', fn ($user) => $user->isOperator());
-Gate::define('horizon-new-dawn.manageBatches', fn ($user) => $user->isAdmin());
+Gate::define('zenith.pauseQueues', fn ($user) => $user->isAdmin());
+Gate::define('zenith.clearQueues', fn ($user) => $user->isAdmin());
+Gate::define('zenith.retryJobs', fn ($user) => $user->isOperator());
+Gate::define('zenith.cancelJobs', fn ($user) => $user->isAdmin());
+Gate::define('zenith.manageInstances', fn ($user) => $user->isAdmin());
+Gate::define('zenith.manageMonitoring', fn ($user) => $user->isOperator());
+Gate::define('zenith.manageBatches', fn ($user) => $user->isAdmin());
 ```
 
 Undefined Gates remain allowed for anyone Horizon already admitted. Successful
 mutations are written to the application log and, after migrate, to
-`horizon_new_dawn_audit_events` (visible at `/horizon/audit`).
+`zenith_audit_events` (visible at `/horizon/audit`).
 
 Choose a durable, asynchronous connection and a queue that is consumed by
 Horizon for bulk operations:
@@ -207,13 +207,13 @@ php artisan config:cache
 php artisan route:cache
 ```
 
-When Composer scripts run, `post-autoload-dump` refreshes New Dawn assets via
-`horizon-new-dawn:assets`. With `--no-scripts`, or when shipping immutable
-artifacts that already include `public/vendor/horizon-new-dawn/build`, skip the
+When Composer scripts run, `post-autoload-dump` refreshes Zenith assets via
+`zenith:assets`. With `--no-scripts`, or when shipping immutable
+artifacts that already include `public/vendor/zenith/build`, skip the
 Artisan publish step on deploy nodes. Otherwise run
-`php artisan horizon-new-dawn:assets` (or the full installer) on each node after
+`php artisan zenith:assets` (or the full installer) on each node after
 Composer. Publication replaces the whole package-owned
-`public/vendor/horizon-new-dawn/build` tree from a validated staged copy, so a
+`public/vendor/zenith/build` tree from a validated staged copy, so a
 request either sees the previous tree or the new one—not a mixed generation.
 There can be a brief gap while the destination is swapped.
 
@@ -222,13 +222,13 @@ deployment, you may optionally prebuild both request-reconciled indexes once
 after deployment:
 
 ```bash
-php artisan horizon-new-dawn:warm-batch-metadata
-php artisan horizon-new-dawn:warm-retained-jobs
+php artisan zenith:warm-batch-metadata
+php artisan zenith:warm-retained-jobs
 ```
 
-Run `horizon-new-dawn:warm-batch-metadata` only after the package migration is
+Run `zenith:warm-batch-metadata` only after the package migration is
 present. The retained-job warm command does not require that SQL table. Neither
-warm-up is required on every deploy. New Dawn still reconciles newly retained
+warm-up is required on every deploy. Zenith still reconciles newly retained
 records on requests; the commands exist to keep the first operator request from
 paying the initial full-history reconciliation cost.
 
@@ -236,7 +236,7 @@ Request reconciliation adds newly retained jobs immediately, while every exact
 query intersects a point-in-time Horizon source snapshot so expired projection
 members cannot appear in results. Removing stale projection members is
 maintenance rather than a serving requirement. Long-lived, high-throughput
-applications should therefore schedule `horizon-new-dawn:warm-retained-jobs`
+applications should therefore schedule `zenith:warm-retained-jobs`
 outside peak traffic at a cadence appropriate for their Horizon retention and
 throughput, using Laravel's `withoutOverlapping()` guard. This bounds package
 index storage without making page correctness depend on the scheduler.
@@ -260,7 +260,7 @@ temporarily hold both a ready-list copy and the due portion of the delayed set.
 Leave Redis or Valkey headroom for that snapshot in addition to the persistent
 projection and temporary query intersections.
 
-New Dawn excludes its configured Horizon route tree from the host application's
+Zenith excludes its configured Horizon route tree from the host application's
 Inertia SSR gateway because the package intentionally ships a client-only
 bundle. It also uses Laravel's Vite CSP nonce for its bootstrap script, package
 Vite entry tags, and Inertia runtime styles.
@@ -297,10 +297,10 @@ production envelope.
 
 ## Reverting to the original Horizon interface
 
-Remove Horizon New Dawn, reinstall Horizon's resources, and clear the application's cached configuration and routes:
+Remove Zenith, reinstall Horizon's resources, and clear the application's cached configuration and routes:
 
 ```bash
-composer remove devaction-labs/horizon-new-dawn
+composer remove devaction-labs/zenith
 php artisan horizon:install
 php artisan optimize:clear
 ```
@@ -309,7 +309,7 @@ The original Horizon interface will then be available at the application's exist
 
 ## Interface
 
-New Dawn provides dedicated Inertia routes for:
+Zenith provides dedicated Inertia routes for:
 
 - the dashboard, system status, supervisors, workload, throughput, and wait times;
 - pending, completed, silenced, and failed job lists with job detail pages;
@@ -333,11 +333,11 @@ matches it exactly. Those alternatives are combined with OR, then intersected
 with any active exact job class, queue, connection, and pending-state filters.
 The Failed Jobs search remains Horizon's exact tag query.
 
-New Dawn maintains package-owned Redis projections of immutable job metadata
+Zenith maintains package-owned Redis projections of immutable job metadata
 and reconciles them from Horizon on requests; it does not require an event
 listener, scheduler, or background indexing process. Full-source search reuses
 that projection and adds no persistent search-specific index. When a search
-matches multiple class facets or an exact retained ID, New Dawn creates only
+matches multiple class facets or an exact retained ID, Zenith creates only
 short-lived Redis union and query keys, deletes them after the request, and
 retains a short expiry as cleanup fallback.
 
@@ -376,13 +376,13 @@ Pending State remains an exact request-time server filter. Its badge can change
 when a job moves between ready, reserved, and delayed structures or crosses its
 release time. Each state-filter request uses one immutable, point-in-time queue
 snapshot so a worker cannot make the scan itself omit members. Jobs explicitly
-made available by New Dawn are classified as Ready, matching their displayed
+made available by Zenith are classified as Ready, matching their displayed
 badge; naturally elapsed schedules remain Released.
 
-For database-backed batches, New Dawn stores one immutable queue and connection
-snapshot per retained batch in `horizon_new_dawn_batch_metadata`. Explicit batch
+For database-backed batches, Zenith stores one immutable queue and connection
+snapshot per retained batch in `zenith_batch_metadata`. Explicit batch
 options are preserved. When an older batch omitted an option, its value is
-inferred once from the application's queue configuration when New Dawn first
+inferred once from the application's queue configuration when Zenith first
 discovers that batch. The interface labels that provenance because a default
 that changed before first discovery cannot prove the batch's historical
 physical destination. Once captured, the snapshot does not change when
@@ -391,7 +391,7 @@ Laravel's `job_batches` table.
 
 Horizon API routes remain available under Horizon's existing authorization
 boundary. Read responses keep Horizon's existing contract. Monitoring
-mutations also apply New Dawn's reserved-key and currently-monitored tag guards,
+mutations also apply Zenith's reserved-key and currently-monitored tag guards,
 while bulk operations retain their bounded asynchronous execution safeguards.
 Unsupported legacy UI paths return `404` instead of silently falling back to
 Horizon's Vue application.
@@ -401,7 +401,7 @@ Horizon's Vue application.
 Publish the configuration when you need to change defaults:
 
 ```bash
-php artisan vendor:publish --tag=horizon-new-dawn-config
+php artisan vendor:publish --tag=zenith-config
 ```
 
 ```php
@@ -452,4 +452,4 @@ The package includes an Orchestra Workbench application with deterministic succe
 
 ## License
 
-Horizon New Dawn is open-source software licensed under the MIT license.
+Zenith is open-source software licensed under the MIT license.

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Http\Requests;
+namespace DevactionLabs\Zenith\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Tests;
+namespace DevactionLabs\Zenith\Tests;
 
-use DevactionLabs\HorizonNewDawn\HorizonNewDawnServiceProvider;
+use DevactionLabs\Zenith\ZenithServiceProvider;
 use Illuminate\Filesystem\Filesystem;
 use Inertia\ServiceProvider as InertiaServiceProvider;
 use Laravel\Horizon\HorizonServiceProvider;
@@ -30,7 +30,7 @@ abstract class TestCase extends Orchestra
     {
         app(Filesystem::class)->copyDirectory(
             __DIR__.'/../dist/build',
-            public_path('vendor/horizon-new-dawn/build'),
+            public_path('vendor/zenith/build'),
         );
     }
 
@@ -43,8 +43,8 @@ abstract class TestCase extends Orchestra
             HorizonServiceProvider::class,
         ];
 
-        if (class_exists(HorizonNewDawnServiceProvider::class)) {
-            $providers[] = HorizonNewDawnServiceProvider::class;
+        if (class_exists(ZenithServiceProvider::class)) {
+            $providers[] = ZenithServiceProvider::class;
         }
 
         return $providers;

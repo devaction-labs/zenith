@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Http\Middleware;
+namespace DevactionLabs\Zenith\Http\Middleware;
 
-use DevactionLabs\HorizonNewDawn\Assets\AssetManifest;
-use DevactionLabs\HorizonNewDawn\Authorization\HorizonAbilityAuthorizer;
-use DevactionLabs\HorizonNewDawn\Monitoring\MonitoringData;
-use DevactionLabs\HorizonNewDawn\Queues\QueuePauseStatus;
-use DevactionLabs\HorizonNewDawn\Support\Data\HorizonShellData;
-use DevactionLabs\HorizonNewDawn\Support\Data\NavigationCountsData;
-use DevactionLabs\HorizonNewDawn\Support\FrameworkCapabilities;
-use DevactionLabs\HorizonNewDawn\Support\HorizonRuntime;
-use DevactionLabs\HorizonNewDawn\Support\NavigationCounts;
-use DevactionLabs\HorizonNewDawn\Support\PollInterval;
+use DevactionLabs\Zenith\Assets\AssetManifest;
+use DevactionLabs\Zenith\Authorization\HorizonAbilityAuthorizer;
+use DevactionLabs\Zenith\Monitoring\MonitoringData;
+use DevactionLabs\Zenith\Queues\QueuePauseStatus;
+use DevactionLabs\Zenith\Support\Data\HorizonShellData;
+use DevactionLabs\Zenith\Support\Data\NavigationCountsData;
+use DevactionLabs\Zenith\Support\FrameworkCapabilities;
+use DevactionLabs\Zenith\Support\HorizonRuntime;
+use DevactionLabs\Zenith\Support\NavigationCounts;
+use DevactionLabs\Zenith\Support\PollInterval;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -21,7 +21,7 @@ use Inertia\Middleware;
 
 final class HandleInertiaRequests extends Middleware
 {
-    protected $rootView = 'horizon-new-dawn::app';
+    protected $rootView = 'zenith::app';
 
     public function __construct(
         private readonly HorizonRuntime $runtime,
@@ -52,14 +52,14 @@ final class HandleInertiaRequests extends Middleware
                 $status = $this->runtime->status();
 
                 return new HorizonShellData(
-                    baseUrl: route('horizon-new-dawn.dashboard'),
+                    baseUrl: route('zenith.dashboard'),
                     pollInterval: PollInterval::milliseconds(),
                     status: $status,
                     processing: $this->runtime->isProcessing($status),
                     maintenanceMode: $this->application->isDownForMaintenance(),
                     capabilities: $this->capabilities,
                     jobNavigationBreakdown: config(
-                        'horizon-new-dawn.job_navigation_breakdown',
+                        'zenith.job_navigation_breakdown',
                         false,
                     ) === true,
                     allQueuesPaused: $this->queuePauseStatus->allPaused(),

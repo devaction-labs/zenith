@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Batches\Data;
+namespace DevactionLabs\Zenith\Batches\Data;
 
-use DevactionLabs\HorizonNewDawn\Batches\BatchCreatedRange;
-use DevactionLabs\HorizonNewDawn\Batches\BatchSort;
-use DevactionLabs\HorizonNewDawn\Batches\BatchSortDirection;
-use DevactionLabs\HorizonNewDawn\Batches\BatchStatus;
+use DevactionLabs\Zenith\Batches\BatchCreatedRange;
+use DevactionLabs\Zenith\Batches\BatchSort;
+use DevactionLabs\Zenith\Batches\BatchSortDirection;
+use DevactionLabs\Zenith\Batches\BatchStatus;
 use Spatie\LaravelData\Data;
 
 final class BatchIndexFiltersData extends Data

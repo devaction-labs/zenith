@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Monitoring\Actions;
+namespace DevactionLabs\Zenith\Monitoring\Actions;
 
-use DevactionLabs\HorizonNewDawn\Monitoring\MonitoringTagGuard;
+use DevactionLabs\Zenith\Monitoring\MonitoringTagGuard;
 use Illuminate\Contracts\Bus\Dispatcher;
 use Laravel\Horizon\Jobs\MonitorTag as HorizonMonitorTag;
 

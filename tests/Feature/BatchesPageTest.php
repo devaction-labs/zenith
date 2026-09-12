@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-use DevactionLabs\HorizonNewDawn\Assets\AssetManifest;
-use DevactionLabs\HorizonNewDawn\Batches\BatchesData;
-use DevactionLabs\HorizonNewDawn\Batches\BatchFilterCatalog;
-use DevactionLabs\HorizonNewDawn\Batches\BatchJobsData;
-use DevactionLabs\HorizonNewDawn\Batches\DatabaseBatchCapability;
-use DevactionLabs\HorizonNewDawn\BulkOperations\Jobs\RetryBatchJob;
-use DevactionLabs\HorizonNewDawn\Jobs\JobsData;
-use DevactionLabs\HorizonNewDawn\Support\HorizonRuntime;
+use DevactionLabs\Zenith\Assets\AssetManifest;
+use DevactionLabs\Zenith\Batches\BatchesData;
+use DevactionLabs\Zenith\Batches\BatchFilterCatalog;
+use DevactionLabs\Zenith\Batches\BatchJobsData;
+use DevactionLabs\Zenith\Batches\DatabaseBatchCapability;
+use DevactionLabs\Zenith\BulkOperations\Jobs\RetryBatchJob;
+use DevactionLabs\Zenith\Jobs\JobsData;
+use DevactionLabs\Zenith\Support\HorizonRuntime;
 use Illuminate\Bus\BatchFactory;
 use Illuminate\Bus\BatchRepository;
 use Illuminate\Bus\DatabaseBatchRepository;
@@ -30,13 +30,13 @@ use Laravel\Horizon\Contracts\JobRepository;
 use Laravel\Horizon\Contracts\MasterSupervisorRepository;
 use Laravel\Horizon\Horizon;
 
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardExpects;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardNeverReceives;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturns;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturnsFor;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\horizonBatch;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\horizonJob;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\Zenith\Tests\Support\dashboardExpects;
+use function DevactionLabs\Zenith\Tests\Support\dashboardNeverReceives;
+use function DevactionLabs\Zenith\Tests\Support\dashboardReturns;
+use function DevactionLabs\Zenith\Tests\Support\dashboardReturnsFor;
+use function DevactionLabs\Zenith\Tests\Support\horizonBatch;
+use function DevactionLabs\Zenith\Tests\Support\horizonJob;
+use function DevactionLabs\Zenith\Tests\Support\mockDashboardContract;
 use function Pest\Laravel\get;
 use function Pest\Laravel\getJson;
 use function Pest\Laravel\post;
@@ -45,8 +45,8 @@ use function Pest\Laravel\withoutMiddleware;
 /** @param 'never'|'once'|'twice'|'zeroOrMoreTimes' $times */
 function bindBatchRetryAsyncBulkQueue(string $times = 'once'): void
 {
-    config()->set('horizon-new-dawn.bulk_operations.connection', 'operations');
-    config()->set('horizon-new-dawn.bulk_operations.queue', 'horizon-maintenance');
+    config()->set('zenith.bulk_operations.connection', 'operations');
+    config()->set('zenith.bulk_operations.queue', 'horizon-maintenance');
 
     $manager = Mockery::mock(QueueManager::class);
     dashboardExpects($manager, 'connection', ['operations'], times: $times, value: Mockery::mock(Queue::class));
@@ -55,8 +55,8 @@ function bindBatchRetryAsyncBulkQueue(string $times = 'once'): void
 
 function bindBatchRetrySyncBulkQueue(): void
 {
-    config()->set('horizon-new-dawn.bulk_operations.connection', 'sync');
-    config()->set('horizon-new-dawn.bulk_operations.queue', null);
+    config()->set('zenith.bulk_operations.connection', 'sync');
+    config()->set('zenith.bulk_operations.queue', null);
 
     $manager = Mockery::mock(QueueManager::class);
     dashboardExpects($manager, 'connection', ['sync'], value: new SyncQueue);
@@ -218,7 +218,7 @@ describe('batch pages', function (): void {
     it('defaults database batch queries to pending progress while preserving explicit sorts', function (): void {
         config()->set('queue.batching.database', null);
         config()->set('queue.batching.table', 'job_batches');
-        Schema::dropIfExists('horizon_new_dawn_batch_metadata');
+        Schema::dropIfExists('zenith_batch_metadata');
         Schema::dropIfExists('job_batches');
         Schema::create('job_batches', function (Blueprint $table): void {
             $table->string('id')->primary();
@@ -262,7 +262,7 @@ describe('batch pages', function (): void {
                         ->where('filters.direction', $direction));
             }
         } finally {
-            Schema::dropIfExists('horizon_new_dawn_batch_metadata');
+            Schema::dropIfExists('zenith_batch_metadata');
             Schema::dropIfExists('job_batches');
         }
     });
@@ -270,7 +270,7 @@ describe('batch pages', function (): void {
     it('queries matching database batches beyond the first 50 before pagination', function (): void {
         config()->set('queue.batching.database', null);
         config()->set('queue.batching.table', 'job_batches');
-        Schema::dropIfExists('horizon_new_dawn_batch_metadata');
+        Schema::dropIfExists('zenith_batch_metadata');
         Schema::dropIfExists('job_batches');
         Schema::create('job_batches', function (Blueprint $table): void {
             $table->string('id')->primary();
@@ -284,7 +284,7 @@ describe('batch pages', function (): void {
             $table->integer('created_at');
             $table->integer('finished_at')->nullable();
         });
-        $migration = require __DIR__.'/../../database/migrations/2026_07_26_000000_create_horizon_new_dawn_batch_metadata_table.php';
+        $migration = require __DIR__.'/../../database/migrations/2026_07_26_000000_create_zenith_batch_metadata_table.php';
         $migration->up();
 
         try {
@@ -334,7 +334,7 @@ describe('batch pages', function (): void {
                     ->where('batches.data.0.queueExplicit', true)
                     ->where('batches.data.0.connectionExplicit', true));
         } finally {
-            Schema::dropIfExists('horizon_new_dawn_batch_metadata');
+            Schema::dropIfExists('zenith_batch_metadata');
             Schema::dropIfExists('job_batches');
         }
     });
@@ -342,7 +342,7 @@ describe('batch pages', function (): void {
     it('renders a deterministic storage empty state when the database batch table is missing', function (): void {
         config()->set('queue.batching.database', null);
         config()->set('queue.batching.table', 'job_batches');
-        Schema::dropIfExists('horizon_new_dawn_batch_metadata');
+        Schema::dropIfExists('zenith_batch_metadata');
         Schema::dropIfExists('job_batches');
 
         $repository = new DatabaseBatchRepository(
@@ -386,7 +386,7 @@ describe('batch pages', function (): void {
     });
 
     it('keeps generic repository batch listing available without a relational batch table', function (): void {
-        Schema::dropIfExists('horizon_new_dawn_batch_metadata');
+        Schema::dropIfExists('zenith_batch_metadata');
         Schema::dropIfExists('job_batches');
 
         $batch = horizonBatch('batch-1', name: 'Custom repository batch');
@@ -476,7 +476,7 @@ describe('batch pages', function (): void {
     });
 
     it('does not resolve the batch page while loading its filter catalog', function (): void {
-        config()->set('horizon-new-dawn.poll_interval', 0);
+        config()->set('zenith.poll_interval', 0);
 
         $batches = mockDashboardContract(BatchRepository::class);
         dashboardExpects($batches, 'get', [50, null], times: 'never');

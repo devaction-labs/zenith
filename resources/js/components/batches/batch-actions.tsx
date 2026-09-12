@@ -19,9 +19,9 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { store as cancelBatch } from "@/generated/routes/horizon-new-dawn/batches/cancel";
-import { destroy as clearBatchFailedJobs } from "@/generated/routes/horizon-new-dawn/batches/failed/clear";
-import { store as retryBatch } from "@/generated/routes/horizon-new-dawn/batches/retry";
+import { store as cancelBatch } from "@/generated/routes/zenith/batches/cancel";
+import { destroy as clearBatchFailedJobs } from "@/generated/routes/zenith/batches/failed/clear";
+import { store as retryBatch } from "@/generated/routes/zenith/batches/retry";
 import { resolveHorizonRoute } from "@/lib/horizon-route";
 
 export function BatchPendingJobsActions({

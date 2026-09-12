@@ -26,7 +26,7 @@ describe('Horizon authorization', function (): void {
         $mutationRoutes = collect(Route::getRoutes()->getRoutes())
             ->filter(
                 fn ($route): bool => (
-                    str_starts_with((string) $route->getName(), 'horizon-new-dawn.')
+                    str_starts_with((string) $route->getName(), 'zenith.')
                     || in_array($route->getName(), $preservedHorizonApiRoutes, true)
                 )
                     && array_intersect($route->methods(), ['POST', 'PUT', 'PATCH', 'DELETE']) !== [],

@@ -1,6 +1,6 @@
 # Architecture
 
-Horizon New Dawn is an additive Laravel package that replaces Horizon's browser interface without replacing Horizon itself. Horizon remains responsible for queue workers, Redis storage, metrics, authorization, and its existing API routes.
+Zenith is an additive Laravel package that replaces Horizon's browser interface without replacing Horizon itself. Horizon remains responsible for queue workers, Redis storage, metrics, authorization, and its existing API routes.
 
 ## Design goals
 
@@ -12,7 +12,7 @@ Horizon New Dawn is an additive Laravel package that replaces Horizon's browser 
 
 ## Request lifecycle
 
-During application booting, `HorizonNewDawnServiceProvider` registers concrete routes under Horizon's configured path and domain:
+During application booting, `ZenithServiceProvider` registers concrete routes under Horizon's configured path and domain:
 
 ```text
 GET  /horizon/dashboard
@@ -30,12 +30,12 @@ followed by the package's Inertia middleware. `Authenticate` delegates to
 Horizon's existing `Horizon::auth` callback, normally backed by the
 `viewHorizon` Gate. This single Horizon boundary covers every page and
 mutation. The group is registered before Horizon's browser catch-all, so
-concrete New Dawn routes own supported screens without shadowing Horizon API
+concrete Zenith routes own supported screens without shadowing Horizon API
 routes.
 
-Horizon still registers its catch-all home route. The provider binds Horizon's home controller to a package controller that returns `404`, preventing unsupported paths from falling through to the bundled Vue interface. Horizon API routes do not receive New Dawn's Inertia middleware. Where New Dawn wraps an API mutation, the wrapper changes only its safety or execution behavior: monitoring keeps the package's reserved-key and currently-monitored tag guards, while batch retries use the bounded asynchronous bulk-operation path. Horizon's authorization, existing read responses, and route contracts remain intact.
+Horizon still registers its catch-all home route. The provider binds Horizon's home controller to a package controller that returns `404`, preventing unsupported paths from falling through to the bundled Vue interface. Horizon API routes do not receive Zenith's Inertia middleware. Where Zenith wraps an API mutation, the wrapper changes only its safety or execution behavior: monitoring keeps the package's reserved-key and currently-monitored tag guards, while batch retries use the bounded asynchronous bulk-operation path. Horizon's authorization, existing read responses, and route contracts remain intact.
 
-`HandleInertiaRequests` selects the package root view and shares the Horizon base URL, runtime status, host maintenance state, polling interval, interface feature flags, and flash messages with every New Dawn page.
+`HandleInertiaRequests` selects the package root view and shares the Horizon base URL, runtime status, host maintenance state, polling interval, interface feature flags, and flash messages with every Zenith page.
 
 ## Backend data flow
 
@@ -96,7 +96,7 @@ An explicit Artisan warm command can force a one-time full reconciliation
 across every retained source, but no Horizon lifecycle listener, scheduler, or
 indexing daemon is required for correctness.
 
-Before synchronization, New Dawn invokes Horizon's own recent- or failed-job
+Before synchronization, Zenith invokes Horizon's own recent- or failed-job
 trim operation. Horizon job hashes and their sorted-set references can otherwise
 expire on slightly different schedules; trimming first prevents a missing hash
 from forcing the package index into a permanent rebuild loop. Persistent and
@@ -120,7 +120,7 @@ requests for each list prop.
 The projection's storage and initial reconciliation work scale with Horizon's
 retained history. Normal request reconciliation closes missing coverage but
 does not synchronously prune stale projection members. The explicit
-`horizon-new-dawn:warm-retained-jobs` command performs that cleanup and may be
+`zenith:warm-retained-jobs` command performs that cleanup and may be
 scheduled with `withoutOverlapping()` to bound storage independently of serving
 correctness. Pending-state filters do not persist a second lifecycle state that
 could drift from Laravel's queue data. On each filtered request, one Lua
@@ -149,8 +149,8 @@ re-sorted. This is intentionally distinct from a global retained-history sort.
 Pending ordering is not described as global execution FIFO: separate queues,
 delayed migration, worker concurrency, and application node clocks do not
 provide one global execution order. A state filter is evaluated against its
-immutable request-time snapshot. Payloads explicitly made available by New
-Dawn are Ready, matching the schedule-clearing row projection, while naturally
+immutable request-time snapshot. Payloads explicitly made available by
+Zenith are Ready, matching the schedule-clearing row projection, while naturally
 elapsed schedules are Released.
 
 When Laravel uses `DatabaseBatchRepository`, full search, exact status and
@@ -158,7 +158,7 @@ creation filters, counts, and stable sorting run directly against live
 `job_batches` columns before selecting a 50-row page. Those source-column
 features do not require a package table or metadata reconciliation.
 
-A package migration separately creates `horizon_new_dawn_batch_metadata` for
+A package migration separately creates `zenith_batch_metadata` for
 features that need a durable queue or connection destination. Request-driven
 reconciliation captures explicit batch options once and resolves omitted values
 from the application's queue configuration at first discovery. The provenance
@@ -215,10 +215,10 @@ Repository failures are caught at data boundaries and converted into explicit un
 
 ## Frontend isolation
 
-`HandleInertiaRequests` sets `horizon-new-dawn::app` as the root view only for package routes. This avoids changing the host application's own Inertia middleware or root template.
+`HandleInertiaRequests` sets `zenith::app` as the root view only for package routes. This avoids changing the host application's own Inertia middleware or root template.
 
 The service provider excludes the configured Horizon path and its descendants
-from the host Inertia SSR gateway. New Dawn has no SSR entry point and never
+from the host Inertia SSR gateway. Zenith has no SSR entry point and never
 asks a consuming application's SSR bundle to resolve package pages. When the
 host enables Laravel's Vite CSP nonce, the root view applies it to package
 bootstrap and Vite-rendered tags and shares it with the Inertia client for
@@ -250,7 +250,7 @@ control.
 Optional automatic loading is coordinated by the persistent layout. A
 background refresh replaces the authoritative first page so expired, deleted,
 or reordered records cannot remain in the interface through an additive merge.
-After infinite scrolling starts loading older history, New Dawn follows
+After infinite scrolling starts loading older history, Zenith follows
 Horizon's page-one refresh model: it stops polling the scroll prop, continues
 polling only the list revision and summary props, and shows the “new entries”
 action when the source changes. That action resets the collection to the
@@ -266,22 +266,22 @@ The package ships a committed Vite production build in `dist/build`. Consumers
 publish it with:
 
 ```bash
-php artisan horizon-new-dawn:install
-php artisan horizon-new-dawn:assets
+php artisan zenith:install
+php artisan zenith:assets
 ```
 
-`horizon-new-dawn:install` publishes configuration and compiled assets, runs
+`zenith:install` publishes configuration and compiled assets, runs
 install-only production prerequisite warnings, and appends
-`@php artisan horizon-new-dawn:assets --ansi` to the host root
+`@php artisan zenith:assets --ansi` to the host root
 `composer.json` `scripts.post-autoload-dump` (unless `--no-composer-hook` is
 passed). Composer executes only root-package scripts, so later
 `composer install` / `composer update` runs refresh assets through that hook.
-`horizon-new-dawn:assets` publishes only the fixed
-`public/vendor/horizon-new-dawn/build` tree and performs no config publish or
+`zenith:assets` publishes only the fixed
+`public/vendor/zenith/build` tree and performs no config publish or
 prerequisite checks.
 
 Both commands share `AssetsPublisher`. A normal run treats
-`public/vendor/horizon-new-dawn/build` as a package-owned tree: it compares the
+`public/vendor/zenith/build` as a package-owned tree: it compares the
 package build and published directory as an exact file set, refreshes when the
 publication is missing, partial, stale, forced, or contains files absent from
 the current package build, and no-ops only when the trees match exactly. On
@@ -294,19 +294,19 @@ assets and consumer-added files inside the package-owned directory are removed
 on refresh, not preserved.
 `AssetManifest` renders entry tags through a package-scoped
 `Illuminate\Foundation\Vite` instance pointed at
-`public/vendor/horizon-new-dawn/build` and Laravel's root `manifest.json`
+`public/vendor/zenith/build` and Laravel's root `manifest.json`
 convention. That instance uses a package-only hot-file path so a consuming
 application's `public/hot` never hijacks package assets, and it never mutates
 the host Vite singleton. It still reuses the host CSP nonce from
 `Vite::useCspNonce()` for generated tags. Inertia asset versions come from
 `manifestHash()`. A consuming application does not need Node.js or changes to
 its own Vite configuration. Deployments that disable Composer scripts or ship
-an immutable `public/vendor/horizon-new-dawn/build` artifact can skip the
-Artisan publish step and call `horizon-new-dawn:assets` only when needed.
+an immutable `public/vendor/zenith/build` artifact can skip the
+Artisan publish step and call `zenith:assets` only when needed.
 
 ## Extension boundaries
 
-Use Horizon contracts when a feature already exists in Horizon. Add a focused package service or action when New Dawn needs normalization, repository-backed aggregation, or a mutation Horizon does not expose through a suitable contract.
+Use Horizon contracts when a feature already exists in Horizon. Add a focused package service or action when Zenith needs normalization, repository-backed aggregation, or a mutation Horizon does not expose through a suitable contract.
 
 The capabilities that should eventually move upstream, together with the
 package code each one would replace, are tracked in

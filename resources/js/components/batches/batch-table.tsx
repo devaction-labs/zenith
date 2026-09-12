@@ -21,7 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { show as batchShow } from "@/generated/routes/horizon-new-dawn/batches";
+import { show as batchShow } from "@/generated/routes/zenith/batches";
 import { resolveHorizonRoute } from "@/lib/horizon-route";
 import { isInteractiveTarget } from "@/lib/interactive-target";
 import type { BatchRow } from "@/types/batches";

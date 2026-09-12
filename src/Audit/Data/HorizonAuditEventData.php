@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Audit\Data;
+namespace DevactionLabs\Zenith\Audit\Data;
 
 use Spatie\LaravelData\Data;
 

@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-use DevactionLabs\HorizonNewDawn\Jobs\Actions\CancelPendingJob;
-use DevactionLabs\HorizonNewDawn\Jobs\Actions\ReleaseCancelledJobLocks;
-use DevactionLabs\HorizonNewDawn\Jobs\Actions\ReleaseDelayedJobNow;
-use DevactionLabs\HorizonNewDawn\Jobs\ForgetsPendingJob;
-use DevactionLabs\HorizonNewDawn\Jobs\PendingJobCancellationResult;
-use DevactionLabs\HorizonNewDawn\Jobs\ReleaseDelayedJobNowResult;
+use DevactionLabs\Zenith\Jobs\Actions\CancelPendingJob;
+use DevactionLabs\Zenith\Jobs\Actions\ReleaseCancelledJobLocks;
+use DevactionLabs\Zenith\Jobs\Actions\ReleaseDelayedJobNow;
+use DevactionLabs\Zenith\Jobs\ForgetsPendingJob;
+use DevactionLabs\Zenith\Jobs\PendingJobCancellationResult;
+use DevactionLabs\Zenith\Jobs\ReleaseDelayedJobNowResult;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Illuminate\Contracts\Encryption\Encrypter;
 use Illuminate\Contracts\Queue\Queue;
@@ -19,10 +19,10 @@ use Laravel\Horizon\Contracts\JobRepository;
 use Laravel\Horizon\JobPayload;
 use Laravel\Horizon\RedisQueue;
 
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardExpects;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturnsFor;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\horizonJob;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\Zenith\Tests\Support\dashboardExpects;
+use function DevactionLabs\Zenith\Tests\Support\dashboardReturnsFor;
+use function DevactionLabs\Zenith\Tests\Support\horizonJob;
+use function DevactionLabs\Zenith\Tests\Support\mockDashboardContract;
 
 describe('ReleaseDelayedJobNow', function (): void {
     it('makes the exact delayed payload immediately eligible and migrates it through Horizon', function (): void {
@@ -78,7 +78,7 @@ describe('ReleaseDelayedJobNow', function (): void {
             ->and($arguments[4] ?? null)->toBe('queues:imports:notify')
             ->and($arguments[5] ?? null)->toBe($job->payload)
             ->and($replacementPayload['displayName'] ?? null)->toBe('App\\Jobs\\ImportFeed')
-            ->and($replacementPayload['horizonNewDawn']['madeAvailableAt'] ?? null)
+            ->and($replacementPayload['zenith']['madeAvailableAt'] ?? null)
             ->toBe(Date::now()->getTimestamp());
 
         expect($migratedConnection)->toBe('redis')

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Jobs;
+namespace DevactionLabs\Zenith\Jobs;
 
-use DevactionLabs\HorizonNewDawn\Support\RedisQueueName;
-use DevactionLabs\HorizonNewDawn\Support\RedisScript;
+use DevactionLabs\Zenith\Support\RedisQueueName;
+use DevactionLabs\Zenith\Support\RedisScript;
 use Illuminate\Contracts\Queue\Factory as QueueFactory;
 use Illuminate\Queue\RedisQueue;
 use Illuminate\Redis\Connections\Connection;
@@ -417,7 +417,7 @@ final readonly class PendingJobStateIndex implements PendingJobEntryScanner
         string $state,
     ): array {
         $token = bin2hex(random_bytes(12));
-        $baseKey = "{$queueKey}:horizon-new-dawn:pending-snapshot:{$token}";
+        $baseKey = "{$queueKey}:zenith:pending-snapshot:{$token}";
         $guardKey = "{$baseKey}:guard";
         $listKey = "{$baseKey}:list";
         $sortedKey = "{$baseKey}:sorted";
@@ -533,7 +533,7 @@ final readonly class PendingJobStateIndex implements PendingJobEntryScanner
         string $queueKey,
     ): array {
         $token = bin2hex(random_bytes(12));
-        $baseKey = "{$queueKey}:horizon-new-dawn:pending-queue-snapshot:{$token}";
+        $baseKey = "{$queueKey}:zenith:pending-queue-snapshot:{$token}";
         $guardKey = "{$baseKey}:guard";
         $readyKey = "{$baseKey}:ready";
         $reservedKey = "{$baseKey}:reserved";
@@ -1394,7 +1394,7 @@ final readonly class PendingJobStateIndex implements PendingJobEntryScanner
             return false;
         }
 
-        if (is_numeric($payload['horizonNewDawn']['madeAvailableAt'] ?? null)) {
+        if (is_numeric($payload['zenith']['madeAvailableAt'] ?? null)) {
             return false;
         }
 

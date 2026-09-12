@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Jobs\Actions;
+namespace DevactionLabs\Zenith\Jobs\Actions;
 
-use DevactionLabs\HorizonNewDawn\Jobs\ForgetsPendingJob;
-use DevactionLabs\HorizonNewDawn\Jobs\PendingJobCancellationResult;
-use DevactionLabs\HorizonNewDawn\Jobs\PendingJobCancellationScope;
-use DevactionLabs\HorizonNewDawn\Support\RedisQueueName;
-use DevactionLabs\HorizonNewDawn\Support\RedisScript;
+use DevactionLabs\Zenith\Jobs\ForgetsPendingJob;
+use DevactionLabs\Zenith\Jobs\PendingJobCancellationResult;
+use DevactionLabs\Zenith\Jobs\PendingJobCancellationScope;
+use DevactionLabs\Zenith\Support\RedisQueueName;
+use DevactionLabs\Zenith\Support\RedisScript;
 use Illuminate\Queue\QueueManager;
 use Illuminate\Queue\RedisQueue;
 use Laravel\Horizon\Contracts\JobRepository;

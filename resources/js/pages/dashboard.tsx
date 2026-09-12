@@ -13,12 +13,9 @@ import {
   StatisticValue,
 } from "@/components/ui/statistic";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import {
-  index as batchesIndex,
-  show as batchShow,
-} from "@/generated/routes/horizon-new-dawn/batches";
-import { index as failedJobsIndex } from "@/generated/routes/horizon-new-dawn/failed-jobs";
-import { index as jobsIndex } from "@/generated/routes/horizon-new-dawn/jobs";
+import { index as batchesIndex, show as batchShow } from "@/generated/routes/zenith/batches";
+import { index as failedJobsIndex } from "@/generated/routes/zenith/failed-jobs";
+import { index as jobsIndex } from "@/generated/routes/zenith/jobs";
 import { useDashboardRefresh } from "@/hooks/use-dashboard-refresh";
 import { resolveProcessPollInterval, useProcessTransitions } from "@/hooks/use-process-transitions";
 import { useAutoLoadPreference } from "@/layouts/horizon-layout";

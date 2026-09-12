@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Batches\Actions;
+namespace DevactionLabs\Zenith\Batches\Actions;
 
-use DevactionLabs\HorizonNewDawn\FailedJobs\Actions\RemoveFailedJob;
+use DevactionLabs\Zenith\FailedJobs\Actions\RemoveFailedJob;
 use Illuminate\Bus\BatchRepository;
 
 /**

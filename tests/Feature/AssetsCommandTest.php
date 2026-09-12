@@ -8,21 +8,21 @@ use Illuminate\Support\Facades\Artisan;
 afterEach(function (): void {
     $filesystem = app(Filesystem::class);
 
-    $filesystem->deleteDirectory(public_path('vendor/horizon-new-dawn'));
-    $filesystem->deleteDirectory(dirname(public_path()).'/horizon-new-dawn-outside-test');
+    $filesystem->deleteDirectory(public_path('vendor/zenith'));
+    $filesystem->deleteDirectory(dirname(public_path()).'/zenith-outside-test');
 });
 
 it('publishes compiled assets without publishing configuration', function (): void {
     $filesystem = app(Filesystem::class);
-    $destination = public_path('vendor/horizon-new-dawn/build');
-    $configPath = config_path('horizon-new-dawn.php');
+    $destination = public_path('vendor/zenith/build');
+    $configPath = config_path('zenith.php');
     $source = dirname(__DIR__, 2).'/dist/build';
 
     $filesystem->delete($configPath);
-    $filesystem->deleteDirectory(public_path('vendor/horizon-new-dawn'));
+    $filesystem->deleteDirectory(public_path('vendor/zenith'));
 
-    expect(Artisan::call('horizon-new-dawn:assets', ['--force' => true]))->toBe(0)
-        ->and(Artisan::output())->toContain('Horizon New Dawn assets are ready')
+    expect(Artisan::call('zenith:assets', ['--force' => true]))->toBe(0)
+        ->and(Artisan::output())->toContain('Zenith assets are ready')
         ->and($destination.'/manifest.json')->toBeFile()
         ->and($destination.'/favicon.svg')->not->toBeFile()
         ->and($configPath)->not->toBeFile();
@@ -34,9 +34,9 @@ it('publishes compiled assets without publishing configuration', function (): vo
 
 it('is a no-op when the published directory exactly matches the package build', function (): void {
     $filesystem = app(Filesystem::class);
-    $destination = public_path('vendor/horizon-new-dawn/build');
+    $destination = public_path('vendor/zenith/build');
 
-    expect(Artisan::call('horizon-new-dawn:assets', ['--force' => true]))->toBe(0);
+    expect(Artisan::call('zenith:assets', ['--force' => true]))->toBe(0);
 
     $manifestBefore = $filesystem->get($destination.'/manifest.json');
 
@@ -48,24 +48,24 @@ it('is a no-op when the published directory exactly matches the package build', 
         }
     });
 
-    expect(Artisan::call('horizon-new-dawn:assets'))->toBe(0)
+    expect(Artisan::call('zenith:assets'))->toBe(0)
         ->and($filesystem->get($destination.'/manifest.json'))->toBe($manifestBefore);
 });
 
 it('refreshes when the published directory contains files absent from the package build', function (): void {
     $filesystem = app(Filesystem::class);
-    $destination = public_path('vendor/horizon-new-dawn/build');
+    $destination = public_path('vendor/zenith/build');
     $metadataPath = $destination.'/.platform-metadata';
     $extraHashedAsset = $destination.'/assets/app-previous-generation.js';
     $extraRootFile = $destination.'/extra-root.txt';
 
-    expect(Artisan::call('horizon-new-dawn:assets', ['--force' => true]))->toBe(0);
+    expect(Artisan::call('zenith:assets', ['--force' => true]))->toBe(0);
 
     $filesystem->put($metadataPath, 'consumer metadata');
     $filesystem->put($extraHashedAsset, 'previous generation asset');
     $filesystem->put($extraRootFile, 'not part of the package build');
 
-    expect(Artisan::call('horizon-new-dawn:assets'))->toBe(0)
+    expect(Artisan::call('zenith:assets'))->toBe(0)
         ->and($metadataPath)->not->toBeFile()
         ->and($extraHashedAsset)->not->toBeFile()
         ->and($extraRootFile)->not->toBeFile()
@@ -89,7 +89,7 @@ it('refreshes when the published directory contains files absent from the packag
 
 it('replaces the whole published directory when refreshing a stale publication', function (): void {
     $filesystem = app(Filesystem::class);
-    $destination = public_path('vendor/horizon-new-dawn/build');
+    $destination = public_path('vendor/zenith/build');
     $metadataPath = $destination.'/.platform-metadata';
     $staleAsset = $destination.'/assets/app-older.js';
     $extraRootFile = $destination.'/extra-root.txt';
@@ -114,7 +114,7 @@ it('replaces the whole published directory when refreshing a stale publication',
         flags: JSON_THROW_ON_ERROR,
     );
 
-    expect(Artisan::call('horizon-new-dawn:assets'))->toBe(0)
+    expect(Artisan::call('zenith:assets'))->toBe(0)
         ->and(json_decode($filesystem->get($destination.'/manifest.json'), true, flags: JSON_THROW_ON_ERROR))
         ->toBe($sourceManifest)
         ->and($staleAsset)->not->toBeFile()
@@ -126,7 +126,7 @@ it('replaces the whole published directory when refreshing a stale publication',
 
 it('restores the previous publication when replacing an existing destination fails', function (): void {
     $filesystem = app(Filesystem::class);
-    $destination = public_path('vendor/horizon-new-dawn/build');
+    $destination = public_path('vendor/zenith/build');
     $manifestPath = $destination.'/manifest.json';
     $oldManifest = json_encode([
         'resources/js/app.tsx' => [
@@ -156,7 +156,7 @@ it('restores the previous publication when replacing an existing destination fai
         }
     });
 
-    expect(fn (): int => Artisan::call('horizon-new-dawn:assets', ['--force' => true]))
+    expect(fn (): int => Artisan::call('zenith:assets', ['--force' => true]))
         ->toThrow(RuntimeException::class, 'Unable to publish')
         ->and($manifestPath)->toBeFile()
         ->and((new Filesystem)->get($manifestPath))->toBe($oldManifest)
@@ -168,7 +168,7 @@ it('restores the previous publication when replacing an existing destination fai
 it('does not run production prerequisite warnings', function (): void {
     config()->set('queue.default', 'sync');
 
-    expect(Artisan::call('horizon-new-dawn:assets', ['--force' => true]))->toBe(0);
+    expect(Artisan::call('zenith:assets', ['--force' => true]))->toBe(0);
 
     $output = Artisan::output();
 

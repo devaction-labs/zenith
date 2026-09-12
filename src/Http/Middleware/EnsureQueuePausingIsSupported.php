@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Http\Middleware;
+namespace DevactionLabs\Zenith\Http\Middleware;
 
 use Closure;
-use DevactionLabs\HorizonNewDawn\Support\FrameworkCapabilities;
+use DevactionLabs\Zenith\Support\FrameworkCapabilities;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 

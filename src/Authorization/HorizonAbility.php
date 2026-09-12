@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Authorization;
+namespace DevactionLabs\Zenith\Authorization;
 
 enum HorizonAbility: string
 {
@@ -16,6 +16,6 @@ enum HorizonAbility: string
 
     public function gate(): string
     {
-        return 'horizon-new-dawn.'.$this->value;
+        return 'zenith.'.$this->value;
     }
 }

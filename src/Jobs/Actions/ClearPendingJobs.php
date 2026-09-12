@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Jobs\Actions;
+namespace DevactionLabs\Zenith\Jobs\Actions;
 
-use DevactionLabs\HorizonNewDawn\Jobs\Data\ClearPendingJobsResultData;
-use DevactionLabs\HorizonNewDawn\Queues\Actions\ClearQueue;
-use DevactionLabs\HorizonNewDawn\Queues\Data\QueueTargetData;
-use DevactionLabs\HorizonNewDawn\Queues\QueuesData;
+use DevactionLabs\Zenith\Jobs\Data\ClearPendingJobsResultData;
+use DevactionLabs\Zenith\Queues\Actions\ClearQueue;
+use DevactionLabs\Zenith\Queues\Data\QueueTargetData;
+use DevactionLabs\Zenith\Queues\QueuesData;
 use Laravel\Horizon\Contracts\JobRepository;
 use RuntimeException;
 use Throwable;
@@ -98,14 +98,14 @@ final readonly class ClearPendingJobs
 
     private function bulkOperationTarget(): ?QueueTargetData
     {
-        $connection = config('horizon-new-dawn.bulk_operations.connection')
+        $connection = config('zenith.bulk_operations.connection')
             ?? config('queue.default');
 
         if (! is_string($connection) || trim($connection) === '') {
             return null;
         }
 
-        $queue = config('horizon-new-dawn.bulk_operations.queue')
+        $queue = config('zenith.bulk_operations.queue')
             ?? config("queue.connections.{$connection}.queue");
 
         if (! is_string($queue) || trim($queue) === '') {

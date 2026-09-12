@@ -20,7 +20,7 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { Spinner } from "@/components/ui/spinner";
-import { destroy as cancelPendingJobs } from "@/generated/routes/horizon-new-dawn/jobs/pending/cancel";
+import { destroy as cancelPendingJobs } from "@/generated/routes/zenith/jobs/pending/cancel";
 import { resolveHorizonRoute } from "@/lib/horizon-route";
 
 type PendingCancellationScope = "ready" | "delayed" | "pending";

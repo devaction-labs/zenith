@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Assets;
+namespace DevactionLabs\Zenith\Assets;
 
 use Illuminate\Contracts\Foundation\Application;
 use RuntimeException;
 
 final readonly class AssetPath
 {
-    private const string RELATIVE_PATH = 'vendor/horizon-new-dawn/build';
+    private const string RELATIVE_PATH = 'vendor/zenith/build';
 
     public function __construct(
         private Application $application,
@@ -26,7 +26,7 @@ final readonly class AssetPath
         $publicPath = realpath($this->application->publicPath());
 
         if (! is_string($publicPath)) {
-            throw new RuntimeException('The public directory could not be resolved for Horizon New Dawn assets.');
+            throw new RuntimeException('The public directory could not be resolved for Zenith assets.');
         }
 
         $currentPath = $publicPath;
@@ -45,7 +45,7 @@ final readonly class AssetPath
                 || $resolvedPath === $publicPath
                 || ! str_starts_with($resolvedPath, $publicPath.DIRECTORY_SEPARATOR)
             ) {
-                throw new RuntimeException('The Horizon New Dawn asset path must resolve within the public directory.');
+                throw new RuntimeException('The Zenith asset path must resolve within the public directory.');
             }
         }
 

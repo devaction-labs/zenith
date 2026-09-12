@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Dashboard;
+namespace DevactionLabs\Zenith\Dashboard;
 
-use DevactionLabs\HorizonNewDawn\Batches\BatchRepositoryOverview;
-use DevactionLabs\HorizonNewDawn\Batches\DatabaseBatchCapability;
-use DevactionLabs\HorizonNewDawn\Dashboard\Data\DashboardBatchPreviewData;
-use DevactionLabs\HorizonNewDawn\Dashboard\Data\DashboardBatchSummaryData;
+use DevactionLabs\Zenith\Batches\BatchRepositoryOverview;
+use DevactionLabs\Zenith\Batches\DatabaseBatchCapability;
+use DevactionLabs\Zenith\Dashboard\Data\DashboardBatchPreviewData;
+use DevactionLabs\Zenith\Dashboard\Data\DashboardBatchSummaryData;
 
 final readonly class DashboardBatchSummary
 {

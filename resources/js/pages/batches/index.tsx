@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/input-group";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { index as batchesIndex } from "@/generated/routes/horizon-new-dawn/batches";
+import { index as batchesIndex } from "@/generated/routes/zenith/batches";
 import { useAutoLoad } from "@/hooks/use-auto-load";
 import { useAutoLoadPreference } from "@/layouts/horizon-layout";
 import { formatCount } from "@/lib/format-count";

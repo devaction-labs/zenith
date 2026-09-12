@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Metrics;
+namespace DevactionLabs\Zenith\Metrics;
 
-use DevactionLabs\HorizonNewDawn\Metrics\Data\MetricPreviewData;
-use DevactionLabs\HorizonNewDawn\Metrics\Data\MetricRowData;
-use DevactionLabs\HorizonNewDawn\Metrics\Data\MetricSnapshotData;
-use DevactionLabs\HorizonNewDawn\Metrics\Data\MetricsPageData;
+use DevactionLabs\Zenith\Metrics\Data\MetricPreviewData;
+use DevactionLabs\Zenith\Metrics\Data\MetricRowData;
+use DevactionLabs\Zenith\Metrics\Data\MetricSnapshotData;
+use DevactionLabs\Zenith\Metrics\Data\MetricsPageData;
 use Laravel\Horizon\Contracts\MetricsRepository;
 use Throwable;
 

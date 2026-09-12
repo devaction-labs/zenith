@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use function DevactionLabs\HorizonNewDawn\Tests\Support\bindBrowserPageFixtures;
+use function DevactionLabs\Zenith\Tests\Support\bindBrowserPageFixtures;
 
 it('renders numeric durations with compact unit suffixes', function (): void {
     bindBrowserPageFixtures();

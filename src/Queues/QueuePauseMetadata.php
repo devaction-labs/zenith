@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Queues;
+namespace DevactionLabs\Zenith\Queues;
 
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
@@ -43,6 +43,6 @@ final readonly class QueuePauseMetadata
 
     private function key(string $connection, string $queue): string
     {
-        return 'horizon-new-dawn:queue-pause:'.hash('sha256', $connection."\0".$queue);
+        return 'zenith:queue-pause:'.hash('sha256', $connection."\0".$queue);
     }
 }

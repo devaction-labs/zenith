@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Queues\Actions;
+namespace DevactionLabs\Zenith\Queues\Actions;
 
 use Carbon\CarbonImmutable;
-use DevactionLabs\HorizonNewDawn\Queues\Data\PauseQueueData;
-use DevactionLabs\HorizonNewDawn\Queues\QueuePauseMetadata;
-use DevactionLabs\HorizonNewDawn\Support\FrameworkCapabilities;
+use DevactionLabs\Zenith\Queues\Data\PauseQueueData;
+use DevactionLabs\Zenith\Queues\QueuePauseMetadata;
+use DevactionLabs\Zenith\Support\FrameworkCapabilities;
 use Illuminate\Queue\QueueManager;
 
 final readonly class PauseQueue

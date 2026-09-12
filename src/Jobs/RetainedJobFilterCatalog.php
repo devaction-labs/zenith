@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Jobs;
+namespace DevactionLabs\Zenith\Jobs;
 
-use DevactionLabs\HorizonNewDawn\Jobs\Data\JobFilterCatalogData;
-use DevactionLabs\HorizonNewDawn\Support\PollInterval;
+use DevactionLabs\Zenith\Jobs\Data\JobFilterCatalogData;
+use DevactionLabs\Zenith\Support\PollInterval;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Illuminate\Support\Str;
 use Throwable;
 
 final readonly class RetainedJobFilterCatalog
 {
-    private const string CACHE_KEY_PREFIX = 'horizon-new-dawn:retained-job-filter-catalog:v1';
+    private const string CACHE_KEY_PREFIX = 'zenith:retained-job-filter-catalog:v1';
 
     public function __construct(
         private RetainedJobIndex $index,

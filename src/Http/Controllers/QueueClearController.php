@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace DevactionLabs\HorizonNewDawn\Http\Controllers;
+namespace DevactionLabs\Zenith\Http\Controllers;
 
-use DevactionLabs\HorizonNewDawn\Http\Requests\ClearQueueRequest;
-use DevactionLabs\HorizonNewDawn\Queues\Actions\ClearQueue;
+use DevactionLabs\Zenith\Http\Requests\ClearQueueRequest;
+use DevactionLabs\Zenith\Queues\Actions\ClearQueue;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Str;
 use Throwable;

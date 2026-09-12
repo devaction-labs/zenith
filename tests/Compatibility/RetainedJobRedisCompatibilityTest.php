@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-use DevactionLabs\HorizonNewDawn\FailedJobs\FailedJobRetryLock;
-use DevactionLabs\HorizonNewDawn\Jobs\Data\JobIndexFiltersData;
-use DevactionLabs\HorizonNewDawn\Jobs\PendingJobStateIndex;
-use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobCursor;
-use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobFilterCatalog;
-use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobIndex;
-use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobQuery;
-use DevactionLabs\HorizonNewDawn\Jobs\RetainedJobType;
-use DevactionLabs\HorizonNewDawn\Support\RedisScript;
+use DevactionLabs\Zenith\FailedJobs\FailedJobRetryLock;
+use DevactionLabs\Zenith\Jobs\Data\JobIndexFiltersData;
+use DevactionLabs\Zenith\Jobs\PendingJobStateIndex;
+use DevactionLabs\Zenith\Jobs\RetainedJobCursor;
+use DevactionLabs\Zenith\Jobs\RetainedJobFilterCatalog;
+use DevactionLabs\Zenith\Jobs\RetainedJobIndex;
+use DevactionLabs\Zenith\Jobs\RetainedJobQuery;
+use DevactionLabs\Zenith\Jobs\RetainedJobType;
+use DevactionLabs\Zenith\Support\RedisScript;
 use Illuminate\Contracts\Queue\Factory as QueueFactory;
 use Illuminate\Contracts\Redis\Factory as RedisFactory;
 use Illuminate\Queue\RedisQueue;
@@ -21,9 +21,9 @@ use Illuminate\Support\Collection;
 use Laravel\Horizon\Contracts\JobRepository;
 use Laravel\Horizon\Horizon;
 
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturns;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\dashboardReturnsUsing;
-use function DevactionLabs\HorizonNewDawn\Tests\Support\mockDashboardContract;
+use function DevactionLabs\Zenith\Tests\Support\dashboardReturns;
+use function DevactionLabs\Zenith\Tests\Support\dashboardReturnsUsing;
+use function DevactionLabs\Zenith\Tests\Support\mockDashboardContract;
 
 final class PendingSnapshotObservingConnection extends Connection
 {
@@ -72,7 +72,7 @@ final class PendingSnapshotObservingConnection extends Connection
             // Per-state snapshots use 5 keys; consolidated pendingQueueEntries uses 8.
             if (count($keys) === 5) {
                 $snapshotKeys = [$keys[0], $keys[3], $keys[4]];
-                $namespace = ':horizon-new-dawn:pending-snapshot:';
+                $namespace = ':zenith:pending-snapshot:';
             } elseif (count($keys) === 8) {
                 $snapshotKeys = [
                     $keys[0],
@@ -81,7 +81,7 @@ final class PendingSnapshotObservingConnection extends Connection
                     $keys[6],
                     $keys[7],
                 ];
-                $namespace = ':horizon-new-dawn:pending-queue-snapshot:';
+                $namespace = ':zenith:pending-queue-snapshot:';
             } else {
                 throw new LogicException(
                     'Expected five or eight pending snapshot keys.',
@@ -322,7 +322,7 @@ it('queries retained jobs through the configured real Redis client', function ()
         ));
 
         expect($index->metadataKey())->toStartWith(
-            "\x1fhorizon-new-dawn:v2:",
+            "\x1fzenith:v2:",
         )->and($catalog->queues)->toContain(
             'maintenance',
             'retained-reports',
@@ -812,11 +812,11 @@ it('captures a coherent pendingQueueEntries inventory with state tags, scores, a
         $allKeys = is_array($allKeys) ? array_map(strval(...), $allKeys) : [];
         $leftoverQueueSnapshots = array_values(array_filter(
             $allKeys,
-            static fn (string $key): bool => str_contains($key, ':horizon-new-dawn:pending-queue-snapshot:'),
+            static fn (string $key): bool => str_contains($key, ':zenith:pending-queue-snapshot:'),
         ));
         $leftoverStateSnapshots = array_values(array_filter(
             $allKeys,
-            static fn (string $key): bool => str_contains($key, ':horizon-new-dawn:pending-snapshot:'),
+            static fn (string $key): bool => str_contains($key, ':zenith:pending-snapshot:'),
         ));
 
         expect($leftoverQueueSnapshots)->toBe([])
@@ -841,7 +841,7 @@ it('captures a coherent pendingQueueEntries inventory with state tags, scores, a
         $remainingKeys = is_array($remainingKeys) ? array_map(strval(...), $remainingKeys) : [];
         $remainingExpiredKeys = array_values(array_filter(
             $remainingKeys,
-            static fn (string $key): bool => str_contains($key, ':horizon-new-dawn:pending-queue-snapshot:'),
+            static fn (string $key): bool => str_contains($key, ':zenith:pending-queue-snapshot:'),
         ));
 
         expect($remainingExpiredKeys)->toBe([]);
@@ -932,12 +932,12 @@ function retainedJobRedisCompatibilityEnvironment(): array
     $token = bin2hex(random_bytes(6));
 
     return [
-        'HORIZON_PREFIX' => "horizon:new-dawn:retained-index:{$token}:",
+        'HORIZON_PREFIX' => "horizon:zenith:retained-index:{$token}:",
         'REDIS_CLIENT' => $client,
         'REDIS_DB' => $database,
         'REDIS_HOST' => $host,
         'REDIS_PORT' => $port,
-        'REDIS_PREFIX' => "database:new-dawn:compatibility:{$token}:",
+        'REDIS_PREFIX' => "database:zenith:compatibility:{$token}:",
     ];
 }
 

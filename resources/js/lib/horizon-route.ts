@@ -4,7 +4,7 @@ type WayfinderRoute = {
   url: string;
 };
 
-const placeholderOrigin = "https://horizon-new-dawn.invalid";
+const placeholderOrigin = "https://zenith.invalid";
 
 export function resolveHorizonRoute<T extends WayfinderRoute>(route: T, horizonBaseUrl: string): T {
   const generatedBasePath = new URL(horizonIndex.url(), placeholderOrigin).pathname.replace(

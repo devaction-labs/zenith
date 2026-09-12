@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/statistic";
 import { Tabs } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { show as queueShow } from "@/generated/routes/horizon-new-dawn/queues";
+import { show as queueShow } from "@/generated/routes/zenith/queues";
 import { resolveHorizonRoute } from "@/lib/horizon-route";
 import { livePendingTotal } from "@/lib/live-pending-total";
 import { cn } from "@/lib/utils";
