@@ -37,6 +37,7 @@ export type HorizonPageProps = {
     maintenanceMode: boolean;
     jobNavigationBreakdown?: boolean;
     allQueuesPaused?: boolean;
+    telemetryEnabled?: boolean;
     capabilities?: {
       queuePausing: boolean;
       timedQueuePausing: boolean;
