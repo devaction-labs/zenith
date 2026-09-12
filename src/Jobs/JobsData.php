@@ -409,6 +409,7 @@ final readonly class JobsData
         $payload = $this->decodePayload($job->payload ?? null);
         $decodedCommand = $this->decodedCommand($payload);
         $data = is_array($payload['data'] ?? null) ? $payload['data'] : [];
+        $commandClass = JobComposition::commandClass($payload, $decodedCommand);
 
         return new JobDetailData(
             id: $row->id,
@@ -432,6 +433,7 @@ final readonly class JobsData
             payload: $this->safePayload($payload, $decodedCommand),
             retryEligible: $row->retryEligible,
             composition: JobComposition::fromPayload($payload, $decodedCommand),
+            attributes: JobAttributes::fromClass($commandClass),
         );
     }
 

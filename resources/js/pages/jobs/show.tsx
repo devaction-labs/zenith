@@ -3,6 +3,7 @@ import { useState } from "react";
 
 import { DetailList, DetailListItem } from "@/components/detail-list";
 import { Duration } from "@/components/duration";
+import { JobAttributesPanel } from "@/components/jobs/job-attributes";
 import { JobStatus, type JobStatusValue } from "@/components/jobs/job-status";
 import { PendingJobActionsMenu } from "@/components/jobs/pending-job-actions";
 import { RetryRetainedJobButton } from "@/components/jobs/retained-job-actions";
@@ -222,6 +223,7 @@ function JobShow({ horizon, type, job }: JobDetailPageProps) {
         </Card>
 
         <JobCompositionPanel composition={job.composition} />
+        <JobAttributesPanel attributes={job.attributes} />
         <JobDataTabs payload={job.payload} tags={job.tags} />
       </div>
     </>

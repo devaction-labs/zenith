@@ -65,6 +65,24 @@ export type JobComposition = {
   chain: Array<{ class: string }>;
 };
 
+export type JobAttributes = {
+  tries: number | null;
+  backoff: number | number[] | null;
+  timeout: number | null;
+  failOnTimeout: boolean;
+  maxExceptions: number | null;
+  uniqueFor: number | null;
+  debounceFor: number | null;
+  debounceMaxWait: number | null;
+  queue: string | null;
+  connection: string | null;
+  delay: number | null;
+  withoutRelations: boolean;
+  deleteWhenMissingModels: boolean;
+  routedQueue: string | null;
+  routedConnection: string | null;
+};
+
 export type JobDetail = Omit<
   JobRow,
   | "index"
@@ -78,6 +96,7 @@ export type JobDetail = Omit<
   batchId: string | null;
   payload: Record<string, unknown>;
   composition?: JobComposition;
+  attributes?: JobAttributes;
 };
 
 export type FailedJobRetry = {

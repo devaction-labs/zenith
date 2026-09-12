@@ -16,6 +16,20 @@ it('lists class routes that target a queue', function (): void {
         ->and($routing->forwardedQueue)->toBeNull();
 });
 
+it('resolves the route registered for a job class', function (): void {
+    app('queue.routes')->set(QueueRouting::class, 'reports', 'redis');
+
+    $route = (new QueueRouting)->forClass(QueueRouting::class);
+
+    expect($route?->class)->toBe(QueueRouting::class)
+        ->and($route?->queue)->toBe('reports')
+        ->and($route?->connection)->toBe('redis');
+});
+
+it('returns null when a job class has no registered route', function (): void {
+    expect((new QueueRouting)->forClass(QueueRouting::class))->toBeNull();
+});
+
 it('reports queues forwarded to another destination', function (): void {
     app('queue.routes')->forward('reports', 'reports.fifo', 'redis');
 

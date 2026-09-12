@@ -258,6 +258,7 @@ final readonly class FailedJobsData
                     ? mb_convert_encoding($job->exception, 'UTF-8', 'UTF-8')
                     : '',
                 composition: $detail->composition,
+                attributes: $detail->attributes,
             );
         } catch (Throwable $exception) {
             report($exception);

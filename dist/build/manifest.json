@@ -250,8 +250,8 @@
       "_badge--mLZpAGc.js"
     ]
   },
-  "_json-payload-CWwtn63D.js": {
-    "file": "assets/json-payload-CWwtn63D.js",
+  "_json-payload-B4oqlXoT.js": {
+    "file": "assets/json-payload-B4oqlXoT.js",
     "name": "json-payload",
     "imports": [
       "_jsx-runtime-JOEmNrpY.js",
@@ -261,7 +261,9 @@
       "_circle-x-CEUAGBRg.js",
       "_code-block-Qf5_SWSR.js",
       "_horizon-layout-DowZIhZy.js",
-      "_badge--mLZpAGc.js"
+      "_badge--mLZpAGc.js",
+      "_duration-C8bzaqfp.js",
+      "_detail-list-RCoFXEZT.js"
     ]
   },
   "_jsx-runtime-JOEmNrpY.js": {
@@ -587,7 +589,7 @@
     "src": "resources/images/favicon.svg"
   },
   "resources/js/app.tsx": {
-    "file": "assets/app-BEZ8jkGT.js",
+    "file": "assets/app-DEWsS48A.js",
     "name": "app",
     "src": "resources/js/app.tsx",
     "isEntry": true,
@@ -731,7 +733,7 @@
     ]
   },
   "resources/js/pages/failed-jobs/index.tsx": {
-    "file": "assets/failed-jobs-BlxLSRY9.js",
+    "file": "assets/failed-jobs-gfbyAvSz.js",
     "name": "failed-jobs",
     "src": "resources/js/pages/failed-jobs/index.tsx",
     "isDynamicEntry": true,
@@ -748,14 +750,14 @@
     ]
   },
   "resources/js/pages/failed-jobs/show.tsx": {
-    "file": "assets/show-DwN1Z3vV.js",
+    "file": "assets/show-DfU-R6Bh.js",
     "name": "show",
     "src": "resources/js/pages/failed-jobs/show.tsx",
     "isDynamicEntry": true,
     "imports": [
       "_jsx-runtime-JOEmNrpY.js",
       "_alert-D0rPt8dK.js",
-      "_json-payload-CWwtn63D.js",
+      "_json-payload-B4oqlXoT.js",
       "_navigation-icons-C_6vgve3.js",
       "_code-block-Qf5_SWSR.js",
       "_database-D_Eh5esT.js",
@@ -789,7 +791,7 @@
     ]
   },
   "resources/js/pages/jobs/index.tsx": {
-    "file": "assets/jobs-6mzXqetg.js",
+    "file": "assets/jobs-7OJdQTG0.js",
     "name": "jobs",
     "src": "resources/js/pages/jobs/index.tsx",
     "isDynamicEntry": true,
@@ -806,14 +808,14 @@
     ]
   },
   "resources/js/pages/jobs/show.tsx": {
-    "file": "assets/show-Bgt49t0j.js",
+    "file": "assets/show-Csc0XBZR.js",
     "name": "show",
     "src": "resources/js/pages/jobs/show.tsx",
     "isDynamicEntry": true,
     "imports": [
       "_jsx-runtime-JOEmNrpY.js",
       "_alert-D0rPt8dK.js",
-      "_json-payload-CWwtn63D.js",
+      "_json-payload-B4oqlXoT.js",
       "_horizon-layout-DowZIhZy.js",
       "_rotate-ccw-gWEHYTqw.js",
       "_responsive-tabs-header-Cwz7ji_m.js",
@@ -955,7 +957,7 @@
     ]
   },
   "resources/js/pages/queues/show.tsx": {
-    "file": "assets/show-CEdw9eyX.js",
+    "file": "assets/show-ty5r2m3f.js",
     "name": "show",
     "src": "resources/js/pages/queues/show.tsx",
     "isDynamicEntry": true,
