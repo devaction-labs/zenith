@@ -346,6 +346,14 @@ Explaining a failure well needs an LLM call, but Zenith has no opinion on which 
 
 Decision: `Zenith::explainFailureUsing(callable $callback)` lets the host register `fn (string $jobClass, string $exceptionMessage): ?string` from its own service provider, backed by whatever AI client it already depends on. Zenith never talks to a provider itself. The failed-job detail page shows an "Explain this failure" action only when a callback is registered, gated by the existing `retryJobs` ability, so hosts that skip the hook see no change.
 
+### Transactional outbox for job dispatch (issue #35): go, single delivery path via sweep
+
+Oban's own outbox gives an at-least-once dispatch guarantee: a job enqueued inside the same transaction as the application data it depends on either commits with that data or rolls back with it, closing the gap where a process crashes after committing but before the job reaches the real queue. Horizon has no equivalent — `dispatch()` inside a transaction only pushes once the transaction commits (via `afterCommit`), which still loses the job if the process dies between that commit and the push.
+
+A design with two paths — an immediate push after commit, falling back to a sweep for whatever the fast path missed — was rejected: it means the job can arrive by two different routes, doubles the surface a test has to cover, and the race between "did the fast path already send it" and "is the sweep about to send it too" is exactly the kind of bug this feature exists to prevent.
+
+Decision: `Outbox::dispatch($job, $connection, $queue)` only ever writes a row inside the caller's transaction; delivery happens exclusively through `Outbox::relayDue($graceSeconds)`, scheduled every minute as `zenith:relay-outbox`. A grace period (default 30s) avoids relaying a row whose owning transaction is still open on another connection. This is at-least-once, not exactly-once: a crash between a successful push and deleting the row redelivers it, so jobs dispatched through the outbox should stay idempotent or use `ShouldBeUnique`, the same expectation Oban sets. `Outbox::backlog()` reports the pending row count and the oldest row's age, exported as `zenith_outbox_backlog` and `zenith_outbox_oldest_pending_seconds` alongside the other autoscaling gauges (issue #39) so a stuck sweep is observable the same way a growing queue is.
+
 ## Development environment
 
 Orchestra Testbench verifies package behavior in isolation. The Workbench application provides deterministic successful and failing jobs for live dashboard development.

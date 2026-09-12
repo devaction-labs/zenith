@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace DevactionLabs\Zenith\Console;
 
+use DevactionLabs\Zenith\Outbox\Outbox;
 use DevactionLabs\Zenith\Queues\Data\QueueRowData;
 use DevactionLabs\Zenith\Queues\QueuesData;
 use Illuminate\Console\Command;
@@ -46,6 +47,20 @@ final class ExportMetricsCommand extends Command
             fn (QueueRowData $queue): float => (float) $metrics->throughputForQueue($queue->name),
         );
 
+        $backlog = Outbox::backlog();
+
+        $this->printScalarGauge(
+            'zenith_outbox_backlog',
+            'Outbox rows waiting to be relayed onto the real queue.',
+            $backlog['count'],
+        );
+
+        $this->printScalarGauge(
+            'zenith_outbox_oldest_pending_seconds',
+            'Age in seconds of the oldest pending outbox row.',
+            $backlog['oldestPendingSeconds'],
+        );
+
         return self::SUCCESS;
     }
 
@@ -62,5 +77,16 @@ final class ExportMetricsCommand extends Command
             $sample = $value($queue);
             $this->line(sprintf('%s{queue="%s"} %s', $name, $queue->name, $sample));
         }
+    }
+
+    private function printScalarGauge(string $name, string $help, ?int $value): void
+    {
+        if ($value === null) {
+            return;
+        }
+
+        $this->line("# HELP {$name} {$help}");
+        $this->line("# TYPE {$name} gauge");
+        $this->line("{$name} {$value}");
     }
 }
