@@ -5,6 +5,7 @@ declare(strict_types=1);
 use DevactionLabs\Zenith\Signals\Signal;
 use DevactionLabs\Zenith\Signals\SignalWaiting;
 use DevactionLabs\Zenith\Workflows\RunWorkflowStep;
+use Illuminate\Contracts\Queue\Job;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Queue\Attributes\Backoff;
@@ -15,6 +16,7 @@ use Illuminate\Queue\Attributes\Queue;
 use Illuminate\Queue\Attributes\Timeout;
 use Illuminate\Queue\Attributes\Tries;
 use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\Date;
 
 function dispatchedWorkflowStep(string $stepName): RunWorkflowStep
 {
@@ -155,6 +157,44 @@ final class WaitingWorkflowStep implements ShouldQueue
         }
 
         return ['approved' => true];
+    }
+}
+
+final class PatientWorkflowStep implements ShouldQueue
+{
+    use Queueable;
+
+    public function retryUntil(): DateTimeInterface
+    {
+        return Date::now()->addMinutes(5);
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @param  array<string, mixed>  $context
+     * @return array<string, bool>
+     */
+    public function handle(array $payload, array $context): array
+    {
+        return ['patient' => true];
+    }
+}
+
+final class ReleasingWaitWorkflowStep implements ShouldQueue
+{
+    use Queueable;
+
+    /**
+     * Mirrors Signal::await, which releases the bound queue job before it reports waiting.
+     *
+     * @param  array<string, mixed>  $payload
+     * @param  array<string, mixed>  $context
+     */
+    public function handle(array $payload, array $context): never
+    {
+        app(Job::class)->release(5);
+
+        throw new SignalWaiting('Waiting for the approval signal.');
     }
 }
 

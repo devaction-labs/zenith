@@ -6,6 +6,7 @@ use DevactionLabs\Zenith\Workflows\AdvanceWorkflow;
 use DevactionLabs\Zenith\Workflows\RunWorkflowStep;
 use DevactionLabs\Zenith\Workflows\WorkflowDefinition;
 use DevactionLabs\Zenith\Workflows\WorkflowStatus;
+use Illuminate\Contracts\Queue\Job;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
 
@@ -154,6 +155,44 @@ it('keeps a step running while it waits for a signal and resumes it on retry', f
 
     expect($workflow->fresh()?->status)->toBe(WorkflowStatus::Completed)
         ->and($workflow->steps()->where('name', 'wait')->value('output'))->toBe(['approved' => true]);
+});
+
+it('adopts the retry deadline declared by the step class', function (): void {
+    Bus::fake();
+
+    WorkflowDefinition::make('patient')->add('patient', PatientWorkflowStep::class)->dispatch();
+    WorkflowDefinition::make('plain')->add('fetch', FetchWorkflowStep::class)->dispatch();
+
+    expect(dispatchedWorkflowStep('patient')->retryUntil())->toBeInstanceOf(DateTimeInterface::class)
+        ->and(dispatchedWorkflowStep('fetch')->retryUntil())->toBeNull();
+});
+
+it('declares the signals release middleware once signals provide it', function (): void {
+    $job = RunWorkflowStep::for('workflow', 'step', 'token', FetchWorkflowStep::class);
+    $middleware = 'DevactionLabs\Zenith\Signals\ReleaseWhileWaiting';
+
+    expect($job->middleware())->toHaveCount(class_exists($middleware) ? 1 : 0);
+});
+
+it('leaves the redelivery to the queue when a signal release already scheduled one', function (): void {
+    Bus::fake();
+
+    $workflow = WorkflowDefinition::make('gated')
+        ->add('wait', ReleasingWaitWorkflowStep::class)
+        ->dispatch();
+
+    $job = dispatchedWorkflowStep('wait')->withFakeQueueInteractions();
+    app()->instance(Job::class, $job->job);
+
+    $job->handle(app(AdvanceWorkflow::class));
+    $job->assertReleased(5);
+
+    expect(Bus::dispatched(
+        RunWorkflowStep::class,
+        static fn (RunWorkflowStep $queued): bool => $queued->stepName === 'wait',
+    ))->toHaveCount(1)
+        ->and($workflow->steps()->where('name', 'wait')->value('status'))->toBe(WorkflowStatus::Running->value)
+        ->and($workflow->fresh()?->status)->toBe(WorkflowStatus::Running);
 });
 
 it('redelivers a waiting step with a fresh delayed job instead of burning an attempt', function (): void {
