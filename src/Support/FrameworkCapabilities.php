@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace DevactionLabs\Zenith\Support;
 
 use Illuminate\Queue\QueueManager;
+use Illuminate\Queue\QueueRoutes;
 use Illuminate\Queue\Worker;
 use LogicException;
 use ReflectionClass;
@@ -34,6 +35,11 @@ final class FrameworkCapabilities extends Data
                 && $queueManager->hasMethod('pauseAll')
                 && $queueManager->hasMethod('resumeAll'),
         );
+    }
+
+    public static function queueForwardingSupported(): bool
+    {
+        return (new ReflectionClass(QueueRoutes::class))->hasMethod('forwardedQueue');
     }
 
     public function ensureQueuePausing(): void
