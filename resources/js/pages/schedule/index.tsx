@@ -59,7 +59,7 @@ function ScheduleIndex({ horizon, events, canRun }: HorizonPageProps & ScheduleP
                 <TableEmpty
                   columns={allowRun ? 5 : 4}
                   title="No scheduled events"
-                  description="Register events on the Laravel scheduler to see them here."
+                  description="Register events on the Laravel scheduler or create dynamic crons to see them here."
                 />
               ) : (
                 events.map((event) => (
@@ -83,6 +83,8 @@ function ScheduleIndex({ horizon, events, canRun }: HorizonPageProps & ScheduleP
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1">
+                        {event.runtimeEditable ? <Badge variant="secondary">Dynamic</Badge> : null}
+                        {event.paused ? <Badge variant="warning">Paused</Badge> : null}
                         {event.withoutOverlapping ? <Badge>No overlap</Badge> : null}
                         {event.overlapping ? <Badge variant="retry">Running</Badge> : null}
                         {event.onOneServer ? <Badge>One server</Badge> : null}

@@ -11,6 +11,7 @@ export type ScheduleEvent = {
   runInBackground: boolean;
   overlapping: boolean;
   runtimeEditable: boolean;
+  paused: boolean;
 };
 
 export type SchedulePageProps = {

@@ -17,6 +17,8 @@ return new class extends Migration
             $table->string('job_class');
             $table->json('payload')->nullable();
             $table->boolean('paused')->default(false);
+            $table->string('timezone')->nullable();
+            $table->timestamp('last_ran_at')->nullable();
             $table->timestamps();
         });
     }
