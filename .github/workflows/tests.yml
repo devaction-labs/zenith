@@ -275,3 +275,24 @@ jobs:
             fi
           done
 
+
+  auto-merge:
+    name: Auto Merge
+    needs:
+      - ci
+    if: github.event_name == 'pull_request' && !github.event.pull_request.draft && github.event.pull_request.head.repo.full_name == github.repository && needs.ci.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Enable auto-merge (merge commit)
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          if [[ -z "$GH_TOKEN" ]]; then
+            echo "::warning::GH_PAT is not available to this repository; enable auto-merge on the pull request manually."
+            exit 0
+          fi
+
+          gh pr merge "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --merge --delete-branch --auto
