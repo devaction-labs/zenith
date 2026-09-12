@@ -6,6 +6,42 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-09-12
+
+This release closes out the remaining Oban-parity roadmap: event-driven telemetry, durable history, workflow observability and resilience, bulk job actions, an engine layer of job-class attributes, and a transactional outbox all land together.
+
+### Added
+
+- An opt-in, event-driven telemetry recorder (`zenith.telemetry.enabled`) that listens to Laravel's own queue events instead of Horizon's snapshots, feeding live per-second/minute/5-minute throughput and wait/runtime percentile charts on the dashboard, per-attempt error history on job and failed-job detail, and an in-flight "Executing" page with a per-node breakdown. Every telemetry-backed screen falls back to the existing Horizon-snapshot behavior while the recorder is disabled.
+- Durable job history: an opt-in `zenith_job_history` table records one row per terminal job attempt (class, queue, connection, status, attempts, runtime, tags, a short error summary) with no raw payload or exception trace, governed by ordered, configurable retention rules and pruned with the new `zenith:prune-history` command.
+- A workflow DAG explorer: the Workflows page renders a step graph alongside the existing table, with a lifeline (`zenith:repair-workflows`) that finds steps stuck past their `#[Timeout]` and either re-dispatches or fails them, plus a graceful-interruption path and a "Stale" badge for steps caught by it.
+- Schedule run history and a global scheduler pause: every scheduled event's recent runs (exit code, duration, output tail) are recorded and shown on the Schedule page, and the whole scheduler can be paused and resumed from the dashboard.
+- Dynamic, runtime-editable cron rows: create, update, delete, and pause individual cron entries from the Schedule page; `DynamicSchedule::tick()` dispatches each due, unpaused row through an allowlisted job class.
+- Runtime supervisor scaling: a `manageInstances`-gated control on the supervisor detail page dispatches Horizon's `Scale` command, bounded by the supervisor's own configured process range.
+- Multi-select bulk actions on job tables: a tri-state checkbox column with "select page" and "select all loaded" modes drives bulk retry and cancel across the pending, completed, silenced, and failed lists.
+- Retrying completed and cancelled jobs: a retained completed or silenced job's payload can be re-dispatched as a new job, gated by `retryJobs` and recorded through the existing audit-mutation middleware, with eligibility checks for missing payloads or command classes.
+- Laravel 13 job attributes on job detail: `Tries`, `Backoff`, `Timeout`, `FailOnTimeout`, `MaxExceptions`, `UniqueFor`, `DebounceFor`, `Queue`, `Connection`, `Delay`, `WithoutRelations`, `DeleteWhenMissingModels`, and the `Queue::route()` destination are read via reflection and shown without instantiating the job.
+- A Horizon-bypass warning: dashboard and queues-page banners, plus a per-row badge, flag connections using Laravel's `failover`, `deferred`, or `background` drivers and recent `QueueFailedOver` occurrences that Horizon (and therefore Zenith) cannot see.
+- Payload redaction: job, failed-job, and workflow payloads mask keys matching the configured `zenith.redact_payload_keys` patterns before reaching Inertia, with a `Zenith::redactPayloadUsing()` hook to fully replace the logic.
+- A `tag:` search qualifier and facet across every job list (pending, completed, silenced, and failed), extending the facet failed jobs already had; opt-in per-argument search was evaluated and deliberately deferred, with the reasoning recorded in `docs/architecture.md`.
+- A per-user refresh-rate selector (1s/2s/5s/15s/off), replacing the fixed poll interval, persisted in `localStorage` and defaulting to the server-configured value; `g d` / `g j` / `g f` navigation shortcuts, `/` to focus the page's search box, and `?` for a shortcuts help dialog.
+- An engine layer of job-class attributes: `#[GlobalLimit]`, `#[RateLimit]`, and `#[Partition]` enforce concurrency and rate limits through the existing queue-budget primitives; `#[ChainBy]` (or a fluent `chainKey()`) runs jobs sharing a key in strict order across dispatches, connections, and queues; `#[Recorded]` captures a job's return value, keyed by its queue UUID.
+- Anti-starvation alerting: `QueueStarvationAlert` flags a queue whose oldest ready job has aged past `zenith.starvation.threshold_seconds`, deliberately alert-only rather than reprioritizing jobs itself.
+- Testing fakes for the orchestration primitives: `Workflow::fake()`, `Signal::fake()`, and `Relay::fake()` swap in isolated, assertable state, and `drainWorkflow()` runs a workflow's claimed steps and compensations to a terminal status in-process without a real queue worker.
+- A transactional outbox for job dispatch: `Outbox::dispatch()` writes a row inside the caller's own transaction, and delivery happens exclusively through a scheduled `zenith:relay-outbox` sweep, closing the crash window between a commit and the push; `Outbox::backlog()` exposes pending-row count and oldest-pending age as autoscaling gauges.
+- `php artisan zenith:export-metrics` prints Prometheus text-format queue depth, wait time, and throughput samples for external autoscalers (KEDA, the Kubernetes HPA) without opening a new HTTP route.
+- An AI-assisted failure-explanation hook: `Zenith::explainFailureUsing(callable)` lets a host register an explanation callback backed by whatever client it already depends on; the failed-job detail page shows an "Explain this failure" action only when a callback is registered.
+- Two RFC decisions recorded in `docs/architecture.md`: fetch-time gating for limits stays a no-go for now (Horizon's fetch path has no supported extension point), while queue-depth and throughput metrics are exported through a CLI command rather than a new browser-facing endpoint.
+
+### Changed
+
+- Routes now authorize through `AuthorizeHorizonAbility::for()`, a static method on the middleware class, instead of a package-declared global `horizonAbility()` helper function.
+- `routes/zenith.php` mutation routes are covered by a feature test that proves every one of them rejects a forged cross-origin request and accepts a same-origin or token-carrying one.
+
+### Fixed
+
+- Stopped a Playwright 1.63+ browser test from silently re-running its script probe from scratch every second and losing events to discarded earlier attempts, by running the probe's script exactly once with the full timeout applied to itself.
+
 ## [0.3.0] - 2026-09-12
 
 ### Added
