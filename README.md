@@ -516,7 +516,8 @@ tags the next semantic version, and publishes a GitHub release whose notes come
 from that version's CHANGELOG section, falling back to generated notes when the
 section is missing. Packagist picks up the tag through its GitHub integration.
 Maintainers can release an explicit version from **Actions → Release → Run
-workflow**; the first Zenith release, 0.2.0, is published that way.
+workflow** on `main`. The first Zenith release, 0.2.0, is cut that way because
+there is no earlier tag to bump from; later releases can use the labels.
 
 ## License
 
