@@ -1,0 +1,1 @@
+import{a as e,c as t}from"./jsx-runtime-DWRut7C4.js";function n(e){return e==null||e.hasAttribute(`disabled`)||e.getAttribute(`aria-disabled`)===`true`}var r=t(e(),1),i=r.createContext(void 0),a={disableStyleElements:!1};function o(){return r.useContext(i)??a}export{n,o as t};

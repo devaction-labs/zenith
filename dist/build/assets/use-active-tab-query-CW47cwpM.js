@@ -1,0 +1,1 @@
+import{a as e,c as t}from"./jsx-runtime-DWRut7C4.js";import{n}from"./url-query-BVE_wLWq.js";var r=t(e(),1);function i(e){(0,r.useEffect)(()=>{let t=()=>n({tab:e}),r=window.setTimeout(t,0);return document.addEventListener(`inertia:navigate`,t),()=>{window.clearTimeout(r),document.removeEventListener(`inertia:navigate`,t)}},[e])}export{i as t};

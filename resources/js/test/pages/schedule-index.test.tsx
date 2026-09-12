@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
+import { useState } from "react";
 import { describe, expect, it, vi } from "vite-plus/test";
 
 import ScheduleIndex from "@/pages/schedule/index";
@@ -6,12 +7,40 @@ import type { HorizonPageProps } from "@/types/page";
 import type { ScheduleEvent, SchedulePageProps } from "@/types/schedule";
 
 const inertia = vi.hoisted(() => ({ post: vi.fn(), delete: vi.fn() }));
+const formCalls = vi.hoisted(() => ({ post: vi.fn(), put: vi.fn() }));
 const pageProps = vi.hoisted(() => ({ current: {} as { horizon?: unknown } }));
 
 vi.mock("@inertiajs/react", () => ({
   Head: () => null,
   router: inertia,
   usePage: () => ({ props: pageProps.current }),
+  useForm: (initial: Record<string, string>) => {
+    const [data, setDataState] = useState(initial);
+
+    return {
+      data,
+      errors: {},
+      processing: false,
+      setData: (keyOrData: string | Record<string, string>, value?: string) => {
+        if (typeof keyOrData === "string") {
+          setDataState((previous) => ({ ...previous, [keyOrData]: value ?? "" }));
+
+          return;
+        }
+
+        setDataState(keyOrData);
+      },
+      clearErrors: () => {},
+      post: (url: string, options?: { onSuccess?: () => void }) => {
+        formCalls.post(url, data);
+        options?.onSuccess?.();
+      },
+      put: (url: string, options?: { onSuccess?: () => void }) => {
+        formCalls.put(url, data);
+        options?.onSuccess?.();
+      },
+    };
+  },
 }));
 vi.mock("@/hooks/use-dashboard-refresh", () => ({ usePageRefresh: vi.fn() }));
 vi.mock("@/layouts/horizon-layout", () => ({
@@ -34,6 +63,8 @@ function event(overrides: Partial<ScheduleEvent> = {}): ScheduleEvent {
     runtimeEditable: false,
     paused: false,
     history: [],
+    dynamicCronId: null,
+    payload: null,
     ...overrides,
   };
 }
@@ -85,6 +116,7 @@ describe("ScheduleIndex", () => {
             }),
           ],
           canRun: true,
+          dynamicCronAllowedClasses: [],
         } as unknown as HorizonPageProps & SchedulePageProps)}
       />,
     );
@@ -101,6 +133,7 @@ describe("ScheduleIndex", () => {
           horizon: horizonProps(),
           events: [event()],
           canRun: true,
+          dynamicCronAllowedClasses: [],
         } as unknown as HorizonPageProps & SchedulePageProps)}
       />,
     );
@@ -119,6 +152,7 @@ describe("ScheduleIndex", () => {
           horizon: horizonProps({ schedulePaused: true }),
           events: [event()],
           canRun: true,
+          dynamicCronAllowedClasses: [],
         } as unknown as HorizonPageProps & SchedulePageProps)}
       />,
     );
@@ -150,11 +184,69 @@ describe("ScheduleIndex", () => {
           horizon: withoutAbility,
           events: [event()],
           canRun: false,
+          dynamicCronAllowedClasses: [],
         } as unknown as HorizonPageProps & SchedulePageProps)}
       />,
     );
 
     expect(screen.queryByRole("button", { name: "Pause scheduler" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Resume scheduler" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Create dynamic cron" })).toBeNull();
+  });
+
+  it("opens the create dialog and posts a new dynamic cron", () => {
+    pageProps.current = { horizon: horizonProps() };
+
+    render(
+      <ScheduleIndex
+        {...({
+          horizon: horizonProps(),
+          events: [event()],
+          canRun: true,
+          dynamicCronAllowedClasses: ["App\\Jobs\\Safe"],
+        } as unknown as HorizonPageProps & SchedulePageProps)}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Create dynamic cron" }));
+
+    expect(screen.getByRole("dialog")).toBeVisible();
+
+    fireEvent.click(screen.getByRole("button", { name: "Create" }));
+
+    expect(formCalls.post).toHaveBeenCalledWith(
+      "/horizon/schedule/dynamic-crons",
+      expect.anything(),
+    );
+  });
+
+  it("edits a dynamic cron from its row actions menu", async () => {
+    pageProps.current = { horizon: horizonProps() };
+
+    render(
+      <ScheduleIndex
+        {...({
+          horizon: horizonProps(),
+          events: [
+            event({
+              description: "nightly-report",
+              runtimeEditable: true,
+              dynamicCronId: 5,
+            }),
+          ],
+          canRun: true,
+          dynamicCronAllowedClasses: ["App\\Jobs\\Safe"],
+        } as unknown as HorizonPageProps & SchedulePageProps)}
+      />,
+    );
+
+    fireEvent.pointerDown(screen.getByRole("button", { name: "nightly-report cron actions" }), {
+      button: 0,
+      ctrlKey: false,
+    });
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Edit" }));
+
+    expect(screen.getByText("Edit dynamic cron")).toBeVisible();
+    expect(screen.getByLabelText("Name")).toHaveValue("nightly-report");
   });
 });

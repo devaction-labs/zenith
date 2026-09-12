@@ -17,6 +17,7 @@ final readonly class DynamicSchedule
 {
     public function __construct(
         private Dispatcher $bus,
+        private DynamicCronAllowlist $allowlist,
     ) {}
 
     public function available(): bool
@@ -25,7 +26,6 @@ final readonly class DynamicSchedule
     }
 
     /**
-     * @param  class-string  $job
      * @param  array<string, mixed>  $payload
      *
      * @throws InvalidArgumentException
@@ -37,13 +37,7 @@ final readonly class DynamicSchedule
         array $payload = [],
         ?string $timezone = null,
     ): DynamicCron {
-        if (! CronExpression::isValidExpression($expression)) {
-            throw new InvalidArgumentException("Invalid cron expression [{$expression}].");
-        }
-
-        if ($timezone !== null && ! in_array($timezone, DateTimeZone::listIdentifiers(DateTimeZone::ALL_WITH_BC), true)) {
-            throw new InvalidArgumentException("Invalid timezone [{$timezone}].");
-        }
+        $this->assertValid($expression, $job, $timezone);
 
         return DynamicCron::query()->create([
             'name' => $name,
@@ -53,6 +47,50 @@ final readonly class DynamicSchedule
             'paused' => false,
             'timezone' => $timezone,
         ]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     *
+     * @throws InvalidArgumentException
+     */
+    public function update(
+        int $id,
+        string $name,
+        string $expression,
+        string $job,
+        array $payload = [],
+        ?string $timezone = null,
+    ): DynamicCron {
+        $this->assertValid($expression, $job, $timezone);
+
+        $cron = DynamicCron::query()->findOrFail($id);
+
+        $cron->update([
+            'name' => $name,
+            'expression' => $expression,
+            'job_class' => $job,
+            'payload' => $payload,
+            'timezone' => $timezone,
+        ]);
+
+        return $cron->refresh();
+    }
+
+    /**
+     * @throws InvalidArgumentException
+     */
+    private function assertValid(string $expression, string $job, ?string $timezone): void
+    {
+        if (! CronExpression::isValidExpression($expression)) {
+            throw new InvalidArgumentException("Invalid cron expression [{$expression}].");
+        }
+
+        if ($timezone !== null && ! in_array($timezone, DateTimeZone::listIdentifiers(DateTimeZone::ALL_WITH_BC), true)) {
+            throw new InvalidArgumentException("Invalid timezone [{$timezone}].");
+        }
+
+        $this->allowlist->ensureAllowed($job);
     }
 
     /**

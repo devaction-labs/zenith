@@ -99,6 +99,8 @@ final readonly class ScheduleCatalog
             runtimeEditable: false,
             paused: false,
             history: $this->history->for($id),
+            dynamicCronId: null,
+            payload: null,
         );
     }
 
@@ -121,6 +123,8 @@ final readonly class ScheduleCatalog
             runtimeEditable: true,
             paused: $cron->paused,
             history: [],
+            dynamicCronId: $cron->id,
+            payload: $cron->payload,
         );
     }
 

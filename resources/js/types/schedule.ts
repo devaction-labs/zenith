@@ -23,9 +23,12 @@ export type ScheduleEvent = {
   runtimeEditable: boolean;
   paused: boolean;
   history: ScheduleRun[];
+  dynamicCronId: number | null;
+  payload: Record<string, unknown> | null;
 };
 
 export type SchedulePageProps = {
   events: ScheduleEvent[];
   canRun: boolean;
+  dynamicCronAllowedClasses: string[];
 };

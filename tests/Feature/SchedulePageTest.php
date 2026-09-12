@@ -153,6 +153,7 @@ describe('dynamic crons', function (): void {
             '--path' => dirname(__DIR__, 2).'/database/migrations/2026_08_30_020000_create_zenith_dynamic_crons_table.php',
             '--realpath' => true,
         ]);
+        config()->set('zenith.dynamic_cron_allowed_classes', [FetchWorkflowStep::class]);
     });
 
     afterEach(function (): void {

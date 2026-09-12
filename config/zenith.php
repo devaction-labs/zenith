@@ -27,4 +27,5 @@ return [
         'ttl' => 604800,
         'limit' => 10,
     ],
+    'dynamic_cron_allowed_classes' => [],
 ];

@@ -1,7 +1,9 @@
 import { Head, router } from "@inertiajs/react";
-import { LoaderCircleIcon, PauseIcon, PlayIcon } from "lucide-react";
+import { LoaderCircleIcon, PauseIcon, PlayIcon, PlusIcon } from "lucide-react";
 import { useState } from "react";
 
+import { DynamicCronActionsMenu } from "@/components/schedule/dynamic-cron-actions-menu";
+import { DynamicCronDialog } from "@/components/schedule/dynamic-cron-dialog";
 import { RunHistorySparkline } from "@/components/schedule/run-history-sparkline";
 import { ListPageHeader } from "@/components/shell/list-page-header";
 import { Badge } from "@/components/ui/badge";
@@ -26,7 +28,7 @@ import { usePageRefresh } from "@/hooks/use-dashboard-refresh";
 import { useAutoLoadPreference } from "@/layouts/horizon-layout";
 import { resolveHorizonRoute } from "@/lib/horizon-route";
 import type { HorizonPageProps } from "@/types/page";
-import type { SchedulePageProps } from "@/types/schedule";
+import type { ScheduleEvent, SchedulePageProps } from "@/types/schedule";
 
 const dateFormatter = new Intl.DateTimeFormat("sv-SE", {
   year: "numeric",
@@ -83,12 +85,29 @@ function SchedulePauseControl({
   );
 }
 
-function ScheduleIndex({ horizon, events, canRun }: HorizonPageProps & SchedulePageProps) {
+function ScheduleIndex({
+  horizon,
+  events,
+  canRun,
+  dynamicCronAllowedClasses,
+}: HorizonPageProps & SchedulePageProps) {
   const { autoLoad } = useAutoLoadPreference();
   const abilities = useHorizonAbilities();
   const allowRun = canRun && abilities.manageSchedule;
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingCron, setEditingCron] = useState<ScheduleEvent | null>(null);
 
   usePageRefresh(horizon.pollInterval, ["events", "canRun"], autoLoad);
+
+  const openCreateDialog = () => {
+    setEditingCron(null);
+    setDialogOpen(true);
+  };
+
+  const openEditDialog = (event: ScheduleEvent) => {
+    setEditingCron(event);
+    setDialogOpen(true);
+  };
 
   return (
     <>
@@ -99,10 +118,16 @@ function ScheduleIndex({ horizon, events, canRun }: HorizonPageProps & ScheduleP
           separated={false}
           actions={
             abilities.manageSchedule ? (
-              <SchedulePauseControl
-                horizonBaseUrl={horizon.baseUrl}
-                schedulePaused={horizon.schedulePaused === true}
-              />
+              <div className="flex items-center gap-2">
+                <SchedulePauseControl
+                  horizonBaseUrl={horizon.baseUrl}
+                  schedulePaused={horizon.schedulePaused === true}
+                />
+                <Button size="sm" onClick={openCreateDialog}>
+                  <PlusIcon />
+                  Create dynamic cron
+                </Button>
+              </div>
             ) : null
           }
         />
@@ -161,17 +186,28 @@ function ScheduleIndex({ horizon, events, canRun }: HorizonPageProps & ScheduleP
                     </TableCell>
                     {allowRun ? (
                       <TableCell className="text-right">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() =>
-                            router.post(
-                              resolveHorizonRoute(runSchedule(event.id), horizon.baseUrl).url,
-                            )
-                          }
-                        >
-                          Run
-                        </Button>
+                        <div className="flex items-center justify-end gap-1">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() =>
+                              router.post(
+                                resolveHorizonRoute(runSchedule(event.id), horizon.baseUrl).url,
+                              )
+                            }
+                          >
+                            Run
+                          </Button>
+                          {event.dynamicCronId !== null ? (
+                            <DynamicCronActionsMenu
+                              name={event.description}
+                              cronId={event.dynamicCronId}
+                              paused={event.paused}
+                              horizonBaseUrl={horizon.baseUrl}
+                              onEdit={() => openEditDialog(event)}
+                            />
+                          ) : null}
+                        </div>
                       </TableCell>
                     ) : null}
                   </TableRow>
@@ -181,6 +217,16 @@ function ScheduleIndex({ horizon, events, canRun }: HorizonPageProps & ScheduleP
           </Table>
         </CardContent>
       </Card>
+
+      {abilities.manageSchedule ? (
+        <DynamicCronDialog
+          open={dialogOpen}
+          onOpenChange={setDialogOpen}
+          horizonBaseUrl={horizon.baseUrl}
+          cron={editingCron}
+          allowedClasses={dynamicCronAllowedClasses}
+        />
+      ) : null}
     </>
   );
 }
