@@ -27,6 +27,7 @@ final class WorkflowsData
 
         return array_values(
             Workflow::query()
+                ->whereNull('parent_id')
                 ->with('steps')
                 ->latest()
                 ->limit(100)
@@ -42,7 +43,7 @@ final class WorkflowsData
             return null;
         }
 
-        $workflow = Workflow::query()->with('steps')->find($id);
+        $workflow = Workflow::query()->with(['steps', 'children.steps'])->find($id);
 
         if (! $workflow instanceof Workflow) {
             return null;
@@ -54,10 +55,12 @@ final class WorkflowsData
             deps: $step->dependencies(),
             cascade: $step->cascade,
             status: $step->status,
-            output: is_array($step->output) ? $step->output : null,
+            output: is_array($step->output) ? $step->outputValues() : null,
             error: $step->error,
             attempts: $step->attempts,
             finishedAt: $step->finished_at?->getTimestamp(),
+            nested: $step->isNested(),
+            childId: $workflow->children->firstWhere('parent_step', $step->name)?->id,
         ))->all();
 
         $failed = $workflow->steps->contains(
@@ -73,8 +76,28 @@ final class WorkflowsData
             createdAt: $workflow->created_at?->getTimestamp(),
             finishedAt: $workflow->finished_at?->getTimestamp(),
             cancellable: ! $workflow->status->finished(),
-            retryable: $failed,
+            retryable: $failed && $workflow->parent_id === null,
+            parentId: $workflow->parent_id,
+            children: $this->children($workflow),
         );
+    }
+
+    /**
+     * @return list<WorkflowRowData>
+     */
+    private function children(Workflow $workflow): array
+    {
+        $positions = [];
+
+        foreach ($workflow->steps as $position => $step) {
+            $positions[$step->name] = $position;
+        }
+
+        $children = $workflow->children
+            ->sortBy(static fn (Workflow $child): int => $positions[$child->parent_step ?? ''] ?? PHP_INT_MAX)
+            ->map(fn (Workflow $child): WorkflowRowData => $this->row($child));
+
+        return array_values($children->all());
     }
 
     private function row(Workflow $workflow): WorkflowRowData

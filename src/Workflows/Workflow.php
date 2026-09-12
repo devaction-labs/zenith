@@ -8,7 +8,6 @@ use DevactionLabs\Zenith\Workflows\Concerns\TransitionsConditionally;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Str;
 
 /**
@@ -71,27 +70,17 @@ final class Workflow extends Model
         return $this->hasMany(WorkflowStep::class, 'workflow_id')->orderBy('id');
     }
 
+    /**
+     * @return HasMany<Workflow, $this>
+     */
+    public function children(): HasMany
+    {
+        return $this->hasMany(self::class, 'parent_id');
+    }
+
     public function cancel(): void
     {
-        if ($this->status->finished()) {
-            return;
-        }
-
-        $this->forceFill([
-            'status' => WorkflowStatus::Cancelled,
-            'finished_at' => Date::now(),
-        ])->save();
-
-        $this->steps()
-            ->whereNotIn('status', [
-                WorkflowStatus::Completed->value,
-                WorkflowStatus::Failed->value,
-                WorkflowStatus::Cancelled->value,
-            ])
-            ->update([
-                'status' => WorkflowStatus::Cancelled->value,
-                'finished_at' => Date::now(),
-            ]);
+        app(AdvanceWorkflow::class)->cancel($this);
     }
 
     public function retryFrom(string $step): void

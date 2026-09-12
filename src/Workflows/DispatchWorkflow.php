@@ -34,7 +34,10 @@ final readonly class DispatchWorkflow
         return $workflow->fresh(['steps']) ?? $workflow;
     }
 
-    private function persist(WorkflowDefinition $definition): Workflow
+    /**
+     * Persist a workflow and, for every nested step, the pending workflow that the step starts.
+     */
+    private function persist(WorkflowDefinition $definition, ?Workflow $parent = null, ?string $parentStep = null): Workflow
     {
         $uniqueKey = $definition->uniqueKey();
 
@@ -45,7 +48,9 @@ final readonly class DispatchWorkflow
         $workflow = Workflow::query()->create([
             'name' => $definition->name(),
             'unique_key' => $uniqueKey,
-            'status' => WorkflowStatus::Running,
+            'status' => $parent === null ? WorkflowStatus::Running : WorkflowStatus::Pending,
+            'parent_id' => $parent?->id,
+            'parent_step' => $parentStep,
             'context' => $definition->contextValues(),
         ]);
 
@@ -58,6 +63,10 @@ final readonly class DispatchWorkflow
                 'cascade' => $step['cascade'],
                 'status' => WorkflowStatus::Pending->value,
             ]);
+
+            if ($step['workflow'] !== null) {
+                $this->persist($step['workflow'], $workflow, $step['name']);
+            }
         }
 
         return $workflow;

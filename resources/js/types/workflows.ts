@@ -17,6 +17,8 @@ export type WorkflowStep = {
   error: string | null;
   attempts: number;
   finishedAt: number | null;
+  nested: boolean;
+  childId: string | null;
 };
 
 export type WorkflowRow = {
@@ -39,6 +41,8 @@ export type WorkflowDetail = {
   finishedAt: number | null;
   cancellable: boolean;
   retryable: boolean;
+  parentId: string | null;
+  children: WorkflowRow[];
 };
 
 export type WorkflowsPageProps = {

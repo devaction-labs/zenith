@@ -1,4 +1,4 @@
-import { Head, router } from "@inertiajs/react";
+import { Head, Link, router } from "@inertiajs/react";
 
 import { DetailList, DetailListItem } from "@/components/detail-list";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { show as workflowShow } from "@/generated/routes/zenith/workflows";
 import { store as cancelWorkflow } from "@/generated/routes/zenith/workflows/cancel";
 import { store as retryWorkflow } from "@/generated/routes/zenith/workflows/retry";
 import { useHorizonAbilities } from "@/hooks/use-horizon-abilities";
@@ -32,6 +33,8 @@ const dateFormatter = new Intl.DateTimeFormat("sv-SE", {
   hour12: false,
 });
 
+const linkClassName = "underline decoration-foreground/40 underline-offset-4";
+
 function WorkflowShow({ horizon, workflow }: HorizonPageProps & WorkflowDetailPageProps) {
   const { autoLoad } = useAutoLoadPreference();
   const abilities = useHorizonAbilities();
@@ -39,6 +42,7 @@ function WorkflowShow({ horizon, workflow }: HorizonPageProps & WorkflowDetailPa
   usePageRefresh(horizon.pollInterval, ["workflow"], autoLoad);
 
   const failedStep = workflow.steps.find((step) => step.status === "failed");
+  const workflowUrl = (id: string) => resolveHorizonRoute(workflowShow(id), horizon.baseUrl).url;
 
   return (
     <>
@@ -86,6 +90,13 @@ function WorkflowShow({ horizon, workflow }: HorizonPageProps & WorkflowDetailPa
               <DetailListItem label="ID" scrollable>
                 {workflow.id}
               </DetailListItem>
+              {workflow.parentId ? (
+                <DetailListItem label="Parent workflow" scrollable>
+                  <Link className={linkClassName} href={workflowUrl(workflow.parentId)}>
+                    {workflow.parentId}
+                  </Link>
+                </DetailListItem>
+              ) : null}
               <DetailListItem label="Created">
                 {workflow.createdAt ? dateFormatter.format(workflow.createdAt * 1000) : "—"}
               </DetailListItem>
@@ -117,9 +128,18 @@ function WorkflowShow({ horizon, workflow }: HorizonPageProps & WorkflowDetailPa
                     <TableCell>
                       <div className="flex flex-col gap-1">
                         <span>{step.name}</span>
-                        <span className="break-all text-muted-foreground text-xs">
-                          {step.jobClass}
-                        </span>
+                        {step.nested && step.childId ? (
+                          <Link
+                            className={`text-muted-foreground text-xs ${linkClassName}`}
+                            href={workflowUrl(step.childId)}
+                          >
+                            Nested workflow
+                          </Link>
+                        ) : (
+                          <span className="break-all text-muted-foreground text-xs">
+                            {step.jobClass}
+                          </span>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell>{step.deps.length > 0 ? step.deps.join(", ") : "—"}</TableCell>
@@ -137,6 +157,42 @@ function WorkflowShow({ horizon, workflow }: HorizonPageProps & WorkflowDetailPa
             </Table>
           </CardContent>
         </Card>
+
+        {workflow.children.length > 0 ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>Nested workflows</CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Steps</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {workflow.children.map((child) => (
+                    <TableRow key={child.id}>
+                      <TableCell>
+                        <Link className={linkClassName} href={workflowUrl(child.id)}>
+                          {child.name ?? child.id}
+                        </Link>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={workflowStatusVariant(child.status)}>{child.status}</Badge>
+                      </TableCell>
+                      <TableCell className="tabular-nums">
+                        {child.completedSteps}/{child.stepCount}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        ) : null}
       </div>
     </>
   );

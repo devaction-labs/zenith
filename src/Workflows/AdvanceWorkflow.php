@@ -20,8 +20,8 @@ final readonly class AdvanceWorkflow
     ) {}
 
     /**
-     * Claim and queue every pending step whose dependencies have completed. A step is
-     * claimed with a conditional update, so it is queued once even when several workers
+     * Claim and start every pending step whose dependencies have completed. A step is
+     * claimed with a conditional update, so it starts once even when several workers
      * see its dependencies finish at the same time.
      */
     public function dispatchReady(Workflow $workflow): void
@@ -44,9 +44,17 @@ final readonly class AdvanceWorkflow
                 'job_uuid' => $token,
             ]);
 
-            if ($claimed) {
-                $this->bus->dispatch(RunWorkflowStep::for($workflow->id, $step->name, $token, $step->job_class));
+            if (! $claimed) {
+                continue;
             }
+
+            if ($step->isNested()) {
+                $this->startChild($workflow, $step);
+
+                continue;
+            }
+
+            $this->bus->dispatch(RunWorkflowStep::for($workflow->id, $step->name, $token, $step->job_class));
         }
     }
 
@@ -187,6 +195,25 @@ final readonly class AdvanceWorkflow
     }
 
     /**
+     * Cancel an unfinished workflow together with its active steps and nested workflows.
+     */
+    public function cancel(Workflow $workflow): void
+    {
+        $cancelled = $workflow->transition([WorkflowStatus::Pending, WorkflowStatus::Running], [
+            'status' => WorkflowStatus::Cancelled,
+            'finished_at' => Date::now(),
+        ]);
+
+        if (! $cancelled) {
+            return;
+        }
+
+        $this->cancelActiveSteps($workflow);
+        $this->cancelChildren($workflow);
+        $this->failParentStep($workflow, sprintf('Nested workflow [%s] was cancelled.', $this->label($workflow)));
+    }
+
+    /**
      * @return array<array-key, mixed>
      */
     private function execute(Workflow $workflow, WorkflowStep $step): array
@@ -202,9 +229,59 @@ final readonly class AdvanceWorkflow
         return is_array($output) ? $output : ['value' => $output];
     }
 
+    /**
+     * Start the nested workflow of a claimed step. Steps that did not complete in an
+     * earlier run start again, so retrying the parent step resumes the nested workflow.
+     */
+    private function startChild(Workflow $parent, WorkflowStep $step): void
+    {
+        $started = $step->transition([WorkflowStatus::Dispatched], [
+            'status' => WorkflowStatus::Running->value,
+            'attempts' => $step->attempts + 1,
+        ]);
+
+        if (! $started) {
+            return;
+        }
+
+        $child = $parent->children()->where('parent_step', $step->name)->first();
+
+        if (! $child instanceof Workflow) {
+            $failed = $step->transition([WorkflowStatus::Running], [
+                'status' => WorkflowStatus::Failed->value,
+                'error' => "The nested workflow of step [{$step->name}] is missing.",
+                'finished_at' => Date::now(),
+            ]);
+
+            if ($failed) {
+                $this->fail($parent);
+            }
+
+            return;
+        }
+
+        $child->steps()
+            ->where('status', '!=', WorkflowStatus::Completed->value)
+            ->update([
+                'status' => WorkflowStatus::Pending->value,
+                'error' => null,
+                'output' => null,
+                'job_uuid' => null,
+                'finished_at' => null,
+            ]);
+
+        $child->forceFill([
+            'status' => WorkflowStatus::Running,
+            'finished_at' => null,
+        ])->save();
+
+        $this->advance($child);
+    }
+
     private function advance(Workflow $workflow): void
     {
         $workflow->refresh();
+        $workflow->loadMissing('steps');
 
         $this->finishIfDone($workflow);
         $this->dispatchReady($workflow);
@@ -256,12 +333,9 @@ final readonly class AdvanceWorkflow
             return;
         }
 
-        $workflow->steps()
-            ->whereIn('status', WorkflowStatus::activeStepValues())
-            ->update([
-                'status' => WorkflowStatus::Cancelled->value,
-                'finished_at' => Date::now(),
-            ]);
+        $this->cancelActiveSteps($workflow);
+        $this->cancelChildren($workflow);
+        $this->failParentStep($workflow, sprintf('Nested workflow [%s] failed.', $this->label($workflow)));
     }
 
     private function finishIfDone(Workflow $workflow): void
@@ -274,10 +348,116 @@ final readonly class AdvanceWorkflow
             return;
         }
 
-        $workflow->transition([WorkflowStatus::Running], [
+        $completed = $workflow->transition([WorkflowStatus::Running], [
             'status' => WorkflowStatus::Completed,
             'finished_at' => Date::now(),
         ]);
+
+        if ($completed) {
+            $this->completeParentStep($workflow);
+        }
+    }
+
+    private function cancelActiveSteps(Workflow $workflow): void
+    {
+        $workflow->steps()
+            ->whereIn('status', WorkflowStatus::activeStepValues())
+            ->update([
+                'status' => WorkflowStatus::Cancelled->value,
+                'finished_at' => Date::now(),
+            ]);
+    }
+
+    private function cancelChildren(Workflow $workflow): void
+    {
+        $children = $workflow->children()
+            ->whereIn('status', [WorkflowStatus::Pending->value, WorkflowStatus::Running->value])
+            ->get();
+
+        foreach ($children as $child) {
+            $this->cancel($child);
+        }
+    }
+
+    private function completeParentStep(Workflow $child): void
+    {
+        $step = $this->parentStepOf($child);
+
+        if ($step === null) {
+            return;
+        }
+
+        $completed = $step->transition([WorkflowStatus::Running], [
+            'status' => WorkflowStatus::Completed->value,
+            'output' => $this->childOutput($child),
+            'error' => null,
+            'finished_at' => Date::now(),
+        ]);
+
+        $parent = Workflow::query()->find($step->workflow_id);
+
+        if ($completed && $parent instanceof Workflow) {
+            $this->advance($parent);
+        }
+    }
+
+    private function failParentStep(Workflow $child, string $error): void
+    {
+        $step = $this->parentStepOf($child);
+
+        if ($step === null) {
+            return;
+        }
+
+        $failed = $step->transition(
+            [WorkflowStatus::Pending, WorkflowStatus::Dispatched, WorkflowStatus::Running],
+            [
+                'status' => WorkflowStatus::Failed->value,
+                'error' => $error,
+                'finished_at' => Date::now(),
+            ],
+        );
+
+        $parent = Workflow::query()->find($step->workflow_id);
+
+        if ($failed && $parent instanceof Workflow) {
+            $this->fail($parent);
+        }
+    }
+
+    private function parentStepOf(Workflow $child): ?WorkflowStep
+    {
+        if ($child->parent_id === null || $child->parent_step === null) {
+            return null;
+        }
+
+        return WorkflowStep::query()
+            ->where('workflow_id', $child->parent_id)
+            ->where('name', $child->parent_step)
+            ->first();
+    }
+
+    /**
+     * The merged outputs of a nested workflow's completed steps, in step order.
+     *
+     * @return array<string, mixed>
+     */
+    private function childOutput(Workflow $child): array
+    {
+        $output = [];
+
+        foreach ($child->steps()->get() as $step) {
+            if ($step->status === WorkflowStatus::Completed->value) {
+                $output = [...$output, ...$step->outputValues()];
+            }
+        }
+
+        return $output;
+    }
+
+    private function label(Workflow $workflow): string
+    {
+        return $workflow->name ?? $workflow->id;
     }
 
     /**

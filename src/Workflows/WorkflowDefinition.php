@@ -7,10 +7,13 @@ namespace DevactionLabs\Zenith\Workflows;
 use InvalidArgumentException;
 use RuntimeException;
 
+/**
+ * @phpstan-type StepDefinition array{name: string, job: class-string, payload: array<string, mixed>, deps: list<string>, cascade: bool, workflow: WorkflowDefinition|null}
+ */
 final class WorkflowDefinition
 {
     /**
-     * @param  list<array{name: string, job: class-string, payload: array<string, mixed>, deps: list<string>, cascade: bool}>  $steps
+     * @param  list<StepDefinition>  $steps
      * @param  array<string, mixed>  $context
      */
     private function __construct(
@@ -49,25 +52,14 @@ final class WorkflowDefinition
      */
     public function add(string $name, string $job, array $payload = [], array $deps = [], bool $cascade = false): self
     {
-        if ($name === '') {
-            throw new InvalidArgumentException('Workflow step names cannot be empty.');
-        }
-
-        foreach ($this->steps as $step) {
-            if ($step['name'] === $name) {
-                throw new InvalidArgumentException("Workflow already has a step named [{$name}].");
-            }
-        }
-
-        $this->steps[] = [
+        return $this->push([
             'name' => $name,
             'job' => $job,
             'payload' => $payload,
             'deps' => $deps,
             'cascade' => $cascade,
-        ];
-
-        return $this;
+            'workflow' => null,
+        ]);
     }
 
     /**
@@ -78,6 +70,24 @@ final class WorkflowDefinition
     public function cascade(string $name, string $job, array $payload = [], array $deps = []): self
     {
         return $this->add($name, $job, $payload, $deps, true);
+    }
+
+    /**
+     * Add a nested workflow that runs as a single step of this one. The step completes when
+     * the nested workflow completes, and the outputs of its steps cascade into dependents.
+     *
+     * @param  list<string>  $deps
+     */
+    public function addWorkflow(string $name, self $workflow, array $deps = []): self
+    {
+        return $this->push([
+            'name' => $name,
+            'job' => Workflow::class,
+            'payload' => [],
+            'deps' => $deps,
+            'cascade' => false,
+            'workflow' => $workflow,
+        ]);
     }
 
     public function dispatch(): Workflow
@@ -93,6 +103,73 @@ final class WorkflowDefinition
      */
     public function validate(): void
     {
+        $this->validateWithin([]);
+    }
+
+    public function name(): ?string
+    {
+        return $this->name;
+    }
+
+    public function isUnique(): bool
+    {
+        return $this->unique;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function contextValues(): array
+    {
+        return $this->context;
+    }
+
+    /**
+     * @return list<StepDefinition>
+     */
+    public function steps(): array
+    {
+        return $this->steps;
+    }
+
+    public function uniqueKey(): ?string
+    {
+        if (! $this->unique || $this->name === null || $this->name === '') {
+            return null;
+        }
+
+        return hash('xxh3', $this->name);
+    }
+
+    /**
+     * @param  StepDefinition  $step
+     */
+    private function push(array $step): self
+    {
+        if ($step['name'] === '') {
+            throw new InvalidArgumentException('Workflow step names cannot be empty.');
+        }
+
+        foreach ($this->steps as $existing) {
+            if ($existing['name'] === $step['name']) {
+                throw new InvalidArgumentException("Workflow already has a step named [{$step['name']}].");
+            }
+        }
+
+        $this->steps[] = $step;
+
+        return $this;
+    }
+
+    /**
+     * @param  list<self>  $ancestors
+     */
+    private function validateWithin(array $ancestors): void
+    {
+        if (in_array($this, $ancestors, true)) {
+            throw new InvalidArgumentException(sprintf('Workflow [%s] cannot contain itself.', $this->name ?? ''));
+        }
+
         if ($this->steps === []) {
             throw new RuntimeException('A workflow needs at least one step.');
         }
@@ -120,41 +197,10 @@ final class WorkflowDefinition
                 sprintf('Workflow steps form a dependency cycle: [%s].', implode(' -> ', $cycle)),
             );
         }
-    }
 
-    public function name(): ?string
-    {
-        return $this->name;
-    }
-
-    public function isUnique(): bool
-    {
-        return $this->unique;
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    public function contextValues(): array
-    {
-        return $this->context;
-    }
-
-    /**
-     * @return list<array{name: string, job: class-string, payload: array<string, mixed>, deps: list<string>, cascade: bool}>
-     */
-    public function steps(): array
-    {
-        return $this->steps;
-    }
-
-    public function uniqueKey(): ?string
-    {
-        if (! $this->unique || $this->name === null || $this->name === '') {
-            return null;
+        foreach ($this->steps as $step) {
+            $step['workflow']?->validateWithin([...$ancestors, $this]);
         }
-
-        return hash('xxh3', $this->name);
     }
 
     /**

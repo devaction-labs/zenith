@@ -69,6 +69,11 @@ final class WorkflowStep extends Model
         return $this->belongsTo(Workflow::class, 'workflow_id');
     }
 
+    public function isNested(): bool
+    {
+        return $this->job_class === Workflow::class;
+    }
+
     /**
      * @return array<string, mixed>
      */
