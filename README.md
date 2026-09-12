@@ -543,3 +543,4 @@ there is no earlier tag to bump from; later releases can use the labels.
 ## License
 
 Zenith is open-source software licensed under the MIT license.
+
