@@ -1,5 +1,6 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition } from './../../wayfinder'
 import dashboard074181 from './dashboard'
+import executing from './executing'
 import instances from './instances'
 import supervisors from './supervisors'
 import monitoring from './monitoring'
@@ -57,6 +58,7 @@ dashboard.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
 const zenith = {
     dashboard: Object.assign(dashboard, dashboard074181),
+    executing: Object.assign(executing, executing),
     instances: Object.assign(instances, instances),
     supervisors: Object.assign(supervisors, supervisors),
     monitoring: Object.assign(monitoring, monitoring),

@@ -70,6 +70,7 @@ final class ZenithServiceProvider extends ServiceProvider
     private const array ROOT_PATH_SSR_EXCLUSIONS = [
         '/',
         'dashboard',
+        'executing',
         'instances',
         'supervisors/*',
         'monitoring',

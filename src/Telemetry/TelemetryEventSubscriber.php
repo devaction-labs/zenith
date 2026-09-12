@@ -16,7 +16,9 @@ use Illuminate\Queue\Events\JobTimedOut;
  * Bound as a singleton (see `ZenithServiceProvider`) so the same instance
  * observes both ends of an attempt within one worker process: `JobProcessing`
  * opens an in-memory timer keyed by job UUID, and the attempt's terminal
- * event closes it to compute runtime.
+ * event closes it to compute runtime. The same events also open and close
+ * that job's `InFlightJobTracker` entry, so the "executing now" view and the
+ * counters/histograms share one lifecycle observation.
  *
  * Only three events are observed. `Illuminate\Queue\Worker::process()`
  * always dispatches exactly one `JobAttempted` in its `finally` block, and
@@ -29,13 +31,21 @@ use Illuminate\Queue\Events\JobTimedOut;
  * `JobTimedOut` is the one path that never reaches `JobAttempted`, because
  * the worker's SIGALRM handler kills the process immediately after
  * dispatching it.
+ *
+ * `JobInterrupted` (dispatched when a worker receives a stop signal while an
+ * `Interruptible` job is running) is deliberately not observed here: it only
+ * asks the job to wind down, it does not end the attempt, so clearing the
+ * in-flight entry on it would show a still-running job as finished.
  */
 final class TelemetryEventSubscriber
 {
     /** @var array<string, array{startedAt: float, waitMilliseconds: int|null}> */
     private array $pending = [];
 
-    public function __construct(private readonly TelemetryRecorder $recorder) {}
+    public function __construct(
+        private readonly TelemetryRecorder $recorder,
+        private readonly InFlightJobTracker $inFlight,
+    ) {}
 
     /** @return array<class-string, string> */
     public function subscribe(Dispatcher $events): array
@@ -59,6 +69,13 @@ final class TelemetryEventSubscriber
             'startedAt' => microtime(true),
             'waitMilliseconds' => $this->waitMilliseconds($event->job),
         ];
+
+        $this->inFlight->start(
+            jobId: $uuid,
+            job: JobIdentity::fromJob($event->job),
+            worker: WorkerIdentity::current(),
+            timeoutSeconds: $event->job->timeout(),
+        );
     }
 
     public function handleAttempted(JobAttempted $event): void
@@ -82,6 +99,12 @@ final class TelemetryEventSubscriber
             runtimeMilliseconds: $timing !== null ? $this->elapsedMilliseconds($timing['startedAt']) : null,
             waitMilliseconds: $timing['waitMilliseconds'] ?? null,
         );
+
+        $uuid = $job->uuid();
+
+        if ($uuid !== null) {
+            $this->inFlight->finish($uuid);
+        }
     }
 
     /** @return array{startedAt: float, waitMilliseconds: int|null}|null */

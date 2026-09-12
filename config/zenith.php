@@ -54,5 +54,15 @@ return [
                 'ttl_seconds' => 604800,
             ],
         ],
+
+        // In-flight ("executing now") tracking. Entries are stored with a
+        // TTL derived from the job's own timeout (falling back to
+        // default_timeout_seconds when the job declares none) plus
+        // grace_seconds, so a crashed worker's entries still expire even
+        // though no terminal event ever fires for them.
+        'in_flight' => [
+            'default_timeout_seconds' => 60,
+            'grace_seconds' => 60,
+        ],
     ],
 ];

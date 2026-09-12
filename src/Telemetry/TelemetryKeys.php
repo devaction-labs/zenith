@@ -38,4 +38,14 @@ final class TelemetryKeys
     ): string {
         return implode("\x1f", ['hist', $metric->value, $dimension->value, $value, (string) $bucketIndex]);
     }
+
+    public static function inFlightIndex(): string
+    {
+        return self::PREFIX.'in-flight:index';
+    }
+
+    public static function inFlightJob(string $jobId): string
+    {
+        return self::PREFIX."in-flight:{$jobId}";
+    }
 }

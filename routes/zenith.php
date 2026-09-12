@@ -10,6 +10,7 @@ use DevactionLabs\Zenith\Http\Controllers\BatchFailedJobClearController;
 use DevactionLabs\Zenith\Http\Controllers\BatchRetryController;
 use DevactionLabs\Zenith\Http\Controllers\DashboardController;
 use DevactionLabs\Zenith\Http\Controllers\DelayedJobReleaseController;
+use DevactionLabs\Zenith\Http\Controllers\ExecutingJobController;
 use DevactionLabs\Zenith\Http\Controllers\FailedJobClearAllController;
 use DevactionLabs\Zenith\Http\Controllers\FailedJobController;
 use DevactionLabs\Zenith\Http\Controllers\FailedJobRetryAllController;
@@ -55,6 +56,7 @@ if (! function_exists('horizonAbility')) {
 
 Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard.index');
+Route::get('/executing', [ExecutingJobController::class, 'index'])->name('executing.index');
 Route::get('/instances', [RunningInstanceController::class, 'index'])->name('instances.index');
 Route::post('/supervisors/{supervisor}/pause', [SupervisorPauseController::class, 'store'])
     ->middleware(horizonAbility('manageInstances'))
