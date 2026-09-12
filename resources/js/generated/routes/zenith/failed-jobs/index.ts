@@ -2,6 +2,7 @@ import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefa
 import clearAll from './clear-all'
 import retryAll from './retry-all'
 import retry from './retry'
+import explain from './explain'
 /**
 * @see \DevactionLabs\Zenith\Http\Controllers\FailedJobController::index
 * @see src/Http/Controllers/FailedJobController.php:20
@@ -167,6 +168,7 @@ const failedJobs = {
     show: Object.assign(show, show),
     destroy: Object.assign(destroy, destroy),
     retry: Object.assign(retry, retry),
+    explain: Object.assign(explain, explain),
 }
 
 export default failedJobs

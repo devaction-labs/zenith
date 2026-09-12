@@ -1,0 +1,58 @@
+import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../../../wayfinder'
+/**
+* @see \DevactionLabs\Zenith\Http\Controllers\FailedJobExplainController::store
+* @see src/Http/Controllers/FailedJobExplainController.php:13
+* @route '/horizon/failed/{job}/explain'
+*/
+export const store = (args: { job: string | number } | [job: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: store.url(args, options),
+    method: 'post',
+})
+
+store.definition = {
+    methods: ["post"],
+    url: '/horizon/failed/{job}/explain',
+} satisfies RouteDefinition<["post"]>
+
+/**
+* @see \DevactionLabs\Zenith\Http\Controllers\FailedJobExplainController::store
+* @see src/Http/Controllers/FailedJobExplainController.php:13
+* @route '/horizon/failed/{job}/explain'
+*/
+store.url = (args: { job: string | number } | [job: string | number ] | string | number, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { job: args }
+    }
+
+    if (Array.isArray(args)) {
+        args = {
+            job: args[0],
+        }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+        job: args.job,
+    }
+
+    return store.definition.url
+            .replace('{job}', parsedArgs.job.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \DevactionLabs\Zenith\Http\Controllers\FailedJobExplainController::store
+* @see src/Http/Controllers/FailedJobExplainController.php:13
+* @route '/horizon/failed/{job}/explain'
+*/
+store.post = (args: { job: string | number } | [job: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+    url: store.url(args, options),
+    method: 'post',
+})
+
+const explain = {
+    store: Object.assign(store, store),
+}
+
+export default explain

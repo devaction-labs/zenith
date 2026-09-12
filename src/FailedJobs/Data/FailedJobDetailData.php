@@ -40,5 +40,6 @@ final class FailedJobDetailData extends Data
         public readonly array $context,
         public readonly string $exception,
         public readonly JobCompositionData $composition = new JobCompositionData(false, false, []),
+        public readonly bool $canExplainFailure = false,
     ) {}
 }

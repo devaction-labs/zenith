@@ -12,6 +12,7 @@ use DevactionLabs\Zenith\Http\Controllers\DashboardController;
 use DevactionLabs\Zenith\Http\Controllers\DelayedJobReleaseController;
 use DevactionLabs\Zenith\Http\Controllers\FailedJobClearAllController;
 use DevactionLabs\Zenith\Http\Controllers\FailedJobController;
+use DevactionLabs\Zenith\Http\Controllers\FailedJobExplainController;
 use DevactionLabs\Zenith\Http\Controllers\FailedJobRetryAllController;
 use DevactionLabs\Zenith\Http\Controllers\FailedJobRetryController;
 use DevactionLabs\Zenith\Http\Controllers\HorizonPauseController;
@@ -191,6 +192,9 @@ Route::delete('/failed/{job}', [FailedJobController::class, 'destroy'])
 Route::post('/failed/{job}/retry', [FailedJobRetryController::class, 'store'])
     ->middleware(horizonAbility('retryJobs'))
     ->name('failed-jobs.retry.store');
+Route::post('/failed/{job}/explain', [FailedJobExplainController::class, 'store'])
+    ->middleware(horizonAbility('retryJobs'))
+    ->name('failed-jobs.explain.store');
 Route::get('/audit', [AuditController::class, 'index'])->name('audit.index');
 Route::get('/schedule', [ScheduleController::class, 'index'])->name('schedule.index');
 Route::post('/schedule/{event}/run', [ScheduleRunController::class, 'store'])
