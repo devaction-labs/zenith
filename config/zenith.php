@@ -6,6 +6,10 @@ return [
     'poll_interval' => 5000,
     'job_navigation_breakdown' => false,
     'job_payload_allowed_classes' => [],
+    'supervisor_scale_bounds' => [
+        'min' => 1,
+        'max' => 20,
+    ],
     'bulk_operations' => [
         'connection' => null,
         'queue' => null,

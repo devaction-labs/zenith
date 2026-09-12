@@ -1,8 +1,9 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../../wayfinder'
 import pause from './pause'
+import scale from './scale'
 /**
 * @see \DevactionLabs\Zenith\Http\Controllers\SupervisorController::show
-* @see src/Http/Controllers/SupervisorController.php:15
+* @see src/Http/Controllers/SupervisorController.php:22
 * @route '/horizon/supervisors/{supervisor}'
 */
 export const show = (args: { supervisor: string | number } | [supervisor: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -17,7 +18,7 @@ show.definition = {
 
 /**
 * @see \DevactionLabs\Zenith\Http\Controllers\SupervisorController::show
-* @see src/Http/Controllers/SupervisorController.php:15
+* @see src/Http/Controllers/SupervisorController.php:22
 * @route '/horizon/supervisors/{supervisor}'
 */
 show.url = (args: { supervisor: string | number } | [supervisor: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -44,7 +45,7 @@ show.url = (args: { supervisor: string | number } | [supervisor: string | number
 
 /**
 * @see \DevactionLabs\Zenith\Http\Controllers\SupervisorController::show
-* @see src/Http/Controllers/SupervisorController.php:15
+* @see src/Http/Controllers/SupervisorController.php:22
 * @route '/horizon/supervisors/{supervisor}'
 */
 show.get = (args: { supervisor: string | number } | [supervisor: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -54,7 +55,7 @@ show.get = (args: { supervisor: string | number } | [supervisor: string | number
 
 /**
 * @see \DevactionLabs\Zenith\Http\Controllers\SupervisorController::show
-* @see src/Http/Controllers/SupervisorController.php:15
+* @see src/Http/Controllers/SupervisorController.php:22
 * @route '/horizon/supervisors/{supervisor}'
 */
 show.head = (args: { supervisor: string | number } | [supervisor: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -64,6 +65,7 @@ show.head = (args: { supervisor: string | number } | [supervisor: string | numbe
 
 const supervisors = {
     pause: Object.assign(pause, pause),
+    scale: Object.assign(scale, scale),
     show: Object.assign(show, show),
 }
 

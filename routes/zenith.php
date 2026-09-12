@@ -38,6 +38,7 @@ use DevactionLabs\Zenith\Http\Controllers\ScheduleController;
 use DevactionLabs\Zenith\Http\Controllers\ScheduleRunController;
 use DevactionLabs\Zenith\Http\Controllers\SupervisorController;
 use DevactionLabs\Zenith\Http\Controllers\SupervisorPauseController;
+use DevactionLabs\Zenith\Http\Controllers\SupervisorScaleController;
 use DevactionLabs\Zenith\Http\Controllers\WorkflowCancelController;
 use DevactionLabs\Zenith\Http\Controllers\WorkflowController;
 use DevactionLabs\Zenith\Http\Controllers\WorkflowRetryController;
@@ -64,6 +65,10 @@ Route::delete('/supervisors/{supervisor}/pause', [SupervisorPauseController::cla
     ->middleware(horizonAbility('manageInstances'))
     ->where('supervisor', '.+?')
     ->name('supervisors.pause.destroy');
+Route::post('/supervisors/{supervisor}/scale', [SupervisorScaleController::class, 'store'])
+    ->middleware(horizonAbility('manageInstances'))
+    ->where('supervisor', '.+?')
+    ->name('supervisors.scale.store');
 Route::get('/supervisors/{supervisor}', [SupervisorController::class, 'show'])
     ->where('supervisor', '.+')
     ->name('supervisors.show');

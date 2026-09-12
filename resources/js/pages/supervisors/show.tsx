@@ -3,8 +3,9 @@ import { TriangleAlertIcon } from "lucide-react";
 
 import { StatusBadge } from "@/components/dashboard/status-badge";
 import { DetailList, DetailListItem } from "@/components/detail-list";
+import { SupervisorScaleControl } from "@/components/supervisors/supervisor-scale-control";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { show as queueShow } from "@/generated/routes/zenith/queues";
 import { usePageRefresh } from "@/hooks/use-dashboard-refresh";
 import { useAutoLoadPreference } from "@/layouts/horizon-layout";
@@ -15,7 +16,11 @@ import type { SupervisorDetails, SupervisorDetailsPageProps } from "@/types/supe
 
 const numberFormatter = new Intl.NumberFormat();
 
-function SupervisorShow({ horizon, supervisorDetails }: SupervisorDetailsPageProps) {
+function SupervisorShow({
+  horizon,
+  supervisorDetails,
+  supervisorScaleBounds,
+}: SupervisorDetailsPageProps) {
   const { autoLoad } = useAutoLoadPreference();
 
   usePageRefresh(horizon.pollInterval, ["supervisorDetails"], autoLoad);
@@ -61,7 +66,18 @@ function SupervisorShow({ horizon, supervisorDetails }: SupervisorDetailsPagePro
         ))}
 
         <div className="grid gap-[7px] min-[1140px]:gap-3.5 lg:grid-cols-2">
-          <PolicyCard title="Scaling Policy" properties={scalingProperties(supervisor)} />
+          <PolicyCard title="Scaling Policy" properties={scalingProperties(supervisor)}>
+            <CardFooter className="flex-col items-stretch gap-2.5 border-t pt-[7px] min-[1140px]:pt-3.5">
+              <SupervisorScaleControl
+                horizonBaseUrl={horizon.baseUrl}
+                supervisorId={supervisor.id}
+                processes={supervisor.processes}
+                bounds={supervisorScaleBounds}
+                balance={supervisor.balance}
+                scalable={supervisor.status === "running" || supervisor.status === "paused"}
+              />
+            </CardFooter>
+          </PolicyCard>
           <PolicyCard title="Worker Policy" properties={workerProperties(supervisor)} />
         </div>
       </div>
@@ -151,7 +167,15 @@ function workerProperties(supervisor: SupervisorDetails): Property[] {
   ];
 }
 
-function PolicyCard({ title, properties }: { title: string; properties: Property[] }) {
+function PolicyCard({
+  title,
+  properties,
+  children,
+}: {
+  title: string;
+  properties: Property[];
+  children?: React.ReactNode;
+}) {
   return (
     <Card>
       <CardHeader>
@@ -160,6 +184,7 @@ function PolicyCard({ title, properties }: { title: string; properties: Property
       <CardContent className="p-0">
         <PropertyList properties={properties} />
       </CardContent>
+      {children}
     </Card>
   );
 }

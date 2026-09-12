@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vite-plus/test";
 
@@ -6,12 +6,16 @@ import SupervisorShow from "@/pages/supervisors/show";
 import type { SupervisorDetailsPageProps } from "@/types/supervisors";
 
 const refresh = vi.hoisted(() => vi.fn());
+const inertia = vi.hoisted(() => ({ post: vi.fn() }));
+const abilities = vi.hoisted(() => ({ manageInstances: true }));
 
 vi.mock("@inertiajs/react", () => ({
   Head: () => null,
   Link: ({ children, href }: { children: ReactNode; href: string }) => (
     <a href={href}>{children}</a>
   ),
+  router: inertia,
+  usePage: () => ({ props: { horizon: { abilities } } }),
 }));
 
 vi.mock("@/hooks/use-dashboard-refresh", () => ({
@@ -62,6 +66,7 @@ const props: SupervisorDetailsPageProps = {
       warnings: [],
     },
   },
+  supervisorScaleBounds: { min: 1, max: 5 },
 };
 
 describe("Supervisor detail page", () => {
@@ -70,5 +75,30 @@ describe("Supervisor detail page", () => {
 
     expect(screen.getByText("supervisor-1")).toBeVisible();
     expect(refresh).toHaveBeenCalledWith(5_000, ["supervisorDetails"], true);
+  });
+
+  it("submits the requested scale within the supervisor own configured bounds", () => {
+    render(<SupervisorShow {...props} />);
+
+    const input = screen.getByLabelText("Scale processes");
+    fireEvent.change(input, { target: { value: "4" } });
+    fireEvent.click(screen.getByRole("button", { name: "Scale" }));
+
+    expect(inertia.post).toHaveBeenCalledWith(
+      "/horizon/supervisors/local-host-a1b2%3Asupervisor-1/scale",
+      { processes: 4 },
+      expect.objectContaining({ preserveScroll: true }),
+    );
+  });
+
+  it("warns that auto-balancing may override a manual scale", () => {
+    render(<SupervisorShow {...props} />);
+
+    expect(
+      screen.getByText(
+        "Horizon auto-balancing may override this value while balancing is enabled.",
+        { exact: false },
+      ),
+    ).toBeVisible();
   });
 });

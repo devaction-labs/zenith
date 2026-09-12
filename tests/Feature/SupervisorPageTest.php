@@ -55,7 +55,48 @@ describe('supervisor detail page', function (): void {
                 ->where('supervisorDetails.supervisor.id', 'horizon-web-01:supervisor-1')
                 ->where('supervisorDetails.supervisor.queues', ['critical', 'default'])
                 ->where('supervisorDetails.supervisor.retryAfter', 120)
-                ->where('supervisorDetails.message', null));
+                ->where('supervisorDetails.message', null)
+                ->where('supervisorScaleBounds.min', 1)
+                ->where('supervisorScaleBounds.max', 20));
+    });
+
+    it('exposes the supervisor own configured scale bounds when present', function (): void {
+        bindSupervisorDetails((object) [
+            'name' => 'horizon-web-01:supervisor-1',
+            'master' => 'horizon-web-01',
+            'status' => 'running',
+            'processes' => ['redis:default' => 4],
+            'options' => [
+                'connection' => 'redis',
+                'queue' => 'default',
+                'minProcesses' => 2,
+                'maxProcesses' => 12,
+            ],
+        ]);
+
+        get('/horizon/supervisors/horizon-web-01%3Asupervisor-1')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
+                ->where('supervisorScaleBounds.min', 2)
+                ->where('supervisorScaleBounds.max', 12));
+    });
+
+    it('uses configured default scale bounds when the active supervisor exposes none', function (): void {
+        config()->set('zenith.supervisor_scale_bounds', ['min' => 3, 'max' => 9]);
+
+        bindSupervisorDetails((object) [
+            'name' => 'horizon-web-01:supervisor-1',
+            'master' => 'horizon-web-01',
+            'status' => 'running',
+            'processes' => ['redis:default' => 4],
+            'options' => ['connection' => 'redis', 'queue' => 'default'],
+        ]);
+
+        get('/horizon/supervisors/horizon-web-01%3Asupervisor-1')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
+                ->where('supervisorScaleBounds.min', 3)
+                ->where('supervisorScaleBounds.max', 9));
     });
 
     it('decodes slash-bearing supervisor names before reading Horizon', function (): void {

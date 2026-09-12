@@ -19,6 +19,7 @@ describe('Zenith routes', function (): void {
             'zenith.instances.pause.destroy' => ['DELETE', 'horizon/instances/{instance}/pause'],
             'zenith.supervisors.pause.store' => ['POST', 'horizon/supervisors/{supervisor}/pause'],
             'zenith.supervisors.pause.destroy' => ['DELETE', 'horizon/supervisors/{supervisor}/pause'],
+            'zenith.supervisors.scale.store' => ['POST', 'horizon/supervisors/{supervisor}/scale'],
             'zenith.monitoring.index' => ['GET', 'horizon/monitoring'],
             'zenith.monitoring.store' => ['POST', 'horizon/monitoring'],
             'zenith.monitoring.show' => ['GET', 'horizon/monitoring/{tag}/{status?}'],
