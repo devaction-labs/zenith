@@ -32,6 +32,7 @@ final class JobDetailData extends Data
         public readonly ?float $failedAt,
         public readonly ?float $runtime,
         public readonly array $payload,
+        public readonly bool $retryEligible = false,
         public readonly JobCompositionData $composition = new JobCompositionData(false, false, []),
     ) {}
 }

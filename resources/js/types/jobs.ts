@@ -73,7 +73,6 @@ export type JobDetail = Omit<
   | "retryCompleted"
   | "retryCount"
   | "latestRetryStatus"
-  | "retryEligible"
   | "attemptsComplete"
 > & {
   batchId: string | null;

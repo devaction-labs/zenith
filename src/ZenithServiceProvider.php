@@ -33,6 +33,7 @@ use DevactionLabs\Zenith\Jobs\PendingJobStateIndex;
 use DevactionLabs\Zenith\Jobs\RetainedJobFilterCatalog;
 use DevactionLabs\Zenith\Jobs\RetainedJobIndex;
 use DevactionLabs\Zenith\Jobs\RetainedJobQuery;
+use DevactionLabs\Zenith\Jobs\RetainedJobRetryEligibility;
 use DevactionLabs\Zenith\Queues\ClearQueueMetadata;
 use DevactionLabs\Zenith\Queues\ClearsQueueMetadata;
 use DevactionLabs\Zenith\Schedule\DynamicSchedule;
@@ -157,6 +158,7 @@ final class ZenithServiceProvider extends ServiceProvider
                 redis: $this->app->make(RedisFactory::class),
                 retainedQuery: $this->app->make(RetainedJobQuery::class),
                 filterCatalog: $this->app->make(RetainedJobFilterCatalog::class),
+                retryEligibility: $this->app->make(RetainedJobRetryEligibility::class),
             ),
         );
         $this->app->resolving(

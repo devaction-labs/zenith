@@ -1,0 +1,1 @@
+import{b as e}from"./alert-D0rPt8dK.js";function t(t){e.getCached(t)===null&&e.prefetch(t)}function n(t){e.visit(t)}export{n,t};

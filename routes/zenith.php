@@ -19,6 +19,7 @@ use DevactionLabs\Zenith\Http\Controllers\FailedJobsSelectedRetryController;
 use DevactionLabs\Zenith\Http\Controllers\HorizonPauseController;
 use DevactionLabs\Zenith\Http\Controllers\HorizonTerminationController;
 use DevactionLabs\Zenith\Http\Controllers\JobController;
+use DevactionLabs\Zenith\Http\Controllers\JobRetryController;
 use DevactionLabs\Zenith\Http\Controllers\MetricController;
 use DevactionLabs\Zenith\Http\Controllers\MetricsController;
 use DevactionLabs\Zenith\Http\Controllers\MonitoringController;
@@ -187,6 +188,10 @@ Route::get('/jobs/{type}', [JobController::class, 'index'])
 Route::get('/jobs/{type}/{job}', [JobController::class, 'show'])
     ->where('type', 'pending|completed|silenced')
     ->name('jobs.show');
+Route::post('/jobs/{type}/{job}/retry', [JobRetryController::class, 'store'])
+    ->middleware(horizonAbility('retryJobs'))
+    ->where('type', 'completed|silenced')
+    ->name('jobs.retry.store');
 
 Route::get('/failed', [FailedJobController::class, 'index'])->name('failed-jobs.index');
 Route::delete('/failed', [FailedJobClearAllController::class, 'destroy'])

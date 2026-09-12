@@ -5,6 +5,7 @@ import { DetailList, DetailListItem } from "@/components/detail-list";
 import { Duration } from "@/components/duration";
 import { JobStatus, type JobStatusValue } from "@/components/jobs/job-status";
 import { PendingJobActionsMenu } from "@/components/jobs/pending-job-actions";
+import { RetryRetainedJobButton } from "@/components/jobs/retained-job-actions";
 import { JobCompositionPanel } from "@/components/jobs/job-composition";
 import { JobTags } from "@/components/jobs/job-tags";
 import { JsonPayload } from "@/components/payload/json-payload";
@@ -184,6 +185,15 @@ function JobShow({ horizon, type, job }: JobDetailPageProps) {
                   horizonBaseUrl={horizon.baseUrl}
                   canCancel={job.batchId === null}
                   canRelease={status === "delayed"}
+                />
+              </CardAction>
+            ) : null}
+            {(type === "completed" || type === "silenced") && job.retryEligible ? (
+              <CardAction className="flex shrink-0 items-center self-center">
+                <RetryRetainedJobButton
+                  type={type}
+                  jobId={job.id}
+                  horizonBaseUrl={horizon.baseUrl}
                 />
               </CardAction>
             ) : null}

@@ -42,6 +42,7 @@ describe('Zenith routes', function (): void {
             'zenith.queues.clear.destroy' => ['DELETE', 'horizon/queues/{connection}/{queue}/clear'],
             'zenith.jobs.index' => ['GET', 'horizon/jobs/{type}'],
             'zenith.jobs.show' => ['GET', 'horizon/jobs/{type}/{job}'],
+            'zenith.jobs.retry.store' => ['POST', 'horizon/jobs/{type}/{job}/retry'],
             'zenith.jobs.pending.cancel-selected.destroy' => ['DELETE', 'horizon/jobs/pending/cancel-selected'],
             'zenith.jobs.pending.destroy' => ['DELETE', 'horizon/jobs/pending/{job}'],
             'zenith.failed-jobs.index' => ['GET', 'horizon/failed'],

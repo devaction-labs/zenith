@@ -11,6 +11,7 @@ use DevactionLabs\Zenith\Jobs\Data\JobFilterCatalogData;
 use DevactionLabs\Zenith\Jobs\Data\JobIndexFiltersData;
 use DevactionLabs\Zenith\Jobs\Data\JobPageData;
 use DevactionLabs\Zenith\Jobs\Data\JobRowData;
+use DevactionLabs\Zenith\Jobs\Data\RetainedCompletedJobData;
 use Illuminate\Contracts\Redis\Factory as RedisFactory;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Date;
@@ -28,6 +29,7 @@ final readonly class JobsData
         private ?RedisFactory $redis = null,
         private ?RetainedJobQuery $retainedQuery = null,
         private ?RetainedJobFilterCatalog $filterCatalog = null,
+        private ?RetainedJobRetryEligibility $retryEligibility = null,
     ) {}
 
     public function page(
@@ -169,6 +171,41 @@ final readonly class JobsData
         }
     }
 
+    /**
+     * Resolve a retained completed or silenced job for a retry, without
+     * exposing its raw payload beyond what re-dispatching it requires.
+     */
+    public function retainedCompletedJob(string $id): ?RetainedCompletedJobData
+    {
+        $job = $this->jobs->getJobs([$id])->first();
+
+        if (! is_object($job) || ($job->status ?? null) !== 'completed') {
+            return null;
+        }
+
+        $rawPayload = $job->payload ?? null;
+
+        if (! is_string($rawPayload) || $rawPayload === '') {
+            return null;
+        }
+
+        $payload = $this->decodePayload($rawPayload);
+        $decodedCommand = $this->decodedCommand($payload);
+
+        return new RetainedCompletedJobData(
+            id: $id,
+            connection: is_string($job->connection ?? null) ? $job->connection : 'default',
+            queue: is_string($job->queue ?? null) ? $job->queue : 'default',
+            rawPayload: $rawPayload,
+            commandClass: JobComposition::commandClass($payload, $decodedCommand),
+        );
+    }
+
+    private function retainedRetryEligibility(): RetainedJobRetryEligibility
+    {
+        return $this->retryEligibility ?? new RetainedJobRetryEligibility;
+    }
+
     public function batchId(object $job): ?string
     {
         $payload = $this->decodePayload($job->payload ?? null);
@@ -254,13 +291,20 @@ final readonly class JobsData
         );
     }
 
+    /**
+     * When $retryEligible is left null, it is derived from the retained-job
+     * retry policy for completed and silenced jobs (which share the
+     * 'completed' status). Callers such as FailedJobsData that already know
+     * their own eligibility, e.g. via FailedJobRetryEligibility, must pass it
+     * explicitly so it is not overwritten by that derivation.
+     */
     public function row(
         object $job,
         bool $retried = false,
         bool $retryCompleted = false,
         int $retryCount = 0,
         ?string $latestRetryStatus = null,
-        bool $retryEligible = false,
+        ?bool $retryEligible = null,
         ?int $attemptsOverride = null,
         bool $attemptsComplete = true,
     ): ?JobRowData {
@@ -302,6 +346,11 @@ final readonly class JobsData
             default => null,
         };
         $runtime = $this->runtime($reservedAt, $finishedAt);
+        $retryEligible ??= $status === 'completed'
+            ? $this->retainedRetryEligibility()->allows(
+                JobComposition::commandClass($payload, $decodedCommand),
+            )
+            : false;
 
         return new JobRowData(
             id: $id,
@@ -381,6 +430,7 @@ final readonly class JobsData
             failedAt: $row->failedAt,
             runtime: $row->runtime,
             payload: $this->safePayload($payload, $decodedCommand),
+            retryEligible: $row->retryEligible,
             composition: JobComposition::fromPayload($payload, $decodedCommand),
         );
     }

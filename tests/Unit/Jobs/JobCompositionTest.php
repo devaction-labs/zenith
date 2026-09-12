@@ -37,6 +37,15 @@ it('reads unique, encrypted, and chained contracts from a retained payload', fun
         ->and($detail?->composition->chain[0]->class)->toBe(DownstreamProbeJob::class);
 });
 
+it('resolves the decoded command class from either the payload or the decoded command', function (): void {
+    expect(JobComposition::commandClass(['data' => ['commandName' => 'App\\Jobs\\FromPayload']], null))
+        ->toBe('App\\Jobs\\FromPayload')
+        ->and(JobComposition::commandClass([], ['class' => 'App\\Jobs\\FromCommand']))
+        ->toBe('App\\Jobs\\FromCommand')
+        ->and(JobComposition::commandClass([], null))
+        ->toBeNull();
+});
+
 it('returns empty composition when the payload has no command', function (): void {
     $composition = JobComposition::fromPayload([
         'data' => ['commandName' => 'App\\Jobs\\Missing'],
