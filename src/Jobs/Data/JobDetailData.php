@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace DevactionLabs\Zenith\Jobs\Data;
 
+use DevactionLabs\Zenith\Telemetry\Data\AttemptTimelineData;
 use Spatie\LaravelData\Data;
 
 final class JobDetailData extends Data
@@ -32,6 +33,7 @@ final class JobDetailData extends Data
         public readonly ?float $failedAt,
         public readonly ?float $runtime,
         public readonly array $payload,
+        public readonly AttemptTimelineData $attemptTimeline,
         public readonly JobCompositionData $composition = new JobCompositionData(false, false, []),
     ) {}
 }

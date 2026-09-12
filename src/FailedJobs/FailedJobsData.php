@@ -257,6 +257,7 @@ final readonly class FailedJobsData
                 exception: is_string($job->exception ?? null)
                     ? mb_convert_encoding($job->exception, 'UTF-8', 'UTF-8')
                     : '',
+                attemptTimeline: $detail->attemptTimeline,
                 composition: $detail->composition,
             );
         } catch (Throwable $exception) {

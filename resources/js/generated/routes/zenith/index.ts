@@ -1,5 +1,6 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition } from './../../wayfinder'
 import dashboard074181 from './dashboard'
+import executing from './executing'
 import instances from './instances'
 import supervisors from './supervisors'
 import monitoring from './monitoring'
@@ -13,7 +14,7 @@ import schedule from './schedule'
 import workflows from './workflows'
 /**
 * @see \DevactionLabs\Zenith\Http\Controllers\DashboardController::dashboard
-* @see src/Http/Controllers/DashboardController.php:18
+* @see src/Http/Controllers/DashboardController.php:25
 * @route '/horizon'
 */
 export const dashboard = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -28,7 +29,7 @@ dashboard.definition = {
 
 /**
 * @see \DevactionLabs\Zenith\Http\Controllers\DashboardController::dashboard
-* @see src/Http/Controllers/DashboardController.php:18
+* @see src/Http/Controllers/DashboardController.php:25
 * @route '/horizon'
 */
 dashboard.url = (options?: RouteQueryOptions) => {
@@ -37,7 +38,7 @@ dashboard.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \DevactionLabs\Zenith\Http\Controllers\DashboardController::dashboard
-* @see src/Http/Controllers/DashboardController.php:18
+* @see src/Http/Controllers/DashboardController.php:25
 * @route '/horizon'
 */
 dashboard.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -47,7 +48,7 @@ dashboard.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 
 /**
 * @see \DevactionLabs\Zenith\Http\Controllers\DashboardController::dashboard
-* @see src/Http/Controllers/DashboardController.php:18
+* @see src/Http/Controllers/DashboardController.php:25
 * @route '/horizon'
 */
 dashboard.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -57,6 +58,7 @@ dashboard.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
 const zenith = {
     dashboard: Object.assign(dashboard, dashboard074181),
+    executing: Object.assign(executing, executing),
     instances: Object.assign(instances, instances),
     supervisors: Object.assign(supervisors, supervisors),
     monitoring: Object.assign(monitoring, monitoring),

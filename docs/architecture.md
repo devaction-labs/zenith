@@ -213,6 +213,126 @@ timeout instead of imposing a package-level override.
 
 Repository failures are caught at data boundaries and converted into explicit unavailable states. List previews omit sensitive payload and exception data. Detail pages expose normalized fields deliberately, never raw repository objects or Redis internals.
 
+## Telemetry
+
+Horizon's `MetricsRepository` snapshots throughput and runtime every five
+minutes. That is enough for the trend charts under `/metrics`, but it cannot
+answer "what is happening right now": live per-second throughput, wait/execution
+percentiles, per-attempt error history, or which jobs are currently executing.
+Answering those requires observing Laravel's queue events as they happen, which
+is otherwise deliberately out of scope for this package (see "Backend data
+flow" above). The telemetry recorder is the one place Zenith listens to queue
+events instead of reading Horizon's repositories, and it is opt-in for that
+reason: `zenith.telemetry.enabled` defaults to `false`, and every screen that
+depends on it falls back to the Horizon-snapshot behavior described elsewhere
+in this document when it is off.
+
+### Decision: which events to observe
+
+`Illuminate\Queue\Worker::process()` dispatches many events per attempt
+(`JobProcessing`, `JobProcessed`, `JobFailed`, `JobReleased`,
+`JobReleasedAfterException`, `JobExceptionOccurred`, `JobAttempted`), but
+exactly one of them, `JobAttempted`, is guaranteed to fire once per attempt
+from a `finally` block, after the job object's `hasFailed()` and
+`isReleased()` state is final. The recorder listens to only three events:
+
+- `JobProcessing` opens an in-memory timer (keyed by job UUID) on the
+  `TelemetryEventSubscriber` instance, which is bound as a singleton so the
+  same object observes both ends of an attempt within one worker process.
+- `JobAttempted` closes that timer and classifies the outcome as `Failed`
+  (`$job->hasFailed()`), `Released` (`$job->isReleased()`), or `Processed`
+  (neither) — in that order, since a job can be released without an
+  exception ever reaching `JobAttempted`.
+- `JobTimedOut` is the one path that never reaches `JobAttempted`, because
+  the worker's SIGALRM handler kills the process immediately after
+  dispatching it; the recorder treats it as its own terminal outcome.
+
+Listening to the granular events directly was rejected: `JobProcessed` and
+`JobReleased` both fire for a job that calls `$this->release()` from inside
+`handle()` without throwing, which would double count that attempt, and a job
+that calls `$this->fail()` manually still gets a `JobProcessed` dispatched
+right after `fire()` returns, which would undercount failures. Deriving the
+outcome from the job object's own state after `JobAttempted` avoids both
+failure modes with fewer listeners.
+
+Wait time is computed once, at `JobProcessing`, as the time since the job's
+`createdAt` payload timestamp (the same timestamp Laravel stamps at push
+time). Runtime is the elapsed time between the in-memory `JobProcessing`
+timer and the terminal event. Both are best-effort: if `JobProcessing` was
+never observed for a given attempt (for example, the recorder was enabled
+after the job was already reserved), the outcome is still recorded, without a
+runtime or wait sample.
+
+The node identity recorded for every event defaults to the local hostname,
+overridable with `zenith.telemetry.node`. The supervisor name is read
+directly from the worker process's own command line rather than through a
+dedicated listener: `horizon:work` always receives `--supervisor=<name>`
+(`Laravel\Horizon\QueueCommandString`), so `WorkerIdentity` parses it out of
+`$_SERVER['argv']`.
+
+### Storage shape
+
+Every recorded attempt increments Redis hash fields across three fixed
+retention tiers (`TelemetryResolution`), so a dashboard can plot both a
+noisy, second-by-second live view and a smoothed multi-day trend from the
+same recorder:
+
+| Tier       | Bucket width | Retention | Key                                            |
+|------------|--------------|-----------|-------------------------------------------------|
+| `fine`     | 1 second     | 15 minutes| `zenith:v1:telemetry:bucket:fine:<bucketStart>`     |
+| `standard` | 1 minute     | 24 hours  | `zenith:v1:telemetry:bucket:standard:<bucketStart>` |
+| `coarse`   | 5 minutes    | 7 days    | `zenith:v1:telemetry:bucket:coarse:<bucketStart>`   |
+
+(Keys are actually prefixed with the ASCII unit separator, matching
+`BulkOperationSnapshot`'s convention; it is omitted above for readability.)
+Each bucket key is a single Redis hash holding every dimension's counters and
+histograms for that time slice, rather than one key per dimension value, so
+the number of live keys is bounded by the number of open buckets
+(at most 900 + 1440 + 2016 = 4356) regardless of how many queues, job
+classes, or nodes are active. Both the bucket key and a companion sorted-set
+index of open bucket timestamps (used to discover which buckets exist without
+an Redis `SCAN`) carry the tier's TTL, renewed on every write; the index
+prunes its own expired entries on each write via `ZREMRANGEBYSCORE` before
+adding the new bucket.
+
+Within a bucket hash, fields are named with the same unit-separator
+convention:
+
+- `count\x1f<dimension>\x1f<value>\x1f<outcome>` — an attempt counter, where
+  `<dimension>` is `queue`, `class`, or `node`, and `<outcome>` is
+  `processed`, `failed`, `released`, or `timed_out`.
+- `hist\x1f<metric>\x1f<dimension>\x1f<value>\x1f<bucketIndex>` — a duration
+  histogram sample, where `<metric>` is `runtime` or `wait` and
+  `<bucketIndex>` is a log2-scaled bucket from `DurationHistogram` (1ms,
+  2ms, 4ms, ... up to roughly 4.6 hours before durations clamp into the final
+  bucket).
+
+Every attempt increments exactly one counter field and up to two histogram
+fields per dimension per tier: a fixed 3 to 9 `HINCRBY` calls per tier
+depending on whether timings are available, times three tiers. This bound is
+asserted directly in `TelemetryRecorderTest` (a deterministic proof of
+overhead, since a network-bound micro-benchmark would be flaky in CI) rather
+than measured with a wall clock. There is no dimension value for "all
+queues" or "all classes": since every attempt has exactly one queue, class,
+and node, a global total for any dimension is the sum of that dimension's own
+values, not a separately stored series. Percentiles for a given window are
+derived by summing histogram bucket counts across every open bucket in that
+window and walking the cumulative distribution until it crosses the target
+percentile, then reporting that bucket's upper bound.
+
+### Fallback
+
+Every telemetry-backed screen checks `horizon.telemetryEnabled` (shared by
+`HandleInertiaRequests`, sourced from `TelemetryRegistration::enabled()`)
+before rendering recorder-fed charts or tables, and falls back to the
+existing Horizon-snapshot behavior otherwise: metrics charts fall back to
+`MetricsRepository` snapshots, and screens with no snapshot equivalent (live
+percentiles, in-flight jobs, attempt history) show an explanatory empty state
+instead of an error. `TelemetryRegistration::register()` returns before
+touching the event dispatcher at all when disabled, so a disabled recorder
+adds zero listeners and zero Redis calls to job processing — not merely a
+no-op recorder, but one that is never registered.
+
 ## Frontend isolation
 
 `HandleInertiaRequests` sets `zenith::app` as the root view only for package routes. This avoids changing the host application's own Inertia middleware or root template.

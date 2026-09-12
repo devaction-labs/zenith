@@ -14,6 +14,7 @@ use DevactionLabs\Zenith\Support\FrameworkCapabilities;
 use DevactionLabs\Zenith\Support\HorizonRuntime;
 use DevactionLabs\Zenith\Support\NavigationCounts;
 use DevactionLabs\Zenith\Support\PollInterval;
+use DevactionLabs\Zenith\Telemetry\TelemetryRegistration;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -64,6 +65,7 @@ final class HandleInertiaRequests extends Middleware
                     ) === true,
                     allQueuesPaused: $this->queuePauseStatus->allPaused(),
                     abilities: $this->abilities->abilities(),
+                    telemetryEnabled: TelemetryRegistration::enabled(),
                 );
             },
             'monitoredTags' => fn (): array => $this->monitoring->monitoredTags(),

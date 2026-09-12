@@ -43,10 +43,14 @@ use DevactionLabs\Zenith\Schedule\InternalScheduledEvent;
 use DevactionLabs\Zenith\Support\FrameworkCapabilities;
 use DevactionLabs\Zenith\Support\HorizonRuntime;
 use DevactionLabs\Zenith\Support\HorizonWorkCommandCompatibility;
+use DevactionLabs\Zenith\Telemetry\AttemptHistory;
+use DevactionLabs\Zenith\Telemetry\TelemetryEventSubscriber;
+use DevactionLabs\Zenith\Telemetry\TelemetryRegistration;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Contracts\Bus\Dispatcher;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Illuminate\Contracts\Container\BindingResolutionException;
+use Illuminate\Contracts\Events\Dispatcher as EventDispatcher;
 use Illuminate\Contracts\Foundation\CachesRoutes;
 use Illuminate\Contracts\Redis\Factory as RedisFactory;
 use Illuminate\Queue\Events\JobFailed as QueueJobFailed;
@@ -74,6 +78,7 @@ final class ZenithServiceProvider extends ServiceProvider
     private const array ROOT_PATH_SSR_EXCLUSIONS = [
         '/',
         'dashboard',
+        'executing',
         'instances',
         'supervisors/*',
         'monitoring',
@@ -164,6 +169,7 @@ final class ZenithServiceProvider extends ServiceProvider
                 redis: $this->app->make(RedisFactory::class),
                 retainedQuery: $this->app->make(RetainedJobQuery::class),
                 filterCatalog: $this->app->make(RetainedJobFilterCatalog::class),
+                attemptHistory: $this->app->make(AttemptHistory::class),
             ),
         );
         $this->app->resolving(
@@ -179,6 +185,7 @@ final class ZenithServiceProvider extends ServiceProvider
             fn (): FrameworkCapabilities => FrameworkCapabilities::detect(),
         );
         $this->app->singleton(JobHistoryStopwatch::class);
+        $this->app->singleton(TelemetryEventSubscriber::class);
         $this->app->bind(
             HorizonRuntime::class,
             fn (): HorizonRuntime => new HorizonRuntime(
@@ -222,6 +229,8 @@ final class ZenithServiceProvider extends ServiceProvider
         $this->registerJobHistoryListeners();
 
         $this->callAfterResolving(Schedule::class, $this->registerScheduledEvents(...));
+
+        TelemetryRegistration::register($this->app->make(EventDispatcher::class));
     }
 
     private function registerJobHistoryListeners(): void

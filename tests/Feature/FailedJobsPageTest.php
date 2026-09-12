@@ -153,7 +153,8 @@ describe('failed job pages', function (): void {
                 ->where('job.context.tenant', 42)
                 ->where('job.payload.displayName', 'App\\Jobs\\ImportFeed')
                 ->where('job.retryEligible', true)
-                ->where('job.exception', 'sensitive trace'));
+                ->where('job.exception', 'sensitive trace')
+                ->where('job.attemptTimeline.available', false));
     });
 
     it('does not pass browser row sorting into the failed-job backend query', function (): void {

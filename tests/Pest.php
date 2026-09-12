@@ -14,6 +14,8 @@ require_once __DIR__.'/Support/BulkOperationSnapshotRedis.php';
 require_once __DIR__.'/Support/FakeQueueJob.php';
 require_once __DIR__.'/Support/HorizonBatches.php';
 require_once __DIR__.'/Support/HorizonJobs.php';
+require_once __DIR__.'/Support/TelemetryFakeJob.php';
+require_once __DIR__.'/Support/TelemetryRedis.php';
 require_once __DIR__.'/Support/WorkflowTables.php';
 require_once __DIR__.'/Support/WorkflowSteps.php';
 

@@ -67,6 +67,13 @@ const props: DashboardPageProps = {
     ],
     message: null,
   },
+  liveThroughput: {
+    available: false,
+    series: [],
+    message: "Enable the telemetry recorder (zenith.telemetry.enabled) to see live throughput.",
+  },
+  liveMetricsGroupBy: "state",
+  liveMetricsWindow: "1h",
 };
 
 describe("Dashboard page", () => {
@@ -81,5 +88,43 @@ describe("Dashboard page", () => {
     expect(screen.getAllByText("default").length).toBeGreaterThan(0);
     expect(screen.queryByText("Instances")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Loading workload")).not.toBeInTheDocument();
+  });
+
+  it("shows a fallback alert when the telemetry recorder is disabled", () => {
+    render(
+      <TooltipProvider>
+        <Dashboard {...props} />
+      </TooltipProvider>,
+    );
+
+    expect(screen.getByText("Live metrics unavailable")).toBeVisible();
+    expect(
+      screen.getByText(
+        "Enable the telemetry recorder (zenith.telemetry.enabled) to see live throughput.",
+      ),
+    ).toBeVisible();
+  });
+
+  it("renders the live throughput chart once the recorder is enabled", () => {
+    render(
+      <TooltipProvider>
+        <Dashboard
+          {...props}
+          liveThroughput={{
+            available: true,
+            series: [
+              {
+                label: "Processed",
+                points: [{ timestamp: 1_784_387_100, count: 4 }],
+              },
+            ],
+            message: null,
+          }}
+        />
+      </TooltipProvider>,
+    );
+
+    expect(screen.queryByText("Live metrics unavailable")).not.toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Live throughput chart" })).toBeVisible();
   });
 });

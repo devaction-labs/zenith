@@ -1,4 +1,5 @@
 import {
+  ActivityIcon,
   ChartNoAxesCombinedIcon,
   CircleAlertIcon,
   CircleCheckIcon,
@@ -14,6 +15,8 @@ import {
 } from "lucide-react";
 
 export const DashboardNavigationIcon = LayoutDashboardIcon;
+
+export const ExecutingNavigationIcon = ActivityIcon;
 
 export const RunningInstancesNavigationIcon = CpuIcon;
 

@@ -4,6 +4,7 @@ import {
   AuditNavigationIcon,
   BatchesNavigationIcon,
   DashboardNavigationIcon,
+  ExecutingNavigationIcon,
   JobsNavigationIcon,
   MetricsNavigationIcon,
   MonitoringNavigationIcon,
@@ -33,6 +34,7 @@ import {
 } from "@/components/ui/sidebar";
 import { dashboard } from "@/generated/routes/zenith";
 import { index as auditIndex } from "@/generated/routes/zenith/audit";
+import { index as executingIndex } from "@/generated/routes/zenith/executing";
 import { index as scheduleIndex } from "@/generated/routes/zenith/schedule";
 import { index as workflowsIndex } from "@/generated/routes/zenith/workflows";
 import { index as batchesIndex } from "@/generated/routes/zenith/batches";
@@ -70,6 +72,13 @@ const navigation: NavigationEntry[] = [
     icon: DashboardNavigationIcon,
     count: null,
     route: () => dashboard(),
+  },
+  {
+    label: "Executing",
+    active: ["executing"],
+    icon: ExecutingNavigationIcon,
+    count: null,
+    route: () => executingIndex(),
   },
   {
     label: "Monitoring",

@@ -1,4 +1,5 @@
 import type { HorizonStatus } from "@/types/dashboard";
+import type { PercentileChart, TelemetryWindow } from "@/types/telemetry";
 
 export type MetricType = "jobs" | "queues";
 
@@ -41,4 +42,6 @@ export type MetricPreviewPageProps = {
   type: MetricType;
   name: string;
   preview: MetricPreview;
+  percentiles: PercentileChart;
+  percentilesWindow: TelemetryWindow;
 };

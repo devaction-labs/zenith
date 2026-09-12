@@ -21,5 +21,6 @@ final class HorizonShellData extends Data
         public readonly bool $jobNavigationBreakdown = false,
         public readonly bool $allQueuesPaused = false,
         public readonly ?HorizonAbilitiesData $abilities = null,
+        public readonly bool $telemetryEnabled = false,
     ) {}
 }

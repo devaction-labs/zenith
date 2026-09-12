@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 
+import { AttemptTimeline } from "@/components/jobs/attempt-timeline";
 import { DetailList, DetailListItem } from "@/components/detail-list";
 import { Duration } from "@/components/duration";
 import { JobCompositionPanel } from "@/components/jobs/job-composition";
@@ -217,6 +218,7 @@ function FailedJobShow({ horizon, job }: FailedJobDetailPageProps) {
 
         <JobCompositionPanel composition={job.composition} />
         <FailedJobDataTabs job={job} horizonBaseUrl={horizon.baseUrl} />
+        <AttemptTimeline timeline={job.attemptTimeline} />
       </div>
     </>
   );
