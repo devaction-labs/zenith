@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- Pull requests from this repository enable auto-merge with a merge commit as soon as the aggregate `CI` check passes, through an Auto Merge job that uses the organization `GH_PAT` secret so the merge triggers the follow-up workflows. Draft pull requests are skipped.
+- **Experimental:** a Schedule page that lists Laravel scheduler events (expression, next run, overlap flags) and can run an event on demand. Runtime cron editing is not available because Laravel schedules live in code.
+- **Experimental:** job composition on job detail: unique and encrypted contracts plus downstream Bus chain steps from the retained payload.
+- **Experimental:** workflow DAGs (`WorkflowDefinition`) with cascade outputs, unique names, cancel/retry, and a Workflows page. Steps run as Horizon jobs. Known gaps are tracked in the P0 milestone.
+- **Experimental:** Signals, Relay, Chunks, Backfills, queue budgets, and persisted dynamic cron rows. Known gaps are tracked in the P0 milestone.
+
+## [0.2.0] - 2026-09-12
+
+First release under the Zenith name. Earlier versions were published as Horizon New Dawn.
+
 ### Changed
 
 - **Breaking:** Renamed the package from Horizon New Dawn to Zenith: `devaction-labs/zenith`, the `DevactionLabs\Zenith` namespace, `zenith:*` Artisan commands, `config/zenith.php`, `zenith.*` Gates and route names, `zenith_*` tables, `zenith:` cache and Redis key prefixes, and the `public/vendor/zenith/build` asset path.
@@ -17,12 +29,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
-- Releases are published from `release:patch`, `release:minor`, and `release:major` pull request labels once CI passes on `main`; manual releases remain available from the workflow dispatch.
+- A dedicated Release workflow runs after the Tests workflow succeeds on `main`. The `release:patch`, `release:minor`, or `release:major` label of the merged pull request picks the next version; the workflow tags it and publishes a GitHub release whose notes come from the version's CHANGELOG section. Manual dispatch releases an explicit version after checking that the commit's CI check passed.
 - Local Pest runs use test impact analysis and can fetch the dependency graph published by the new TIA Baseline workflow; `composer test:full` runs the whole suite, and CI always does.
-- **Experimental:** a Schedule page that lists Laravel scheduler events (expression, next run, overlap flags) and can run an event on demand. Runtime cron editing is not available because Laravel schedules live in code.
-- **Experimental:** job composition on job detail: unique and encrypted contracts plus downstream Bus chain steps from the retained payload.
-- **Experimental:** workflow DAGs (`WorkflowDefinition`) with cascade outputs, unique names, cancel/retry, and a Workflows page. Steps run as Horizon jobs. Known gaps are tracked in the P0 milestone.
-- **Experimental:** Signals, Relay, Chunks, Backfills, queue budgets, and persisted dynamic cron rows. Known gaps are tracked in the P0 milestone.
 - Rebranded the fork to DevAction Labs (`devaction-labs/zenith`, `DevactionLabs\Zenith`).
 - Added Laravel 13.25 global queue pause and resume (`Queue::pauseAll()` / `resumeAll()`), gated when the framework methods are missing, with a shell banner and Queues actions that leave individually paused queues paused after a global resume.
 - Warned at install time when Redis Cluster connections are configured.
@@ -165,9 +173,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Backfill the worker option expected by newer Laravel releases when Horizon 5.46 does not register it, allowing real Horizon workers to boot normally.
 - Calculate dashboard queue runtime and throughput leaders from retained metric snapshots instead of relying on repository methods unavailable in Horizon 5.46.
 
-[Unreleased]: https://github.com/devaction-labs/zenith/compare/0.1.5...HEAD
-[0.1.5]: https://github.com/devaction-labs/zenith/compare/0.1.4...0.1.5
-[0.1.4]: https://github.com/devaction-labs/zenith/compare/0.1.3...0.1.4
-[0.1.3]: https://github.com/devaction-labs/zenith/compare/0.1.2...0.1.3
-[0.1.2]: https://github.com/devaction-labs/zenith/compare/0.1.1...0.1.2
-[0.1.1]: https://github.com/devaction-labs/zenith/compare/0.1.0...0.1.1
+[Unreleased]: https://github.com/devaction-labs/zenith/compare/0.2.0...HEAD
+[0.2.0]: https://github.com/devaction-labs/zenith/releases/tag/0.2.0
+[0.1.5]: https://github.com/nckrtl/horizon-new-dawn/compare/0.1.4...0.1.5
+[0.1.4]: https://github.com/nckrtl/horizon-new-dawn/compare/0.1.3...0.1.4
+[0.1.3]: https://github.com/nckrtl/horizon-new-dawn/compare/0.1.2...0.1.3
+[0.1.2]: https://github.com/nckrtl/horizon-new-dawn/compare/0.1.1...0.1.2
+[0.1.1]: https://github.com/nckrtl/horizon-new-dawn/compare/0.1.0...0.1.1

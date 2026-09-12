@@ -1,0 +1,176 @@
+name: Release
+
+on:
+  workflow_run:
+    workflows:
+      - Tests
+    types:
+      - completed
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Semantic version to tag and release
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Tag and publish the release
+    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    permissions:
+      contents: write
+      pull-requests: read
+      checks: read
+
+    env:
+      RELEASE_SHA: ${{ github.event_name == 'workflow_dispatch' && github.sha || github.event.workflow_run.head_sha }}
+
+    steps:
+      - name: Check out the released commit
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ env.RELEASE_SHA }}
+          fetch-depth: 0
+
+      - name: Verify the CI check
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+
+          if [[ "$EVENT_NAME" == "workflow_dispatch" && "$GITHUB_REF" != "refs/heads/main" ]]; then
+            echo "Releases can only be dispatched from main." >&2
+            exit 1
+          fi
+
+          conclusion="$(gh api "repos/${GITHUB_REPOSITORY}/commits/${RELEASE_SHA}/check-runs?check_name=CI" --jq '[.check_runs[] | select(.name == "CI")] | first | .conclusion // ""')"
+
+          if [[ "$conclusion" != "success" ]]; then
+            echo "The CI check for ${RELEASE_SHA} has not passed (conclusion: ${conclusion:-missing})." >&2
+            exit 1
+          fi
+
+      - name: Resolve release version
+        id: version
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+          MANUAL_VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+
+          existing="$(git tag --points-at "$RELEASE_SHA" | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1 || true)"
+
+          if [[ "$EVENT_NAME" != "workflow_dispatch" && -n "$existing" ]]; then
+            echo "Tag ${existing} already points to ${RELEASE_SHA}; resuming that release."
+            echo "release=true" >> "$GITHUB_OUTPUT"
+            echo "version=${existing}" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          latest="$(git tag --list | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1 || true)"
+          latest="${latest:-0.0.0}"
+
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            version="$MANUAL_VERSION"
+          else
+            labels="$(gh api "repos/${GITHUB_REPOSITORY}/commits/${RELEASE_SHA}/pulls" --jq '.[].labels[].name')"
+            bump=""
+
+            for candidate in major minor patch; do
+              if grep -qx "release:${candidate}" <<<"$labels"; then
+                bump="$candidate"
+                break
+              fi
+            done
+
+            if [[ -z "$bump" ]]; then
+              echo "The merged pull request has no release label; nothing to release."
+              echo "release=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+
+            IFS=. read -r major minor patch <<<"$latest"
+
+            case "$bump" in
+              major) version="$((major + 1)).0.0" ;;
+              minor) version="${major}.$((minor + 1)).0" ;;
+              patch) version="${major}.${minor}.$((patch + 1))" ;;
+            esac
+          fi
+
+          echo "release=true" >> "$GITHUB_OUTPUT"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+
+      - name: Validate release version
+        if: steps.version.outputs.release == 'true'
+        shell: bash
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          if [[ ! "$RELEASE_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Release version must be a semantic version such as 1.2.3." >&2
+            exit 1
+          fi
+
+          if git rev-parse --verify --quiet "refs/tags/$RELEASE_VERSION"; then
+            tag_commit="$(git rev-list -n 1 "refs/tags/$RELEASE_VERSION")"
+
+            if [[ "$tag_commit" != "$RELEASE_SHA" ]]; then
+              echo "Tag $RELEASE_VERSION already exists on $tag_commit, not $RELEASE_SHA." >&2
+              exit 1
+            fi
+
+            echo "Tag $RELEASE_VERSION already points to $RELEASE_SHA; resuming the release."
+          fi
+
+      - name: Create and push tag
+        if: steps.version.outputs.release == 'true'
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          if git rev-parse --verify --quiet "refs/tags/$RELEASE_VERSION"; then
+            echo "Tag $RELEASE_VERSION already exists on this commit; skipping tag creation."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag "$RELEASE_VERSION" "$RELEASE_SHA"
+          git push origin "$RELEASE_VERSION"
+
+      - name: Create GitHub release
+        if: steps.version.outputs.release == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          if gh release view "$RELEASE_VERSION" >/dev/null 2>&1; then
+            echo "GitHub release $RELEASE_VERSION already exists; nothing to do."
+            exit 0
+          fi
+
+          notes="$(awk -v heading="## [$RELEASE_VERSION]" 'index($0, heading) == 1 { found = 1; next } found && /^## \[/ { exit } found { print }' CHANGELOG.md)"
+
+          if [[ -n "${notes//[[:space:]]/}" ]]; then
+            printf '%s\n' "$notes" > "$RUNNER_TEMP/release-notes.md"
+            gh release create "$RELEASE_VERSION" --verify-tag --title "$RELEASE_VERSION" --notes-file "$RUNNER_TEMP/release-notes.md"
+          else
+            gh release create "$RELEASE_VERSION" --verify-tag --title "$RELEASE_VERSION" --generate-notes
+          fi
