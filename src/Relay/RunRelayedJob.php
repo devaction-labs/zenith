@@ -20,16 +20,19 @@ final class RunRelayedJob implements ShouldQueue
 
     public function handle(Container $container): void
     {
-        try {
-            $result = method_exists($this->target, 'handle')
-                ? $container->call([$this->target, 'handle'])
-                : null;
+        $result = method_exists($this->target, 'handle')
+            ? $container->call([$this->target, 'handle'])
+            : null;
 
-            Relay::record($this->relayId, $result);
-        } catch (Throwable $exception) {
-            Relay::fail($this->relayId, $exception->getMessage());
+        Relay::record($this->relayId, $result);
+    }
 
-            throw $exception;
-        }
+    /**
+     * Record the failure once the job has failed for good, so awaiting callers keep
+     * waiting while it still has attempts left.
+     */
+    public function failed(Throwable $exception): void
+    {
+        Relay::fail($this->relayId, $exception->getMessage(), $exception::class);
     }
 }

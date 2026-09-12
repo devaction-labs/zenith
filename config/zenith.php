@@ -14,4 +14,8 @@ return [
         'store' => null,
         'ttl' => 86400,
     ],
+    'relay' => [
+        'store' => null,
+        'ttl' => 3600,
+    ],
 ];

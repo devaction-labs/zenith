@@ -5,15 +5,16 @@ declare(strict_types=1);
 namespace DevactionLabs\Zenith\Signals;
 
 use Closure;
+use DevactionLabs\Zenith\Relay\RelayWaiting;
 use Illuminate\Contracts\Queue\Job;
 
 /**
- * Job middleware for jobs that wait on signals.
+ * Job middleware for jobs that wait on signals or relayed results.
  *
- * It exposes the running queue job to Signal::await() so a wait can release it, and
- * treats the resulting SignalWaiting as a completed release instead of a failure.
- * Every redelivery still counts as an attempt, so give waiting jobs a retryUntil()
- * deadline instead of a fixed $tries.
+ * It exposes the running queue job to Signal::await() and Relay::await() so a wait
+ * can release it, and treats the resulting SignalWaiting or RelayWaiting as a
+ * completed release instead of a failure. Every redelivery still counts as an
+ * attempt, so give waiting jobs a retryUntil() deadline instead of a fixed $tries.
  */
 final readonly class ReleaseWhileWaiting
 {
@@ -31,7 +32,7 @@ final readonly class ReleaseWhileWaiting
 
         try {
             return $next($command);
-        } catch (SignalWaiting) {
+        } catch (SignalWaiting|RelayWaiting) {
             return null;
         } finally {
             if ($previous === null) {
