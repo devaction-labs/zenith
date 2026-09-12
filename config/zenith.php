@@ -25,4 +25,8 @@ return [
     'chains' => [
         'store' => null,
     ],
+    'recorded' => [
+        'store' => null,
+        'ttl' => 86400,
+    ],
 ];
