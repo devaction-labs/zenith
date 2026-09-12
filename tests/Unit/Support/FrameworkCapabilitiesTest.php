@@ -22,7 +22,6 @@ describe('FrameworkCapabilities', function (): void {
         $reflection = new ReflectionClass(Worker::class);
 
         if (! $reflection->hasProperty('pausable')) {
-            // Older Laravel releases have no separate worker pause-polling flag.
             $capabilities = FrameworkCapabilities::detect();
 
             expect($capabilities->queuePausing)->toBe(queuePausingIsSupported())

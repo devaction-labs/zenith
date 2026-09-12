@@ -6,6 +6,7 @@ namespace DevactionLabs\Zenith\Queues;
 
 use DevactionLabs\Zenith\Queues\Data\QueueClassRouteData;
 use DevactionLabs\Zenith\Queues\Data\QueueRoutingData;
+use DevactionLabs\Zenith\Support\FrameworkCapabilities;
 use Illuminate\Container\Container;
 use Illuminate\Queue\QueueRoutes;
 use Throwable;
@@ -40,24 +41,9 @@ final class QueueRouting
                 );
             }
 
-            $forwardedQueue = null;
-            $forwardedConnection = null;
-
-            foreach ($connections as $connection) {
-                if ($connection === '') {
-                    continue;
-                }
-
-                $forwarded = $routes->forwardedQueue($queue, $connection);
-
-                if ($forwarded === $queue) {
-                    continue;
-                }
-
-                $forwardedQueue = $forwarded;
-                $forwardedConnection = $connection;
-                break;
-            }
+            [$forwardedQueue, $forwardedConnection] = FrameworkCapabilities::queueForwardingSupported()
+                ? $this->forwardedDestination($routes, $queue, $connections)
+                : [null, null];
 
             return new QueueRoutingData(
                 available: true,
@@ -68,6 +54,27 @@ final class QueueRouting
         } catch (Throwable) {
             return QueueRoutingData::unavailable();
         }
+    }
+
+    /**
+     * @param  array<int, string>  $connections
+     * @return array{0: ?string, 1: ?string}
+     */
+    private function forwardedDestination(QueueRoutes $routes, string $queue, array $connections): array
+    {
+        foreach ($connections as $connection) {
+            if ($connection === '') {
+                continue;
+            }
+
+            $forwarded = $routes->forwardedQueue($queue, $connection);
+
+            if ($forwarded !== $queue) {
+                return [$forwarded, $connection];
+            }
+        }
+
+        return [null, null];
     }
 
     private function routes(): ?QueueRoutes

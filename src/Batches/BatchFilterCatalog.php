@@ -181,6 +181,6 @@ final readonly class BatchFilterCatalog
             }
         }
 
-        return $this->sortedValues($values);
+        return $this->sortedValues(array_values($values));
     }
 }

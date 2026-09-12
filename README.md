@@ -496,6 +496,15 @@ bun run typecheck
 bun run build
 ```
 
+On local machines, `composer test` uses Pest's
+[test impact analysis](https://pestphp.com/docs/tia): it re-runs only the tests
+affected by your changes and replays the rest from cache. The first run either
+downloads the dependency graph that the **TIA Baseline** workflow publishes from
+`main` (requires an authenticated `gh`) or records one locally, which needs
+Xdebug or PCOV. Run `composer test:full` to execute every test, or
+`vendor/bin/pest --tia --fresh` to record the graph again. CI always runs the
+complete suite.
+
 Regenerate typed Horizon route helpers after route changes:
 
 ```bash
@@ -503,6 +512,22 @@ bun run wayfinder:generate
 ```
 
 The package includes an Orchestra Workbench application with deterministic successful and failing queue jobs for exercising the interface.
+
+## Continuous integration and releases
+
+Every pull request runs the **Tests** workflow on GitHub-hosted runners: the
+Laravel and Horizon compatibility matrix, the retained-job Redis matrix, a
+dependency audit, and the PHP and frontend quality checks. A single aggregate
+status check named **CI** passes only when all of them pass, and `main` accepts
+only pull requests whose CI check is green.
+
+To publish a release, add one of the `release:patch`, `release:minor`, or
+`release:major` labels to the pull request before merging it. After the merge,
+the workflow runs CI again on `main`. If it passes, the workflow creates the next
+semantic version tag (for example `0.2.0`) and a GitHub release with generated
+notes, and Packagist picks up the tag through its GitHub integration.
+Maintainers can also release an explicit version from **Actions → Tests → Run
+workflow**.
 
 ## License
 

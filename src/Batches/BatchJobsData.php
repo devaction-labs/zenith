@@ -55,8 +55,6 @@ final readonly class BatchJobsData
             return $this->empty($total);
         }
 
-        // Prefer the live queue snapshot: it is authoritative for active batch
-        // pending IDs and avoids scanning Horizon's entire pending history.
         if ($this->pendingStates !== null) {
             try {
                 return $this->pendingFromLiveQueue($batch, $total, $attribution);
@@ -108,8 +106,6 @@ final readonly class BatchJobsData
         foreach ($entries as $entry) {
             $retained = $retainedById[$entry['id']] ?? null;
 
-            // A job may leave the queue and complete between the snapshot and
-            // getJobs; only pending-table statuses stay inspectable here.
             if (
                 $retained !== null
                 && in_array($retained->status, ['pending', 'reserved'], true)
@@ -279,7 +275,10 @@ final readonly class BatchJobsData
         ?DatabaseBatchMetadata $attribution,
     ): array {
         $metadata = $attribution
-            ?? DatabaseBatchMetadata::fromOptions($batch->id, $batch->options);
+            ?? DatabaseBatchMetadata::fromOptions(
+                $batch->id,
+                array_filter($batch->options, is_string(...), ARRAY_FILTER_USE_KEY),
+            );
 
         $connection = $metadata->connection;
 

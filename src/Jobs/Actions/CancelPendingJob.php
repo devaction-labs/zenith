@@ -102,7 +102,7 @@ final readonly class CancelPendingJob
             $scope->includesDelayedJobs() ? '1' : '0',
         );
 
-        return (int) $removed > 0;
+        return is_numeric($removed) && (int) $removed > 0;
     }
 
     /** @param array<string, mixed> $payload */
@@ -135,7 +135,9 @@ final readonly class CancelPendingJob
 
         $decoded = json_decode($payload, true);
 
-        return is_array($decoded) ? $decoded : [];
+        return is_array($decoded)
+            ? array_filter($decoded, is_string(...), ARRAY_FILTER_USE_KEY)
+            : [];
     }
 
     /** @param array<string, mixed> $payload */

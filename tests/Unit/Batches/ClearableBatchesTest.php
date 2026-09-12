@@ -38,7 +38,7 @@ it('keeps later active retry batches out of clearable ids despite stale earlier 
     dashboardReturnsFor($jobs, 'getPending', ['-1'], new Collection);
     $active = horizonJob(50, 'pending-50');
     $payload = json_decode($active->payload, true, flags: JSON_THROW_ON_ERROR);
-    $payload['data']['batchId'] = 'batch-1';
+    data_set($payload, 'data.batchId', 'batch-1');
     $active->payload = json_encode($payload, JSON_THROW_ON_ERROR);
     dashboardReturnsFor($jobs, 'getPending', ['49'], new Collection([$active]));
 
@@ -48,7 +48,6 @@ it('keeps later active retry batches out of clearable ids despite stale earlier 
 });
 
 it('classifies every retained batch across repository pages', function (): void {
-    // Former public default was 1000 retained batches; scans must continue onto the next page.
     config()->set('zenith.retained_batch_scan_limit', 1000);
 
     $calls = 0;
@@ -146,7 +145,7 @@ it('verifies clearable candidates against every pending job page', function (): 
     dashboardReturnsFor($jobs, 'getPending', ['-1'], new Collection);
     $active = horizonJob(50, 'pending-50');
     $payload = json_decode($active->payload, true, flags: JSON_THROW_ON_ERROR);
-    $payload['data']['batchId'] = 'batch-1';
+    data_set($payload, 'data.batchId', 'batch-1');
     $active->payload = json_encode($payload, JSON_THROW_ON_ERROR);
     dashboardReturnsFor($jobs, 'getPending', ['49'], new Collection([$active]));
 

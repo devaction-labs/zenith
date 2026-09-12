@@ -72,9 +72,10 @@
         "format:test": "vendor/bin/pint --test",
         "rector": "vendor/bin/rector process --dry-run --ansi",
         "rector:fix": "vendor/bin/rector process --ansi",
-        "test": "vendor/bin/pest --testsuite=Package",
-        "test:browser": "vendor/bin/pest --testsuite=Browser",
-        "test:compatibility": "vendor/bin/pest --testsuite=Compatibility",
+        "test": "@php -d memory_limit=1G vendor/bin/pest --testsuite=Package",
+        "test:full": "@php -d memory_limit=1G vendor/bin/pest --testsuite=Package --no-tia",
+        "test:browser": "@php -d memory_limit=1G vendor/bin/pest --testsuite=Browser",
+        "test:compatibility": "@php -d memory_limit=1G vendor/bin/pest --testsuite=Compatibility",
         "quality": [
             "@format:test",
             "@analyse",

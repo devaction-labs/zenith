@@ -9,6 +9,7 @@ use DevactionLabs\Zenith\Batches\BatchSort;
 use DevactionLabs\Zenith\Batches\BatchSortDirection;
 use DevactionLabs\Zenith\Batches\BatchStatus;
 use DevactionLabs\Zenith\Batches\Data\BatchIndexFiltersData;
+use DevactionLabs\Zenith\Batches\Data\BatchRowData;
 use DevactionLabs\Zenith\Batches\DatabaseBatchCapability;
 use DevactionLabs\Zenith\Batches\DatabaseBatchMetadataSynchronizer;
 use DevactionLabs\Zenith\Batches\DatabaseBatchQuery;
@@ -17,7 +18,10 @@ use DevactionLabs\Zenith\Queues\QueueBatchesData;
 use Illuminate\Bus\BatchFactory;
 use Illuminate\Bus\DatabaseBatchRepository;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
+use Illuminate\Database\Events\QueryExecuted;
+use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -50,6 +54,11 @@ beforeEach(function (): void {
     });
 
     $migration = require __DIR__.'/../../../database/migrations/2026_07_26_000000_create_zenith_batch_metadata_table.php';
+
+    if (! $migration instanceof Migration || ! method_exists($migration, 'up')) {
+        throw new LogicException('The Zenith batch metadata migration could not be loaded.');
+    }
+
     $migration->up();
 
     foreach (range(1, 101) as $index) {
@@ -88,7 +97,7 @@ it('filters all retained rows before pagination and includes first-observed infe
     );
     $page = $query->page($filters, null);
 
-    expect(array_column($page->toArray()['batches'], 'id'))->toBe(['batch-026'])
+    expect(array_column(Arr::array($page->toArray(), 'batches'), 'id'))->toBe(['batch-026'])
         ->and($page->batches[0]->queue)->toBe('priority')
         ->and($page->batches[0]->queueExplicit)->toBeTrue()
         ->and($page->batches[0]->connectionExplicit)->toBeTrue()
@@ -97,7 +106,7 @@ it('filters all retained rows before pagination and includes first-observed infe
     $queueOnlyFilters = databaseBatchQueryFilters(queue: 'priority');
     $queueOnly = $query->page($queueOnlyFilters, null);
 
-    expect(array_column($queueOnly->toArray()['batches'], 'id'))
+    expect(array_column(Arr::array($queueOnly->toArray(), 'batches'), 'id'))
         ->toContain('batch-026', 'batch-027')
         ->and($query->statusCounts($queueOnlyFilters)->all)->toBe(2);
 
@@ -114,10 +123,10 @@ it('filters all retained rows before pagination and includes first-observed infe
         ->and($inferredQueue->batches[0]->queueExplicit)->toBeFalse()
         ->and($inferredQueue->batches[0]->connectionExplicit)->toBeFalse()
         ->and($query->statusCounts($inferredConnectionFilters)->all)->toBe(100)
-        ->and(array_column($inferredConnection->toArray()['batches'], 'id'))
+        ->and(array_column(Arr::array($inferredConnection->toArray(), 'batches'), 'id'))
         ->toContain('batch-101')
-        ->and(array_column($recent->toArray()['batches'], 'id'))->toBe(['batch-101'])
-        ->and(array_column($idSearch->toArray()['batches'], 'id'))->toBe(['batch-026']);
+        ->and(array_column(Arr::array($recent->toArray(), 'batches'), 'id'))->toBe(['batch-101'])
+        ->and(array_column(Arr::array($idSearch->toArray(), 'batches'), 'id'))->toBe(['batch-026']);
 });
 
 it('keeps source-column queries exact while destination filters wait for the metadata migration', function (): void {
@@ -135,7 +144,7 @@ it('keeps source-column queries exact while destination filters wait for the met
 
     expect($query->supported())->toBeTrue()
         ->and($query->attributionSupported())->toBeFalse()
-        ->and(array_column($page->toArray()['batches'], 'id'))->toBe(['batch-026'])
+        ->and(array_column(Arr::array($page->toArray(), 'batches'), 'id'))->toBe(['batch-026'])
         ->and($query->statusCounts($filters)->all)->toBe(1)
         ->and(fn () => $query->page(
             databaseBatchQueryFilters(queue: 'priority'),
@@ -184,7 +193,7 @@ it('returns exact status counts and applies each status to the full retained set
         $page = $query->page(databaseBatchQueryFilters(status: $status), null);
 
         expect($page->batches)->not->toBe([])
-            ->and(array_unique(array_column($page->toArray()['batches'], 'status')))
+            ->and(collect(Arr::array($page->toArray(), 'batches'))->pluck('status')->unique()->all())
             ->toBe([$status->value]);
     }
 });
@@ -192,7 +201,7 @@ it('returns exact status counts and applies each status to the full retained set
 it('does not aggregate status counts while fetching a row page', function (): void {
     $queries = [];
 
-    DB::listen(static function ($query) use (&$queries): void {
+    DB::listen(static function (QueryExecuted $query) use (&$queries): void {
         $queries[] = mb_strtolower($query->sql);
     });
 
@@ -217,12 +226,12 @@ it('does not aggregate status counts while fetching a row page', function (): vo
 it('sorts all six columns before stable 50-row keyset pagination', function (): void {
     $query = databaseBatchQuery();
     $sorts = [
-        BatchSort::Name->value => static fn ($row): string => mb_strtolower($row->displayName),
-        BatchSort::TotalJobs->value => static fn ($row): int => $row->totalJobs,
-        BatchSort::PendingJobs->value => static fn ($row): int => $row->pendingJobs,
-        BatchSort::FailedJobs->value => static fn ($row): int => $row->failedJobs,
-        BatchSort::Progress->value => static fn ($row): int => $row->progress,
-        BatchSort::CreatedAt->value => static fn ($row): int => $row->createdAt,
+        BatchSort::Name->value => static fn (BatchRowData $row): string => mb_strtolower($row->displayName),
+        BatchSort::TotalJobs->value => static fn (BatchRowData $row): int => $row->totalJobs,
+        BatchSort::PendingJobs->value => static fn (BatchRowData $row): int => $row->pendingJobs,
+        BatchSort::FailedJobs->value => static fn (BatchRowData $row): int => $row->failedJobs,
+        BatchSort::Progress->value => static fn (BatchRowData $row): int => $row->progress,
+        BatchSort::CreatedAt->value => static fn (BatchRowData $row): int => $row->createdAt,
     ];
 
     foreach ($sorts as $sort => $value) {
@@ -307,7 +316,7 @@ it('invalidates a cursor when any active filter changes', function (): void {
         $firstPage->next,
     );
 
-    expect(array_column($recent->toArray()['batches'], 'id'))->toBe(['batch-101']);
+    expect(array_column(Arr::array($recent->toArray(), 'batches'), 'id'))->toBe(['batch-101']);
 });
 
 it('reconciles new rows and source-rooted queries immediately hide deleted batches', function (): void {
@@ -327,7 +336,7 @@ it('reconciles new rows and source-rooted queries immediately hide deleted batch
     $query = databaseBatchQuery();
 
     expect(array_column(
-        $query->page(databaseBatchQueryFilters(queue: 'late'), null)->toArray()['batches'],
+        Arr::array($query->page(databaseBatchQueryFilters(queue: 'late'), null)->toArray(), 'batches'),
         'id',
     ))->toBe(['batch-102']);
 
@@ -369,7 +378,7 @@ it('provides exact catalogs overviews and queue activity from the same source qu
         ->and($summary->total)->toBe(2)
         ->and($summary->complete)->toBeTrue()
         ->and($page->total)->toBe(2)
-        ->and(array_column($page->toArray()['rows'], 'id'))->toBe([
+        ->and(array_column(Arr::array($page->toArray(), 'rows'), 'id'))->toBe([
             'batch-026',
             'batch-027',
         ]);
@@ -515,12 +524,12 @@ it('previews queue summary active batches by progress descending rather than new
     expect($summary->total)->toBe(6)
         ->and($summary->active)->toBe(5)
         ->and($summary->complete)->toBeTrue()
-        ->and(array_column($summary->toArray()['previews'], 'id'))->toBe([
+        ->and(array_column(Arr::array($summary->toArray(), 'previews'), 'id'))->toBe([
             'queue-preview-old-progressing',
             'queue-preview-mid',
             'queue-preview-new-zero-c',
         ])
-        ->and(array_column($summary->toArray()['previews'], 'progress'))->toBe([40, 30, 0]);
+        ->and(array_column(Arr::array($summary->toArray(), 'previews'), 'progress'))->toBe([40, 30, 0]);
 });
 
 it('puts actively processing queue batches ahead of waiting and terminal batches', function (): void {
@@ -587,7 +596,7 @@ it('puts actively processing queue batches ahead of waiting and terminal batches
         $query,
     ))->page('activity-order', null);
 
-    expect(array_column($page->toArray()['rows'], 'id'))->toBe([
+    expect(array_column(Arr::array($page->toArray(), 'rows'), 'id'))->toBe([
         'queue-active-most',
         'queue-active-failed',
         'queue-active-least',

@@ -41,8 +41,13 @@ it('serializes overlapping retries for the same retained failed job', function (
         $bus,
         'dispatch',
         returnUsing: function (mixed $command) use ($holder, &$nestedResult): void {
-            expect($command)->toBeInstanceOf(HorizonRetryFailedJob::class)
-                ->and($command->id)->toBe('failed-1');
+            expect($command)->toBeInstanceOf(HorizonRetryFailedJob::class);
+
+            if (! $command instanceof HorizonRetryFailedJob) {
+                throw new LogicException('Expected a Horizon retry job dispatch.');
+            }
+
+            expect($command->id)->toBe('failed-1');
 
             if (! $holder->action instanceof RetryFailedJob) {
                 throw new LogicException('The retry action was not initialized.');
@@ -165,7 +170,8 @@ it('allows individual retries after prior retries failed and blocks active or su
 
     $retryChild = horizonJob(1, 'retry-child');
     $retryPayload = json_decode($retryChild->payload, true, flags: JSON_THROW_ON_ERROR);
-    $retryChild->payload = json_encode([...$retryPayload, 'retry_of' => 'original'], JSON_THROW_ON_ERROR);
+    data_set($retryPayload, 'retry_of', 'original');
+    $retryChild->payload = json_encode($retryPayload, JSON_THROW_ON_ERROR);
 
     $completed = horizonJob(2, 'completed-retry');
     $completed->retried_by = json_encode([

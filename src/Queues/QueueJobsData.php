@@ -361,6 +361,7 @@ final readonly class QueueJobsData
         ], JSON_THROW_ON_ERROR));
     }
 
+    /** @param  (Closure(): QueueActivityPageData)|null  $fallbackPageResolver */
     public function listRevision(
         string $queue,
         QueueActivityTab $tab,
@@ -440,7 +441,7 @@ final readonly class QueueJobsData
             $cache = $this->cache->store();
             $cacheKey = $this->cacheKey($queue);
             $payload = $this->rememberSummaryPayload($queue, $cacheSeconds);
-            $cached = is_array($payload) ? $this->summaryFromPayload($payload) : null;
+            $cached = is_array($payload) ? $this->summaryFromPayload($this->stringKeyed($payload)) : null;
 
             if ($cached !== null) {
                 return $cached;
@@ -448,7 +449,7 @@ final readonly class QueueJobsData
 
             $cache->forget($cacheKey);
             $payload = $this->rememberSummaryPayload($queue, $cacheSeconds);
-            $cached = is_array($payload) ? $this->summaryFromPayload($payload) : null;
+            $cached = is_array($payload) ? $this->summaryFromPayload($this->stringKeyed($payload)) : null;
 
             return $cached ?? $this->buildSummary($queue);
         } catch (Throwable $exception) {
@@ -588,7 +589,7 @@ final readonly class QueueJobsData
                     }
                 }
 
-                $summary = $this->summaryFromPayload($payload['summary']);
+                $summary = $this->summaryFromPayload($this->stringKeyed($payload['summary']));
 
                 return $summary === null
                     ? null
@@ -599,7 +600,7 @@ final readonly class QueueJobsData
                     ];
             }
 
-            $legacySummary = $this->summaryFromPayload($payload);
+            $legacySummary = $this->summaryFromPayload($this->stringKeyed($payload));
 
             return $legacySummary === null
                 ? null
@@ -699,6 +700,15 @@ final readonly class QueueJobsData
         } catch (Throwable) {
             return null;
         }
+    }
+
+    /**
+     * @param  array<mixed>  $values
+     * @return array<string, mixed>
+     */
+    private function stringKeyed(array $values): array
+    {
+        return array_filter($values, is_string(...), ARRAY_FILTER_USE_KEY);
     }
 
     private function buildSummary(
@@ -1007,6 +1017,6 @@ final readonly class QueueJobsData
             QueueActivityTab::Batches => 0,
         };
 
-        return max(0, (int) $minutes);
+        return is_numeric($minutes) ? max(0, (int) $minutes) : 0;
     }
 }

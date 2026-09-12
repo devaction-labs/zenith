@@ -66,7 +66,7 @@ final class QueueRetainedJobsData extends Data
             completedPastHourComplete: false,
             completedPastDay: null,
             completedPastDayComplete: false,
-            completedRetentionMinutes: max(0, (int) config('horizon.trim.completed', 60)),
+            completedRetentionMinutes: self::retentionMinutes('horizon.trim.completed', 60),
             failed: 0,
             failedComplete: false,
             failedPerMinute: 0,
@@ -75,11 +75,18 @@ final class QueueRetainedJobsData extends Data
             failedPastHourComplete: false,
             failedPastDay: 0,
             failedPastDayComplete: false,
-            failedRetentionMinutes: max(0, (int) config('horizon.trim.failed', 10080)),
+            failedRetentionMinutes: self::retentionMinutes('horizon.trim.failed', 10080),
             silenced: 0,
             silencedComplete: false,
             message: $message,
             warming: $warming,
         );
+    }
+
+    private static function retentionMinutes(string $key, int $default): int
+    {
+        $minutes = config($key, $default);
+
+        return is_numeric($minutes) ? max(0, (int) $minutes) : 0;
     }
 }

@@ -151,7 +151,6 @@ describe('Inertia isolation', function (): void {
             ->and($content)->toContain('/vendor/zenith/build/assets/')
             ->and($content)->toContain('data-horizon-favicon')
             ->and($content)->toContain('nonce="zenith-csp-nonce"')
-            // Theme bootstrap plus package Vite tags (module, styles, preloads).
             ->and(substr_count($content, 'nonce="zenith-csp-nonce"'))->toBeGreaterThanOrEqual(2)
             ->and(preg_match(
                 '/<script[^>]*type="module"[^>]*nonce="zenith-csp-nonce"|<script[^>]*nonce="zenith-csp-nonce"[^>]*type="module"/',
@@ -207,10 +206,16 @@ describe('Inertia isolation', function (): void {
     it('shares empty flash props for requests without a session', function (): void {
         $request = Request::create('/horizon');
         $shared = app(HandleInertiaRequests::class)->share($request);
+        $success = data_get($shared, 'flash.success');
+        $error = data_get($shared, 'flash.error');
+
+        if (! is_callable($success) || ! is_callable($error)) {
+            throw new LogicException('Expected the shared flash props to be lazily resolved.');
+        }
 
         expect($request->hasSession())->toBeFalse()
-            ->and(($shared['flash']['success'])())->toBeNull()
-            ->and(($shared['flash']['error'])())->toBeNull();
+            ->and($success())->toBeNull()
+            ->and($error())->toBeNull();
     });
 
     it('shares string flash props for requests with a session', function (): void {
@@ -221,8 +226,14 @@ describe('Inertia isolation', function (): void {
         $request->setLaravelSession($session);
 
         $shared = app(HandleInertiaRequests::class)->share($request);
+        $success = data_get($shared, 'flash.success');
+        $error = data_get($shared, 'flash.error');
 
-        expect(($shared['flash']['success'])())->toBe('Saved.')
-            ->and(($shared['flash']['error'])())->toBe('Try again.');
+        if (! is_callable($success) || ! is_callable($error)) {
+            throw new LogicException('Expected the shared flash props to be lazily resolved.');
+        }
+
+        expect($success())->toBe('Saved.')
+            ->and($error())->toBe('Try again.');
     });
 });

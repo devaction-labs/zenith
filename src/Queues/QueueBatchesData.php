@@ -76,7 +76,7 @@ final readonly class QueueBatchesData
             $message = null;
 
             while ($inspected < self::SCAN_LIMIT && count($rows) < self::RESULT_PAGE_SIZE) {
-                $source = $this->repository->get(self::SOURCE_PAGE_SIZE, $cursor);
+                $source = array_values($this->repository->get(self::SOURCE_PAGE_SIZE, $cursor));
 
                 if ($source === []) {
                     $complete = true;
@@ -156,7 +156,7 @@ final readonly class QueueBatchesData
             $cache = $this->cache->store();
             $cacheKey = $this->cacheKey($queue);
             $payload = $this->rememberSummaryPayload($queue, $cacheSeconds);
-            $cached = is_array($payload) ? $this->summaryFromPayload($payload) : null;
+            $cached = is_array($payload) ? $this->summaryFromPayload($this->stringKeyed($payload)) : null;
 
             if ($cached !== null) {
                 return $cached;
@@ -164,7 +164,7 @@ final readonly class QueueBatchesData
 
             $cache->forget($cacheKey);
             $payload = $this->rememberSummaryPayload($queue, $cacheSeconds);
-            $cached = is_array($payload) ? $this->summaryFromPayload($payload) : null;
+            $cached = is_array($payload) ? $this->summaryFromPayload($this->stringKeyed($payload)) : null;
 
             return $cached ?? $this->buildSummary($queue);
         } catch (Throwable $exception) {
@@ -193,6 +193,15 @@ final readonly class QueueBatchesData
         }
     }
 
+    /**
+     * @param  array<mixed>  $values
+     * @return array<string, mixed>
+     */
+    private function stringKeyed(array $values): array
+    {
+        return array_filter($values, is_string(...), ARRAY_FILTER_USE_KEY);
+    }
+
     private function buildSummary(string $queue): QueueRetainedBatchesData
     {
         try {
@@ -218,7 +227,7 @@ final readonly class QueueBatchesData
             $complete = false;
 
             while ($inspected < self::SCAN_LIMIT) {
-                $source = $this->repository->get(self::SOURCE_PAGE_SIZE, $cursor);
+                $source = array_values($this->repository->get(self::SOURCE_PAGE_SIZE, $cursor));
 
                 if ($source === []) {
                     $complete = true;

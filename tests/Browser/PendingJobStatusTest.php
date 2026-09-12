@@ -59,6 +59,11 @@ it('renders a retry as ready instead of released through the retained query path
     $retry = pendingStatusBrowserJob(0, 'retry-job', $now - 120, $now - 60);
     $retry->delay = 0;
     $retryPayload = json_decode($retry->payload, true, flags: JSON_THROW_ON_ERROR);
+
+    if (! is_array($retryPayload)) {
+        throw new LogicException('Expected the retry job payload to decode to an array.');
+    }
+
     $retryPayload['retry_of'] = 'failed-parent';
     $retry->payload = json_encode($retryPayload, JSON_THROW_ON_ERROR);
 
@@ -107,9 +112,13 @@ function bindPendingStatusBrowserFixtures(array $jobsById): void
         'getJobs',
         static function (array $ids) use ($jobsById): Collection {
             return new Collection(array_values(array_filter(array_map(
-                static fn (string $id): ?HorizonJob => isset($jobsById[$id])
-                    ? clone $jobsById[$id]
-                    : null,
+                static function (mixed $id) use ($jobsById): ?HorizonJob {
+                    if (! is_string($id)) {
+                        throw new LogicException('Expected Horizon job ids to be strings.');
+                    }
+
+                    return isset($jobsById[$id]) ? clone $jobsById[$id] : null;
+                },
                 $ids,
             ))));
         },

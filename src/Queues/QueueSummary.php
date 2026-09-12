@@ -93,7 +93,7 @@ final readonly class QueueSummary
             failedJobsPastHourComplete: false,
             failedJobsPastDay: null,
             failedJobsPastDayComplete: false,
-            failedRetentionMinutes: max(0, (int) config('horizon.trim.failed', 10080)),
+            failedRetentionMinutes: self::retentionMinutes('horizon.trim.failed', 10080),
             completedJobs: null,
             completedAvailable: false,
             completedComplete: false,
@@ -103,7 +103,7 @@ final readonly class QueueSummary
             completedJobsPastHourComplete: false,
             completedJobsPastDay: null,
             completedJobsPastDayComplete: false,
-            completedRetentionMinutes: max(0, (int) config('horizon.trim.completed', 60)),
+            completedRetentionMinutes: self::retentionMinutes('horizon.trim.completed', 60),
             silencedJobs: null,
             silencedComplete: false,
             batches: null,
@@ -117,6 +117,13 @@ final readonly class QueueSummary
             averageRuntime: null,
             message: $message,
         );
+    }
+
+    private static function retentionMinutes(string $key, int $default): int
+    {
+        $minutes = config($key, $default);
+
+        return is_numeric($minutes) ? max(0, (int) $minutes) : 0;
     }
 
     /** @return array{0: int|float|null, 1: ?int, 2: ?float} */

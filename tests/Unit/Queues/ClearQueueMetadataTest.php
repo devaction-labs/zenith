@@ -14,14 +14,19 @@ use function DevactionLabs\Zenith\Tests\Support\dashboardReturns;
 use function DevactionLabs\Zenith\Tests\Support\dashboardReturnsFor;
 use function DevactionLabs\Zenith\Tests\Support\mockDashboardContract;
 
-$createRedisClient = static fn (string $prefix = ''): Client => new Client([
-    'scheme' => 'tcp',
-    'host' => (string) config('database.redis.default.host', '127.0.0.1'),
-    'port' => (int) config('database.redis.default.port', 6379),
-    'timeout' => 1,
-], [
-    'prefix' => $prefix,
-]);
+$createRedisClient = static function (string $prefix = ''): Client {
+    $host = config('database.redis.default.host', '127.0.0.1');
+    $port = config('database.redis.default.port', 6379);
+
+    return new Client([
+        'scheme' => 'tcp',
+        'host' => is_string($host) ? $host : '127.0.0.1',
+        'port' => is_numeric($port) ? (int) $port : 6379,
+        'timeout' => 1,
+    ], [
+        'prefix' => $prefix,
+    ]);
+};
 
 $redisIsUnavailable = function () use ($createRedisClient): bool {
     try {
@@ -226,10 +231,7 @@ final class ClearQueueMetadataPhpRedisStub extends PhpRedisConnection
     /**
      * @param  array<int, EvalResult>  $responses
      */
-    public function __construct(private array $responses)
-    {
-        // Client is unused: command() is fully overridden for packing assertions.
-    }
+    public function __construct(private array $responses) {}
 
     /**
      * @param  array<int, mixed>  $parameters

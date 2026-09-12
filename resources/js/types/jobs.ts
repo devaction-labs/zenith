@@ -83,7 +83,7 @@ export type FailedJobDetail = Omit<JobDetail, "completedAt"> & {
   retried: boolean;
   retriedBy: FailedJobRetry[];
   retryEligible: boolean;
-  context: Record<string, unknown>;
+  context: Record<string, unknown> | unknown[];
   exception: string;
 };
 

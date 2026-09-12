@@ -90,7 +90,10 @@ export function QueuesActions({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <Dialog open={dialog === "pause-all"} onOpenChange={(open) => setDialog(open ? "pause-all" : null)}>
+      <Dialog
+        open={dialog === "pause-all"}
+        onOpenChange={(open) => setDialog(open ? "pause-all" : null)}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Pause all queues?</DialogTitle>
@@ -150,12 +153,7 @@ export function QueuesActions({
             <DialogClose render={<Button type="button" variant="ghost" disabled={working} />}>
               Cancel
             </DialogClose>
-            <Button
-              type="button"
-              variant="destructive"
-              disabled={working}
-              onClick={clear}
-            >
+            <Button type="button" variant="destructive" disabled={working} onClick={clear}>
               {working ? <LoaderCircleIcon className="animate-spin" /> : <Trash2Icon />}
               {working ? "Clearing…" : "Clear all queues"}
             </Button>

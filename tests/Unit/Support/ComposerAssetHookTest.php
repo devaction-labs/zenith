@@ -27,13 +27,13 @@ it('appends the asset refresh hook after existing post-autoload-dump entries', f
 
         $composer = json_decode($filesystem->get($composerJson), true, flags: JSON_THROW_ON_ERROR);
 
-        expect($composer['scripts']['post-autoload-dump'])->toBe([
+        expect(data_get($composer, 'scripts.post-autoload-dump'))->toBe([
             '@php artisan package:discover --ansi',
             ComposerAssetHook::SCRIPT,
         ])
-            ->and($composer['scripts']['test'])->toBe('pest')
-            ->and($composer['name'])->toBe('acme/app')
-            ->and($composer['require'])->toBe(['php' => '^8.3']);
+            ->and(data_get($composer, 'scripts.test'))->toBe('pest')
+            ->and(data_get($composer, 'name'))->toBe('acme/app')
+            ->and(data_get($composer, 'require'))->toBe(['php' => '^8.3']);
     } finally {
         $filesystem->deleteDirectory($directory);
     }
@@ -51,7 +51,7 @@ it('creates post-autoload-dump when scripts are missing', function (): void {
 
         $composer = json_decode($filesystem->get($composerJson), true, flags: JSON_THROW_ON_ERROR);
 
-        expect($composer['scripts']['post-autoload-dump'])->toBe([
+        expect(data_get($composer, 'scripts.post-autoload-dump'))->toBe([
             ComposerAssetHook::SCRIPT,
         ]);
     } finally {
@@ -73,8 +73,8 @@ it('creates post-autoload-dump when the scripts map exists without that event', 
 
         $composer = json_decode($filesystem->get($composerJson), true, flags: JSON_THROW_ON_ERROR);
 
-        expect($composer['scripts']['post-autoload-dump'])->toBe([ComposerAssetHook::SCRIPT])
-            ->and($composer['scripts']['test'])->toBe('pest');
+        expect(data_get($composer, 'scripts.post-autoload-dump'))->toBe([ComposerAssetHook::SCRIPT])
+            ->and(data_get($composer, 'scripts.test'))->toBe('pest');
     } finally {
         $filesystem->deleteDirectory($directory);
     }
@@ -94,7 +94,7 @@ it('promotes a string post-autoload-dump entry into a list before appending', fu
 
         $composer = json_decode($filesystem->get($composerJson), true, flags: JSON_THROW_ON_ERROR);
 
-        expect($composer['scripts']['post-autoload-dump'])->toBe([
+        expect(data_get($composer, 'scripts.post-autoload-dump'))->toBe([
             '@php artisan package:discover --ansi',
             ComposerAssetHook::SCRIPT,
         ]);

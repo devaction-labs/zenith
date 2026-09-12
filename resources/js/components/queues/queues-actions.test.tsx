@@ -18,12 +18,7 @@ describe("QueuesActions", () => {
 
   it("pauses every queue through the global pause endpoint", async () => {
     render(
-      <QueuesActions
-        horizonBaseUrl="/horizon"
-        queueCount={2}
-        pendingJobs={0}
-        queuePausingAll
-      />,
+      <QueuesActions horizonBaseUrl="/horizon" queueCount={2} pendingJobs={0} queuePausingAll />,
     );
 
     fireEvent.pointerDown(screen.getByRole("button", { name: "Queue list actions" }), {

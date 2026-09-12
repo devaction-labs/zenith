@@ -42,9 +42,7 @@ function storedScheme(): ColorScheme {
 function storeScheme(scheme: ColorScheme) {
   try {
     window.localStorage.setItem(storageKey, scheme);
-  } catch {
-    // The current session can still use the selected scheme when storage is unavailable.
-  }
+  } catch {}
 }
 
 function systemScheme(): ResolvedColorScheme {

@@ -326,6 +326,11 @@ describe('failed job pages', function (): void {
     it('makes a failed retry independently retryable after its parent was cleared', function (): void {
         $job = horizonJob(0, 'retry-child');
         $payload = json_decode($job->payload, true, flags: JSON_THROW_ON_ERROR);
+
+        if (! is_array($payload)) {
+            throw new LogicException('Expected the retry job payload to decode to an array.');
+        }
+
         $job->payload = json_encode([...$payload, 'retry_of' => 'cleared-parent'], JSON_THROW_ON_ERROR);
 
         $repository = mockDashboardContract(JobRepository::class);

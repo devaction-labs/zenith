@@ -15,7 +15,13 @@ describe('RedisQueueName', function (): void {
     ): void {
         expect(is_callable([RedisQueueName::class, 'normalize']))->toBeTrue();
 
-        expect(RedisQueueName::normalize($connection(), $queue))->toBe($expected);
+        $redisConnection = $connection();
+
+        if (! $redisConnection instanceof Connection) {
+            throw new LogicException('The dataset must provide a Redis connection.');
+        }
+
+        expect(RedisQueueName::normalize($redisConnection, $queue))->toBe($expected);
     })->with([
         'standalone connection' => [
             fn (): Connection => new RedisQueueNameConnectionStub(false),

@@ -319,7 +319,7 @@ function batchDataJob(int $index, string $id, string $batchId, string $status): 
 {
     $job = horizonJob($index, $id);
     $payload = json_decode($job->payload, true, flags: JSON_THROW_ON_ERROR);
-    $payload['data']['batchId'] = $batchId;
+    data_set($payload, 'data.batchId', $batchId);
     $job->payload = json_encode($payload, JSON_THROW_ON_ERROR);
     $job->status = $status;
 

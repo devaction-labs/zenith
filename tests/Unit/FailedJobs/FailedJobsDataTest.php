@@ -124,7 +124,15 @@ describe('FailedJobsData', function (): void {
                 $callback($connection);
 
                 return array_map(
-                    static fn (string $id): array => $responses[$id],
+                    static function (string $id) use ($responses): array {
+                        $response = $responses[$id];
+
+                        if (! is_array($response)) {
+                            throw new LogicException("The Redis hash response for [{$id}] must be an array.");
+                        }
+
+                        return $response;
+                    },
                     array_slice($requestedIds, $startingAt),
                 );
             },
@@ -209,7 +217,8 @@ describe('FailedJobsData', function (): void {
         ], JSON_THROW_ON_ERROR);
         $retryChild = horizonJob(3, 'retry-child');
         $payload = json_decode($retryChild->payload, true, flags: JSON_THROW_ON_ERROR);
-        $retryChild->payload = json_encode([...$payload, 'retry_of' => 'fresh'], JSON_THROW_ON_ERROR);
+        data_set($payload, 'retry_of', 'fresh');
+        $retryChild->payload = json_encode($payload, JSON_THROW_ON_ERROR);
 
         $repository = mockDashboardContract(JobRepository::class);
         $data = new FailedJobsData(
@@ -367,6 +376,10 @@ describe('FailedJobsData', function (): void {
                 $jobs = [];
 
                 foreach ($requestedIds as $offset => $id) {
+                    if (! is_string($id)) {
+                        throw new LogicException('Failed job ids must be strings.');
+                    }
+
                     if ($id === 'failed-20') {
                         continue;
                     }

@@ -742,8 +742,6 @@ final readonly class PendingJobStateIndex implements PendingJobEntryScanner
             $start += self::SCAN_CHUNK_SIZE;
         }
 
-        // Ready list is scanned twice (ready + released filters); only the first
-        // pass validates the expected member count against the snapshot guard.
         if ($structure['state'] === 'released' && $structure['kind'] === 'list') {
             return;
         }
@@ -1319,7 +1317,6 @@ final readonly class PendingJobStateIndex implements PendingJobEntryScanner
             return [];
         }
 
-        // Predis/PhpRedis withscores maps: member => score
         if (! array_is_list($payloads)) {
             foreach ($payloads as $payload => $score) {
                 if (is_string($payload) && is_numeric($score)) {
@@ -1330,7 +1327,6 @@ final readonly class PendingJobStateIndex implements PendingJobEntryScanner
             return $normalized;
         }
 
-        // Lua withscores flat list: member, score, member, score, ...
         $count = count($payloads);
 
         for ($offset = 0; $offset + 1 < $count; $offset += 2) {
@@ -1371,7 +1367,6 @@ final readonly class PendingJobStateIndex implements PendingJobEntryScanner
         try {
             $connection->del(...$keys);
         } catch (Throwable) {
-            // Snapshot keys retain a bounded TTL when eager cleanup is unavailable.
         }
     }
 
@@ -1384,7 +1379,9 @@ final readonly class PendingJobStateIndex implements PendingJobEntryScanner
             return [];
         }
 
-        return is_array($decoded) ? $decoded : [];
+        return is_array($decoded)
+            ? array_filter($decoded, is_string(...), ARRAY_FILTER_USE_KEY)
+            : [];
     }
 
     /** @param array<string, mixed> $payload */
@@ -1394,7 +1391,9 @@ final readonly class PendingJobStateIndex implements PendingJobEntryScanner
             return false;
         }
 
-        if (is_numeric($payload['zenith']['madeAvailableAt'] ?? null)) {
+        $zenith = $payload['zenith'] ?? null;
+
+        if (is_array($zenith) && is_numeric($zenith['madeAvailableAt'] ?? null)) {
             return false;
         }
 

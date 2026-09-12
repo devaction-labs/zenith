@@ -56,12 +56,11 @@ final readonly class NavigationCounts
         return $overview['complete'] ? $overview['total'] : null;
     }
 
+    /** @param Closure(): ?int $count */
     private function safely(Closure $count): ?int
     {
         try {
-            $resolved = $count();
-
-            return $resolved === null ? null : (int) $resolved;
+            return $count();
         } catch (Throwable $exception) {
             report($exception);
 

@@ -7,6 +7,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Support\Facades\Schema;
+use Inertia\Testing\AssertableInertia;
 use Laravel\Horizon\Horizon;
 
 use function Pest\Laravel\get;
@@ -40,5 +41,5 @@ it('records successful mutations in the audit table', function (): void {
 it('renders the audit page', function (): void {
     get('/horizon/audit')
         ->assertOk()
-        ->assertInertia(fn ($page) => $page->component('Audit/Index'));
+        ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page->component('Audit/Index'));
 });

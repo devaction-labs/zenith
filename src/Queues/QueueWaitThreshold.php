@@ -23,9 +23,11 @@ final readonly class QueueWaitThreshold
         ?int $oldestPendingAt,
     ): QueueWaitThresholdTargetData {
         $configuredThreshold = $this->config->get("horizon.waits.{$connection}:{$queue}");
-        $thresholdSeconds = $configuredThreshold === null
-            ? self::DEFAULT_THRESHOLD_SECONDS
-            : (int) $configuredThreshold;
+        $thresholdSeconds = match (true) {
+            $configuredThreshold === null => self::DEFAULT_THRESHOLD_SECONDS,
+            is_numeric($configuredThreshold) => (int) $configuredThreshold,
+            default => 0,
+        };
         $monitored = $configuredThreshold !== 0;
 
         $status = match (true) {

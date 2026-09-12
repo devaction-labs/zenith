@@ -59,7 +59,12 @@ final readonly class HorizonRuntime
                 return false;
             }
 
-            $pending = $this->pendingState->forQueues($this->waitTimes->calculate());
+            $waits = array_filter(
+                $this->waitTimes->calculate(),
+                static fn (mixed $wait, int|string $queue): bool => is_string($queue) && (is_int($wait) || is_float($wait)),
+                ARRAY_FILTER_USE_BOTH,
+            );
+            $pending = $this->pendingState->forQueues($waits);
 
             return ($pending->reserved ?? 0) > 0 || ($pending->readyNow ?? 0) > 0;
         } catch (Throwable $exception) {

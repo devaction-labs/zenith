@@ -1,1 +1,0 @@
-import{g as e}from"./alert-DxAl48jY.js";var t={pauseQueues:!0,clearQueues:!0,retryJobs:!0,cancelJobs:!0,manageInstances:!0,manageMonitoring:!0,manageBatches:!0,manageSchedule:!0,manageWorkflows:!0};function n(){let n=e().props.horizon.abilities;return{...t,...n}}export{n as t};

@@ -229,6 +229,10 @@ it('shows the newest retained completed jobs first by default', function (): voi
         })
     JS);
 
+    if (! is_array($result) || ! is_array($result['ids'] ?? null)) {
+        throw new LogicException('Expected the completed jobs probe to report the rendered ids.');
+    }
+
     expect($result['ids'][0] ?? null)->toBe('completed-109')
         ->and($result['ids'][49] ?? null)->toBe('completed-060')
         ->and($result['completedSort'])->toBe('descending');
@@ -833,6 +837,10 @@ it('sorts the loaded completed rows locally and re-sorts infinite-scroll additio
         })
     JS);
 
+    if (! is_array($localResult)) {
+        throw new LogicException('Expected the local sort probe to resolve an object.');
+    }
+
     expect($localResult['ids'])->toBe($beforeIds)
         ->and($localResult['requests'])->toBe([])
         ->and($localResult['hasServerSortProp'])->toBeFalse()
@@ -887,6 +895,10 @@ it('sorts the loaded completed rows locally and re-sorts infinite-scroll additio
             inspect()
         })
     JS);
+
+    if (! is_array($sortedResult)) {
+        throw new LogicException('Expected the next locally sorted page probe to resolve an object.');
+    }
 
     expect($sortedResult['rowCount'])->toBe(60)
         ->and($sortedResult['first'])->toBe($matchingId);
@@ -943,6 +955,10 @@ it('sorts only the loaded failed rows without resetting the cursor or requesting
         })
     JS);
 
+    if (! is_array($result)) {
+        throw new LogicException('Expected the failed jobs sort probe to resolve an object.');
+    }
+
     expect($result['ids'])->toBe($beforeIds)
         ->and($result['requests'])->toBe(0);
 
@@ -989,6 +1005,10 @@ it('shows newest queue activity first and sorts loaded rows without a request', 
         }
     JS);
 
+    if (! is_array($beforeIds) || ! is_array($beforeIds['ids'] ?? null)) {
+        throw new LogicException('Expected the queue activity probe to report the rendered ids.');
+    }
+
     expect($beforeIds['ids'][0] ?? null)->toBe('completed-109')
         ->and($beforeIds['ids'][49] ?? null)->toBe('completed-060')
         ->and($beforeIds['completedSort'])->toBe('descending');
@@ -1011,6 +1031,10 @@ it('shows newest queue activity first and sorts loaded rows without a request', 
             requests: window.__zenithSortRequests,
         })
     JS);
+
+    if (! is_array($result)) {
+        throw new LogicException('Expected the queue activity sort probe to resolve an object.');
+    }
 
     expect($result['ids'])->toBe($beforeIds['ids'])
         ->and($result['requests'])->toBe([]);

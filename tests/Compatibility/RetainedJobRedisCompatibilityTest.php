@@ -9,6 +9,7 @@ use DevactionLabs\Zenith\Jobs\RetainedJobCursor;
 use DevactionLabs\Zenith\Jobs\RetainedJobFilterCatalog;
 use DevactionLabs\Zenith\Jobs\RetainedJobIndex;
 use DevactionLabs\Zenith\Jobs\RetainedJobQuery;
+use DevactionLabs\Zenith\Jobs\RetainedJobQueryPage;
 use DevactionLabs\Zenith\Jobs\RetainedJobType;
 use DevactionLabs\Zenith\Support\RedisScript;
 use Illuminate\Contracts\Queue\Factory as QueueFactory;
@@ -69,7 +70,6 @@ final class PendingSnapshotObservingConnection extends Connection
         );
 
         if (str_contains($script, "local timestamp = redis.call('time')")) {
-            // Per-state snapshots use 5 keys; consolidated pendingQueueEntries uses 8.
             if (count($keys) === 5) {
                 $snapshotKeys = [$keys[0], $keys[3], $keys[4]];
                 $namespace = ':zenith:pending-snapshot:';
@@ -164,7 +164,7 @@ it('queries retained jobs through the configured real Redis client', function ()
         expect($horizonRedis->zcard(
             RetainedJobType::Completed->sourceKey(),
         ))->toBe(120)
-            ->and($hydratedSeed?->name)->toBe(
+            ->and(data_get($hydratedSeed, 'name'))->toBe(
                 'App\\Jobs\\GenerateCompatibilityReport',
             );
 
@@ -221,14 +221,23 @@ it('queries retained jobs through the configured real Redis client', function ()
         );
         $horizonRedis->del($matchingJobFacet);
 
+        $retainedJobIds = static function (RetainedJobQueryPage $page): array {
+            return $page->jobs->pluck('id')->map(static function (mixed $id): string {
+                if (! is_string($id)) {
+                    throw new LogicException('Expected retained job ids to be strings.');
+                }
+
+                return $id;
+            })->all();
+        };
+
         $firstPage = $query->page(
             RetainedJobType::Completed,
             $filters,
             -1,
         );
-        $firstPageIds = $firstPage->jobs->pluck('id')->all();
+        $firstPageIds = $retainedJobIds($firstPage);
 
-        // A missing facet forces a generation publish; resolve the live key after page.
         $rebuiltJobFacet = $index->facetKey(
             RetainedJobType::Completed,
             'job',
@@ -284,7 +293,7 @@ it('queries retained jobs through the configured real Redis client', function ()
             $filters,
             $cursor,
         );
-        $secondPageIds = $secondPage->jobs->pluck('id')->all();
+        $secondPageIds = $retainedJobIds($secondPage);
 
         expect($secondPage->total)->toBe(74)
             ->and($secondPage->current)->toBe($cursor)
@@ -702,6 +711,11 @@ it('queries only the relevant delayed score window through the configured real R
         $connection = $queue->getConnection();
         $queueKey = $queue->getQueue('default');
         $serverTime = $horizonRedis->time();
+
+        if (! is_array($serverTime)) {
+            throw new LogicException('Expected Redis to report its server time.');
+        }
+
         $asOf = $serverTime[0];
         $futurePayload = json_encode(['uuid' => 'future'], JSON_THROW_ON_ERROR);
         $duePayload = json_encode(['uuid' => 'due'], JSON_THROW_ON_ERROR);
@@ -737,6 +751,11 @@ it('captures a coherent pendingQueueEntries inventory with state tags, scores, a
         $connection = $queue->getConnection();
         $queueKey = $queue->getQueue('default');
         $serverTime = $horizonRedis->time();
+
+        if (! is_array($serverTime)) {
+            throw new LogicException('Expected Redis to report its server time.');
+        }
+
         $asOf = (int) $serverTime[0];
 
         $readyPayload = json_encode([
@@ -994,9 +1013,6 @@ function seedRetainedJobCompatibilityJobs(Connection $redis): array
         $queue = $matches ? 'retained-reports' : 'maintenance';
         $connection = $matches ? 'redis-analytics' : 'redis';
 
-        // Horizon completed_jobs scores are -timestamp: lower scores are newer and
-        // appear first via zrange. Keep lower positions newest so matchingIds order
-        // matches first-page results after filters.
         $redis->zadd(
             RetainedJobType::Completed->sourceKey(),
             -($retainedAt + ((121 - $position) / 1000)),

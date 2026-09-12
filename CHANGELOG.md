@@ -12,9 +12,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Raised the supported runtime floors to PHP 8.5 and Laravel 13.23, required by Pest 5 and `pestphp/pest-plugin-laravel` 5. Laravel 12 and PHP 8.3/8.4 are no longer part of the supported contract.
 - Upgraded the test suite to Pest 5 and PHPUnit 13, and added `pestphp/pest-plugin-phpstan` so PHPStan understands Pest's test API.
 - Installed Rector 2 with the community Laravel plugin (`driftingly/rector-laravel`) for composer-based Laravel upgrades.
+- Upgraded Vite+ to 0.3.1 (Vitest 4.1.11) and regenerated the frontend lockfile within the declared ranges, so `bun audit` reports no vulnerabilities.
+- Split the dependency audit into its own CI job, added the aggregate `CI` status check used by branch protection, and limited push builds to `main`.
 
 ### Added
 
+- Releases are published from `release:patch`, `release:minor`, and `release:major` pull request labels once CI passes on `main`; manual releases remain available from the workflow dispatch.
+- Local Pest runs use test impact analysis and can fetch the dependency graph published by the new TIA Baseline workflow; `composer test:full` runs the whole suite, and CI always does.
 - **Experimental:** a Schedule page that lists Laravel scheduler events (expression, next run, overlap flags) and can run an event on demand. Runtime cron editing is not available because Laravel schedules live in code.
 - **Experimental:** job composition on job detail: unique and encrypted contracts plus downstream Bus chain steps from the retained payload.
 - **Experimental:** workflow DAGs (`WorkflowDefinition`) with cascade outputs, unique names, cancel/retry, and a Workflows page. Steps run as Horizon jobs. Known gaps are tracked in the P0 milestone.
@@ -27,6 +31,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Surfaced Laravel `Queue::route()` class routes and `Queue::forward()` destinations on queue detail.
 - Added retained-source search on monitored-tag job lists (completed and failed).
 - Copied Horizon source sets into hash-tagged keys on Redis Cluster so retained-job indexes no longer issue CROSSSLOT `ZDIFFSTORE` commands.
+
+### Fixed
+
+- Kept `Queue::route()` class routes visible on Laravel releases that predate `Queue::forward()`; forwarding destinations appear only where the framework supports them.
+- Raised the memory limit of the Composer test scripts so the package suite no longer exhausts PHP's default 128M CLI limit.
 
 ## [0.1.5] - 2026-07-30
 

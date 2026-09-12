@@ -15,6 +15,7 @@ final readonly class EnsureQueuePausingIsSupported
         private FrameworkCapabilities $capabilities,
     ) {}
 
+    /** @param Closure(Request): Response $next */
     public function handle(Request $request, Closure $next): Response
     {
         abort_unless($this->capabilities->queuePausing, 404);

@@ -79,9 +79,7 @@ function storeNavigationCounts(baseUrl: string, counts: NavigationCounts) {
         expiresAt: Date.now() + NAVIGATION_COUNTS_CACHE_TTL,
       }),
     );
-  } catch {
-    // The current session can still use the resolved counts when storage is unavailable.
-  }
+  } catch {}
 }
 
 function navigationCountsStorageKey(baseUrl: string) {
@@ -155,9 +153,7 @@ export function HorizonLayout({ children }: { children: ReactNode }) {
 
     try {
       localStorage.setItem(AUTO_LOAD_STORAGE_KEY, enabled ? "1" : "0");
-    } catch {
-      // The current session can still use the preference when storage is unavailable.
-    }
+    } catch {}
   }, []);
 
   useEffect(() => {

@@ -22,9 +22,9 @@ final readonly class ClearQueueMetadata implements ClearsQueueMetadata, ForgetsP
     public function purgePending(string $connection, string $queue): int
     {
         $count = 0;
-        $cursor = 0;
+        $cursor = '0';
         $redis = $this->horizonConnection();
-        $prefix = (string) config('horizon.prefix', 'horizon:');
+        $prefix = $this->prefix();
 
         do {
             $result = RedisScript::evaluate(
@@ -36,16 +36,16 @@ final readonly class ClearQueueMetadata implements ClearsQueueMetadata, ForgetsP
                 $prefix,
                 $queue,
                 $connection,
-                (string) $cursor,
+                $cursor,
             );
 
             if (! is_array($result) || count($result) < 2) {
                 break;
             }
 
-            $count += (int) $result[0];
-            $cursor = $result[1];
-        } while ((string) $cursor !== '0');
+            $count += $this->integerValue($result[0]);
+            $cursor = is_scalar($result[1]) ? (string) $result[1] : '0';
+        } while ($cursor !== '0');
 
         return $count;
     }
@@ -76,17 +76,29 @@ final readonly class ClearQueueMetadata implements ClearsQueueMetadata, ForgetsP
             2,
             'pending_jobs',
             'recent_jobs',
-            (string) config('horizon.prefix', 'horizon:'),
+            $this->prefix(),
             $id,
             ...$tags,
         );
 
-        return (int) $removed === 1;
+        return $this->integerValue($removed) === 1;
     }
 
     private function horizonConnection(): Connection
     {
         return $this->redis->connection('horizon');
+    }
+
+    private function prefix(): string
+    {
+        $prefix = config('horizon.prefix', 'horizon:');
+
+        return is_string($prefix) ? $prefix : '';
+    }
+
+    private function integerValue(mixed $value): int
+    {
+        return is_numeric($value) ? (int) $value : 0;
     }
 
     private function purgeScript(): string

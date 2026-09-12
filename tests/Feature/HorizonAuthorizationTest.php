@@ -29,7 +29,10 @@ describe('Horizon authorization', function (): void {
                     str_starts_with((string) $route->getName(), 'zenith.')
                     || in_array($route->getName(), $preservedHorizonApiRoutes, true)
                 )
-                    && array_intersect($route->methods(), ['POST', 'PUT', 'PATCH', 'DELETE']) !== [],
+                    && array_any(
+                        $route->methods(),
+                        static fn (mixed $method): bool => in_array($method, ['POST', 'PUT', 'PATCH', 'DELETE'], true),
+                    ),
             );
 
         expect($mutationRoutes)->not->toBeEmpty();

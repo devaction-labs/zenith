@@ -167,8 +167,6 @@ it('does not call queue-name-only Horizon purge after clearing a connection-scop
         ->assertRedirect()
         ->assertSessionHas('toast.success', 'Cleared 3 jobs from reports.');
 
-    // Horizon RedisJobRepository::purge($queue) matches queue name only and would
-    // also drop pending/reserved metadata for sqs:reports.
     expect($jobs->purgedQueues)->toBe([])
         ->and($metadata->targets)->toBe([['redis', 'reports']]);
 });

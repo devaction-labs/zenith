@@ -34,17 +34,17 @@ final readonly class DatabaseBatchQueryRow
         $values = (array) $row;
 
         return new self(
-            id: (string) ($values['id'] ?? ''),
-            name: (string) ($values['name'] ?? ''),
-            totalJobs: (int) ($values['total_jobs'] ?? 0),
-            pendingJobs: (int) ($values['pending_jobs'] ?? 0),
-            failedJobAttempts: (int) ($values['failed_jobs'] ?? 0),
-            pendingCount: (int) ($values['pending_count'] ?? 0),
-            failedCount: (int) ($values['failed_count'] ?? 0),
-            processedCount: (int) ($values['processed_count'] ?? 0),
-            progress: (int) ($values['progress'] ?? 0),
-            status: (string) ($values['status'] ?? BatchStatus::Pending->value),
-            createdAt: (int) ($values['created_at'] ?? 0),
+            id: self::stringValue($values['id'] ?? ''),
+            name: self::stringValue($values['name'] ?? ''),
+            totalJobs: self::integerValue($values['total_jobs'] ?? 0),
+            pendingJobs: self::integerValue($values['pending_jobs'] ?? 0),
+            failedJobAttempts: self::integerValue($values['failed_jobs'] ?? 0),
+            pendingCount: self::integerValue($values['pending_count'] ?? 0),
+            failedCount: self::integerValue($values['failed_count'] ?? 0),
+            processedCount: self::integerValue($values['processed_count'] ?? 0),
+            progress: self::integerValue($values['progress'] ?? 0),
+            status: self::stringValue($values['status'] ?? BatchStatus::Pending->value),
+            createdAt: self::integerValue($values['created_at'] ?? 0),
             cancelledAt: self::nullableInt($values['cancelled_at'] ?? null),
             finishedAt: self::nullableInt($values['finished_at'] ?? null),
             queue: self::nullableString($values['queue'] ?? null),
@@ -52,14 +52,24 @@ final readonly class DatabaseBatchQueryRow
             queueIsExplicit: (bool) ($values['queue_is_explicit'] ?? false),
             connectionIsExplicit: (bool) ($values['connection_is_explicit'] ?? false),
             attributionCaptured: (bool) ($values['attribution_captured'] ?? false),
-            sortName: (string) ($values['sort_name'] ?? ''),
-            queueActivityRank: (int) ($values['queue_activity_rank'] ?? 0),
+            sortName: self::stringValue($values['sort_name'] ?? ''),
+            queueActivityRank: self::integerValue($values['queue_activity_rank'] ?? 0),
         );
+    }
+
+    private static function integerValue(mixed $value): int
+    {
+        return is_numeric($value) ? (int) $value : 0;
+    }
+
+    private static function stringValue(mixed $value): string
+    {
+        return is_scalar($value) ? (string) $value : '';
     }
 
     private static function nullableInt(mixed $value): ?int
     {
-        return $value === null ? null : (int) $value;
+        return $value === null ? null : self::integerValue($value);
     }
 
     private static function nullableString(mixed $value): ?string

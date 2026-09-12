@@ -3,7 +3,14 @@ import { useRef } from "react";
 
 import { ListPageHeader } from "@/components/shell/list-page-header";
 import { Card, CardContent } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { TableEmpty } from "@/components/data-table/table-empty";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { TriangleAlertIcon } from "lucide-react";
@@ -75,9 +82,7 @@ function AuditIndex({ events }: AuditPageProps) {
                     events.data.map((event) => (
                       <TableRow key={event.id}>
                         <TableCell>
-                          {event.occurredAt
-                            ? dateFormatter.format(event.occurredAt * 1000)
-                            : "—"}
+                          {event.occurredAt ? dateFormatter.format(event.occurredAt * 1000) : "—"}
                         </TableCell>
                         <TableCell className="font-mono text-xs">{event.route}</TableCell>
                         <TableCell>{event.userId ?? "—"}</TableCell>

@@ -22,6 +22,8 @@ use Illuminate\Support\Collection;
 use JsonException;
 use Laravel\Horizon\Contracts\JobRepository;
 use Laravel\Horizon\Contracts\TagRepository;
+use Predis\ClientContextInterface;
+use Redis;
 use Throwable;
 
 final readonly class FailedJobsData
@@ -90,10 +92,9 @@ final readonly class FailedJobsData
                 $current = max(0, $numericAfterIndex);
                 $ids = $this->oldestTaggedFailed($tag, $current);
                 $hasMore = count($ids) > self::PAGE_SIZE;
-                $jobIds = array_values(array_filter(
-                    array_slice($ids, 0, self::PAGE_SIZE),
-                    is_string(...),
-                ));
+                $jobIds = array_slice($ids, 0, self::PAGE_SIZE)
+                        |> (static fn ($x) => array_filter($x, is_string(...)))
+                        |> array_values(...);
                 $failed = $this->repository->getJobs($jobIds, $current);
                 $total = $this->tags->count("failed:{$tag}");
                 $next = $hasMore ? $current + self::PAGE_SIZE : null;
@@ -129,6 +130,9 @@ final readonly class FailedJobsData
         }
     }
 
+    /**
+     * @throws JsonException
+     */
     public function querySignature(
         JobIndexFiltersData $filters,
         ?string $tag,
@@ -291,15 +295,18 @@ final readonly class FailedJobsData
         $ids = array_slice($ids, 0, self::PAGE_SIZE);
 
         return [
-            'jobs' => $this->repository->getJobs(
-                array_values(array_filter($ids, is_string(...))),
-                $start,
-            ),
+            'jobs' => array_filter($ids, is_string(...))
+                    |> array_values(...)
+                    |> (fn ($x) => $this->repository->getJobs($x, $start)),
             'next' => $hasMore ? $start + self::PAGE_SIZE - 1 : null,
         ];
     }
 
-    /** @param Collection<int, mixed> $failed */
+    /**
+     * @template TJob
+     *
+     * @param  Collection<int, TJob>  $failed
+     */
     private function pageData(
         Collection $failed,
         int $total,
@@ -334,7 +341,7 @@ final readonly class FailedJobsData
     private function oldestTaggedFailed(string $tag, int $startingAt): array
     {
         if ($this->redis === null) {
-            return $this->tags->paginate("failed:{$tag}", $startingAt, self::PAGE_SIZE + 1);
+            return array_values($this->tags->paginate("failed:{$tag}", $startingAt, self::PAGE_SIZE + 1));
         }
 
         $ids = $this->redis->connection('horizon')->zrange(
@@ -346,6 +353,9 @@ final readonly class FailedJobsData
         return is_array($ids) ? array_values($ids) : [];
     }
 
+    /**
+     * @throws Throwable
+     */
     private function hasRetryableFromRawIndex(): bool
     {
         $startingAt = 0;
@@ -371,11 +381,12 @@ final readonly class FailedJobsData
             }
 
             $hasMore = count($ids) > self::PAGE_SIZE;
-            $pageIds = array_values(array_filter(
-                array_slice($ids, 0, self::PAGE_SIZE),
-                is_string(...),
-            ));
-            $failed = $connection->pipeline(static function (mixed $pipeline) use ($pageIds): void {
+            $pageIds = array_slice($ids, 0, self::PAGE_SIZE)
+                    |> (static fn ($x) => array_filter($x, is_string(...)))
+                    |> array_values(...);
+            $failed = $connection->pipeline(static function (
+                Redis|ClientContextInterface|PhpRedisConnection|PredisConnection $pipeline,
+            ) use ($pageIds): void {
                 foreach ($pageIds as $id) {
                     $pipeline->hmget($id, ['payload', 'retried_by']);
                 }
@@ -409,6 +420,9 @@ final readonly class FailedJobsData
         }
     }
 
+    /**
+     * @throws Throwable
+     */
     private function hasRetryableJob(): bool
     {
         if ($this->redis !== null) {
@@ -444,7 +458,9 @@ final readonly class FailedJobsData
         }
     }
 
-    /** @param Collection<int, mixed> $jobs */
+    /**
+     * @param  Collection<int, mixed>  $jobs
+     */
     private function lastIndex(Collection $jobs): ?int
     {
         $last = $jobs->last();
@@ -460,13 +476,8 @@ final readonly class FailedJobsData
     /** @param array<int, FailedJobRetryData> $retries */
     private function hasCompletedRetry(array $retries): bool
     {
-        foreach ($retries as $retry) {
-            if ($retry->status === 'completed') {
-                return true;
-            }
-        }
+        return array_any($retries, fn ($retry) => $retry->status === 'completed');
 
-        return false;
     }
 
     /** @return array<int, FailedJobRetryData> */
@@ -513,13 +524,13 @@ final readonly class FailedJobsData
 
         usort(
             $normalized,
-            static fn (FailedJobRetryData $left, FailedJobRetryData $right): int => ($right->retriedAt ?? 0) <=> ($left->retriedAt ?? 0),
+            static fn (FailedJobRetryData $left, FailedJobRetryData $right): int => ($right->retriedAt ?? 0.0) <=> ($left->retriedAt ?? 0.0),
         );
 
         return $normalized;
     }
 
-    /** @return array<string, mixed> */
+    /** @return array<array-key, mixed> */
     private function context(mixed $context): array
     {
         if (! is_string($context) || $context === '') {

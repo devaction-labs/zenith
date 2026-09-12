@@ -187,7 +187,15 @@ it('uses the configured or default poll interval for its cache ttl', function (
             Mockery::on(static fn (mixed $value): bool => $value instanceof Closure),
         ],
         'once',
-        returnUsing: static fn (string $key, int $seconds, Closure $callback): array => $callback(),
+        returnUsing: static function (string $key, int $seconds, Closure $callback): array {
+            $payload = $callback();
+
+            if (! is_array($payload)) {
+                throw new LogicException('The batch filter catalog cache callback must build an array payload.');
+            }
+
+            return $payload;
+        },
     );
 
     $cache = mockDashboardContract(CacheFactory::class);
@@ -294,7 +302,6 @@ it('falls back to a repository-built catalog when the cache store fails', functi
 
 it('returns every queue and connection from a multipage retained scan', function (): void {
     config()->set('zenith.poll_interval', 0);
-    // Former public default was 1000; page size is 100, so this forces a page past the ceiling.
     config()->set('zenith.retained_batch_scan_limit', 1000);
 
     $calls = 0;

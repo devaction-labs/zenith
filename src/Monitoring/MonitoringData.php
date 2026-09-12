@@ -33,8 +33,8 @@ final readonly class MonitoringData
             $items = [];
             $silencedTags = $this->silencedTags();
 
-            foreach (array_unique($this->tags->monitoring()) as $tag) {
-                if (! is_string($tag) || $tag === '') {
+            foreach (array_unique(array_filter($this->tags->monitoring(), is_string(...))) as $tag) {
+                if ($tag === '') {
                     continue;
                 }
 
@@ -79,8 +79,8 @@ final readonly class MonitoringData
                 trackedCount: $this->tags->count($tag),
                 failedCount: $this->tags->count("failed:{$tag}"),
                 silenced: in_array($tag, $this->silencedTags(), true),
-                monitoredRetentionMinutes: max(0, (int) config('horizon.trim.monitored', 10080)),
-                failedRetentionMinutes: max(0, (int) config('horizon.trim.failed', 10080)),
+                monitoredRetentionMinutes: $this->retentionMinutes('horizon.trim.monitored'),
+                failedRetentionMinutes: $this->retentionMinutes('horizon.trim.failed'),
             );
         } catch (Throwable $exception) {
             report($exception);
@@ -90,8 +90,8 @@ final readonly class MonitoringData
                 trackedCount: 0,
                 failedCount: 0,
                 silenced: in_array($tag, $this->silencedTags(), true),
-                monitoredRetentionMinutes: max(0, (int) config('horizon.trim.monitored', 10080)),
-                failedRetentionMinutes: max(0, (int) config('horizon.trim.failed', 10080)),
+                monitoredRetentionMinutes: $this->retentionMinutes('horizon.trim.monitored'),
+                failedRetentionMinutes: $this->retentionMinutes('horizon.trim.failed'),
             );
         }
     }
@@ -113,8 +113,6 @@ final readonly class MonitoringData
 
             return $tags;
         } catch (Throwable) {
-            // Shared shell chrome must fail closed without reporting when Redis is
-            // unavailable — package page requests remain usable without live storage.
             return [];
         }
     }
@@ -264,6 +262,13 @@ final readonly class MonitoringData
 
             $startingAt += self::PAGE_SIZE;
         }
+    }
+
+    private function retentionMinutes(string $key): int
+    {
+        $minutes = config($key, 10080);
+
+        return is_numeric($minutes) ? max(0, (int) $minutes) : 0;
     }
 
     /** @return list<string> */

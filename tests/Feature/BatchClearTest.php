@@ -13,6 +13,7 @@ use Illuminate\Bus\DatabaseBatchRepository;
 use Illuminate\Contracts\Queue\Queue;
 use Illuminate\Database\Events\TransactionBeginning;
 use Illuminate\Database\Events\TransactionCommitted;
+use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
@@ -104,6 +105,13 @@ beforeEach(function (): void {
         $jobs,
         'getJobs',
         static function (array $failedJobIds) use ($retryingParent): Collection {
+            $failedJobIds = array_map(
+                static fn (mixed $failedJobId): string => is_string($failedJobId)
+                    ? $failedJobId
+                    : throw new LogicException('Expected failed job ids to be strings.'),
+                $failedJobIds,
+            );
+
             expect($failedJobIds)->not->toBeEmpty()
                 ->and(count($failedJobIds))->toBeLessThanOrEqual(500)
                 ->and(array_diff(
@@ -125,7 +133,13 @@ beforeEach(function (): void {
 afterEach(function (): void {
     Schema::dropIfExists(DatabaseBatchCapability::METADATA_TABLE);
     Schema::dropIfExists('zenith_batch_clearing');
-    (require dirname(__DIR__, 2).'/database/migrations/2026_07_26_000000_create_zenith_batch_metadata_table.php')->up();
+    $migration = require dirname(__DIR__, 2).'/database/migrations/2026_07_26_000000_create_zenith_batch_metadata_table.php';
+
+    if (! $migration instanceof Migration || ! method_exists($migration, 'up')) {
+        throw new LogicException('Expected the batch metadata migration to define an up method.');
+    }
+
+    $migration->up();
     Horizon::auth(static fn (): bool => true);
 });
 

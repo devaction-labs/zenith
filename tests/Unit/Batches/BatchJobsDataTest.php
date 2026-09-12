@@ -307,7 +307,6 @@ describe('BatchJobsData', function (): void {
 
     it('uses stored sidecar attribution for the live pending queue target', function (): void {
         $repository = mockDashboardContract(JobRepository::class);
-        // Options omit destination so only the sidecar can resolve the historical queue.
         $batch = new Batch(
             queue: mockDashboardContract(QueueFactory::class),
             repository: mockDashboardContract(BatchRepository::class),
@@ -588,7 +587,7 @@ function retainedBatchJob(
 ): HorizonJob {
     $job = horizonJob($index, $id);
     $payload = json_decode($job->payload, true, flags: JSON_THROW_ON_ERROR);
-    $payload['data']['batchId'] = $batchId;
+    data_set($payload, 'data.batchId', $batchId);
     $job->payload = json_encode($payload, JSON_THROW_ON_ERROR);
     $job->status = $status;
 
@@ -613,10 +612,10 @@ function retainedBatchRetry(
 ): HorizonJob {
     $job = retainedBatchJob($index, $id, 'batch-42', 'failed');
     $payload = json_decode($job->payload, true, flags: JSON_THROW_ON_ERROR);
-    $payload['attempts'] = $attempts;
+    data_set($payload, 'attempts', $attempts);
 
     if ($retryOf !== null) {
-        $payload['retry_of'] = $retryOf;
+        data_set($payload, 'retry_of', $retryOf);
     }
 
     $job->payload = json_encode($payload, JSON_THROW_ON_ERROR);
