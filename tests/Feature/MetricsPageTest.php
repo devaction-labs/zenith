@@ -94,4 +94,48 @@ describe('metrics pages', function (): void {
     it('rejects metric types outside the route constraint', function (): void {
         get('/horizon/metrics/workers')->assertNotFound();
     });
+
+    it('renders a metric preview with live percentiles disabled by default', function (): void {
+        config()->set('zenith.telemetry.enabled', false);
+
+        $repository = mockDashboardContract(MetricsRepository::class);
+        dashboardReturnsFor($repository, 'snapshotsForQueue', ['emails'], []);
+        app()->instance(MetricsData::class, new MetricsData($repository));
+
+        get('/horizon/metrics/queues/emails')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
+                ->component('Metrics/Show')
+                ->where('percentiles.available', false)
+                ->where('percentiles.points', [])
+                ->whereType('percentiles.message', 'string')
+                ->where('percentilesWindow', '1h'));
+    });
+
+    it('reads the percentiles window from the query string', function (): void {
+        config()->set('zenith.telemetry.enabled', false);
+
+        $repository = mockDashboardContract(MetricsRepository::class);
+        dashboardReturnsFor($repository, 'snapshotsForJob', ['App\\Jobs\\ProcessPayment'], []);
+        app()->instance(MetricsData::class, new MetricsData($repository));
+
+        get('/horizon/metrics/jobs/App%5CJobs%5CProcessPayment?window=24h')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
+                ->where('percentilesWindow', '24h'));
+    });
+
+    it('reports live percentiles as available once the recorder is enabled', function (): void {
+        config()->set('zenith.telemetry.enabled', true);
+
+        $repository = mockDashboardContract(MetricsRepository::class);
+        dashboardReturnsFor($repository, 'snapshotsForQueue', ['emails'], []);
+        app()->instance(MetricsData::class, new MetricsData($repository));
+
+        get('/horizon/metrics/queues/emails')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
+                ->where('percentiles.available', true)
+                ->where('percentiles.message', null));
+    });
 });

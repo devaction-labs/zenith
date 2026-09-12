@@ -99,6 +99,13 @@ function dashboardProps(masterStatus: string, supervisorStatus: string): Dashboa
       items: [],
       message: null,
     },
+    liveThroughput: {
+      available: false,
+      series: [],
+      message: null,
+    },
+    liveMetricsGroupBy: "state",
+    liveMetricsWindow: "1h",
   };
 }
 
@@ -206,11 +213,13 @@ describe("instances process transition refresh ownership", () => {
   it("uses the Dashboard's existing poll for the same transition lifecycle", async () => {
     const view = render(<Dashboard {...dashboardProps("running", "running")} />);
 
-    expect(dashboardRefresh).toHaveBeenLastCalledWith(5_000, false);
+    const liveMetricsProps = ["summary", "workload", "supervisors", "liveThroughput"];
+
+    expect(dashboardRefresh).toHaveBeenLastCalledWith(5_000, false, liveMetricsProps);
 
     fireEvent.click(screen.getByRole("button", { name: "Begin instance pause" }));
 
-    expect(dashboardRefresh).toHaveBeenLastCalledWith(5_000, true);
+    expect(dashboardRefresh).toHaveBeenLastCalledWith(5_000, true, liveMetricsProps);
     expect(table.mock.lastCall?.[0].transitions.instances).toEqual({
       "local-host-a1b2": "pausing",
     });
@@ -218,7 +227,7 @@ describe("instances process transition refresh ownership", () => {
     view.rerender(<Dashboard {...dashboardProps("paused", "paused")} />);
 
     await waitFor(() => {
-      expect(dashboardRefresh).toHaveBeenLastCalledWith(5_000, false);
+      expect(dashboardRefresh).toHaveBeenLastCalledWith(5_000, false, liveMetricsProps);
       expect(table.mock.lastCall?.[0].transitions.instances).toEqual({});
     });
   });

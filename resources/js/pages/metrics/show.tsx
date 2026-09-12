@@ -1,17 +1,38 @@
-import { Head } from "@inertiajs/react";
+import { Head, router } from "@inertiajs/react";
 import { TriangleAlertIcon } from "lucide-react";
 
 import { MetricChart } from "@/components/metrics/metric-chart";
+import { TelemetryWindowSelect } from "@/components/telemetry/telemetry-controls";
+import { PercentileChart } from "@/components/telemetry/percentile-chart";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { show as metricShow } from "@/generated/routes/zenith/metrics";
 import { usePageRefresh } from "@/hooks/use-dashboard-refresh";
 import { useAutoLoadPreference } from "@/layouts/horizon-layout";
+import { resolveHorizonRoute } from "@/lib/horizon-route";
 import type { MetricPreviewPageProps } from "@/types/metrics";
+import type { TelemetryWindow } from "@/types/telemetry";
 
-function MetricShow({ horizon, name, preview }: MetricPreviewPageProps) {
+function MetricShow({
+  horizon,
+  type,
+  name,
+  preview,
+  percentiles,
+  percentilesWindow,
+}: MetricPreviewPageProps) {
   const { autoLoad } = useAutoLoadPreference();
 
   usePageRefresh(horizon.pollInterval, metricRefreshProps, autoLoad);
+
+  const changePercentilesWindow = (windowValue: TelemetryWindow) => {
+    const url = resolveHorizonRoute(
+      metricShow({ type, slug: name }, { query: { window: windowValue } }),
+      horizon.baseUrl,
+    ).url;
+
+    router.visit(url, { preserveScroll: true, preserveState: true, replace: true });
+  };
 
   return (
     <>
@@ -26,6 +47,29 @@ function MetricShow({ horizon, name, preview }: MetricPreviewPageProps) {
             </AlertDescription>
           </Alert>
         ) : null}
+        <Card>
+          <CardHeader>
+            <CardTitle className="truncate" title={`Execution time percentiles — ${name}`}>
+              {`Execution time percentiles — ${name}`}
+            </CardTitle>
+            <CardAction>
+              <TelemetryWindowSelect value={percentilesWindow} onValueChange={changePercentilesWindow} />
+            </CardAction>
+          </CardHeader>
+          <CardContent className="px-0 pt-3 pb-2">
+            {!percentiles.available ? (
+              <Alert variant="destructive" className="mx-4 sm:mx-6">
+                <TriangleAlertIcon aria-hidden="true" />
+                <AlertTitle>Live percentiles unavailable</AlertTitle>
+                <AlertDescription>
+                  {percentiles.message ?? "Live percentiles are currently unavailable."}
+                </AlertDescription>
+              </Alert>
+            ) : (
+              <PercentileChart points={percentiles.points} />
+            )}
+          </CardContent>
+        </Card>
         <MetricCard title={`Throughput — ${name}`}>
           <MetricChart kind="throughput" snapshots={preview.data} />
         </MetricCard>
@@ -50,6 +94,6 @@ function MetricCard({ title, children }: { title: string; children: React.ReactN
   );
 }
 
-const metricRefreshProps = ["preview"];
+const metricRefreshProps = ["preview", "percentiles"];
 
 export default MetricShow;

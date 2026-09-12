@@ -53,4 +53,49 @@ final class TelemetryKeys
     {
         return self::PREFIX."attempts:{$jobId}";
     }
+
+    /**
+     * Parses a bucket hash field name back into its structured meaning.
+     * Returns null for anything not shaped like a field this class names
+     * (including a dimension value that happens to contain the unit
+     * separator, an assumption documented on the class itself).
+     *
+     * @return array{kind: 'count', dimension: TelemetryDimension, value: string, outcome: TelemetryOutcome}
+     *                                                                                                       |array{kind: 'hist', metric: TelemetryMetric, dimension: TelemetryDimension, value: string, bucketIndex: int}
+     *                                                                                                       |null
+     */
+    public static function parseField(string $field): ?array
+    {
+        $parts = explode("\x1f", $field);
+
+        if ($parts[0] === 'count' && count($parts) === 4) {
+            $dimension = TelemetryDimension::tryFrom($parts[1]);
+            $outcome = TelemetryOutcome::tryFrom($parts[3]);
+
+            if ($dimension === null || $outcome === null) {
+                return null;
+            }
+
+            return ['kind' => 'count', 'dimension' => $dimension, 'value' => $parts[2], 'outcome' => $outcome];
+        }
+
+        if ($parts[0] === 'hist' && count($parts) === 5) {
+            $metric = TelemetryMetric::tryFrom($parts[1]);
+            $dimension = TelemetryDimension::tryFrom($parts[2]);
+
+            if ($metric === null || $dimension === null || ! ctype_digit($parts[4])) {
+                return null;
+            }
+
+            return [
+                'kind' => 'hist',
+                'metric' => $metric,
+                'dimension' => $dimension,
+                'value' => $parts[3],
+                'bucketIndex' => (int) $parts[4],
+            ];
+        }
+
+        return null;
+    }
 }

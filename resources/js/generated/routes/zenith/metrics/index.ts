@@ -107,7 +107,7 @@ index.head = (args: { type: string | number } | [type: string | number ] | strin
 
 /**
 * @see \DevactionLabs\Zenith\Http\Controllers\MetricController::show
-* @see src/Http/Controllers/MetricController.php:16
+* @see src/Http/Controllers/MetricController.php:24
 * @route '/horizon/metrics/{type}/{slug}'
 */
 export const show = (args: { type: string | number, slug: string | number } | [type: string | number, slug: string | number ], options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -122,7 +122,7 @@ show.definition = {
 
 /**
 * @see \DevactionLabs\Zenith\Http\Controllers\MetricController::show
-* @see src/Http/Controllers/MetricController.php:16
+* @see src/Http/Controllers/MetricController.php:24
 * @route '/horizon/metrics/{type}/{slug}'
 */
 show.url = (args: { type: string | number, slug: string | number } | [type: string | number, slug: string | number ], options?: RouteQueryOptions) => {
@@ -148,7 +148,7 @@ show.url = (args: { type: string | number, slug: string | number } | [type: stri
 
 /**
 * @see \DevactionLabs\Zenith\Http\Controllers\MetricController::show
-* @see src/Http/Controllers/MetricController.php:16
+* @see src/Http/Controllers/MetricController.php:24
 * @route '/horizon/metrics/{type}/{slug}'
 */
 show.get = (args: { type: string | number, slug: string | number } | [type: string | number, slug: string | number ], options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -158,7 +158,7 @@ show.get = (args: { type: string | number, slug: string | number } | [type: stri
 
 /**
 * @see \DevactionLabs\Zenith\Http\Controllers\MetricController::show
-* @see src/Http/Controllers/MetricController.php:16
+* @see src/Http/Controllers/MetricController.php:24
 * @route '/horizon/metrics/{type}/{slug}'
 */
 show.head = (args: { type: string | number, slug: string | number } | [type: string | number, slug: string | number ], options?: RouteQueryOptions): RouteDefinition<'head'> => ({

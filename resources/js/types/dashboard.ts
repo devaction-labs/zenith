@@ -1,4 +1,5 @@
 import type { QueueWaitThreshold } from "@/types/queues";
+import type { TelemetryGroupBy, TelemetryWindow, ThroughputChart } from "@/types/telemetry";
 
 export type HorizonStatus = "running" | "paused" | "inactive" | "unavailable";
 export type HorizonTransitionStatus = "continuing" | "pausing";
@@ -133,6 +134,9 @@ export type DashboardPageProps = {
   summary: DashboardSummary;
   workload: DashboardWorkload;
   supervisors?: DashboardSupervisors;
+  liveThroughput: ThroughputChart;
+  liveMetricsGroupBy: TelemetryGroupBy;
+  liveMetricsWindow: TelemetryWindow;
 };
 
 export type RunningInstancesPageProps = {
