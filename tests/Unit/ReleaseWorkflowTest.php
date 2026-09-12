@@ -5,55 +5,75 @@ declare(strict_types=1);
 use Symfony\Component\Yaml\Yaml;
 
 it('requires an explicit semantic version for a manual release', function (): void {
-    $workflow = releaseWorkflow();
+    $dispatch = releaseWorkflowSection(releaseWorkflowSection(releaseWorkflow(), 'on'), 'workflow_dispatch');
 
-    expect($workflow['on']['workflow_dispatch']['inputs']['version'] ?? null)
-        ->toBe([
-            'description' => 'Semantic version to tag and release',
-            'required' => true,
-            'type' => 'string',
-        ]);
-});
-
-it('releases only after both gates pass on an explicit main branch dispatch', function (): void {
-    $workflow = releaseWorkflow();
-    $jobs = $workflow['jobs'] ?? null;
-
-    expect($jobs)->toBeArray();
-
-    if (! is_array($jobs)) {
-        return;
-    }
-
-    $release = $jobs['release'] ?? null;
-
-    expect($release)->toBeArray()
-        ->and(array_key_exists('auto-release', $jobs))->toBeFalse();
-
-    if (! is_array($release)) {
-        return;
-    }
-
-    expect($release['needs'] ?? null)->toBe([
-        'compatibility',
-        'retained-job-redis',
-        'tests',
-    ])
-        ->and($release['if'] ?? null)
-        ->toBe("github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch'")
-        ->and($release['permissions'] ?? null)->toBe(['contents' => 'write']);
-});
-
-it('keeps manual releases isolated while allowing push runs to cancel', function (): void {
-    $workflow = releaseWorkflow();
-
-    expect($workflow['concurrency'] ?? null)->toBe([
-        'group' => "\${{ github.event_name == 'workflow_dispatch' && 'release' || format('tests-{0}', github.ref) }}",
-        'cancel-in-progress' => "\${{ github.event_name != 'workflow_dispatch' }}",
+    expect(releaseWorkflowSection($dispatch, 'inputs')['version'] ?? null)->toBe([
+        'description' => 'Semantic version to tag and release',
+        'required' => true,
+        'type' => 'string',
     ]);
 });
 
-it('can resume a release only when the existing tag belongs to the dispatched commit', function (): void {
+it('runs on pull requests and on pushes to main', function (): void {
+    $triggers = releaseWorkflowSection(releaseWorkflow(), 'on');
+
+    expect($triggers['push'] ?? null)->toBe(['branches' => ['main']])
+        ->and(array_key_exists('pull_request', $triggers))->toBeTrue();
+});
+
+it('cancels superseded pull request runs but never main or release runs', function (): void {
+    expect(releaseWorkflow()['concurrency'] ?? null)->toBe([
+        'group' => "\${{ github.event_name == 'pull_request' && format('tests-{0}', github.ref) || format('tests-{0}', github.sha) }}",
+        'cancel-in-progress' => "\${{ github.event_name == 'pull_request' }}",
+    ]);
+});
+
+it('gates merges on a single aggregate CI check', function (): void {
+    $ci = releaseWorkflowJob('ci');
+
+    expect($ci['name'] ?? null)->toBe('CI')
+        ->and($ci['if'] ?? null)->toBe('always()')
+        ->and($ci['needs'] ?? null)->toBe(['compatibility', 'retained-job-redis', 'audit', 'tests'])
+        ->and(releaseWorkflowRuns('ci'))->toContain('if [[ "$result" != "success" ]]; then');
+});
+
+it('audits dependencies in a dedicated job', function (): void {
+    expect(releaseWorkflowRuns('audit'))
+        ->toContain('composer audit --locked --no-interaction')
+        ->toContain('bun audit')
+        ->and(releaseWorkflowRuns('tests'))
+        ->not->toContain('composer audit')
+        ->not->toContain('bun audit');
+});
+
+it('runs the complete test suite in CI without test impact analysis', function (): void {
+    $runs = releaseWorkflowRuns('tests')
+        .releaseWorkflowRuns('compatibility')
+        .releaseWorkflowRuns('retained-job-redis');
+
+    expect($runs)->not->toContain('--tia');
+});
+
+it('releases only after CI passes on main', function (): void {
+    $release = releaseWorkflowJob('release');
+
+    expect($release['needs'] ?? null)->toBe(['ci'])
+        ->and($release['if'] ?? null)
+        ->toBe("github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')")
+        ->and($release['permissions'] ?? null)->toBe(['contents' => 'write', 'pull-requests' => 'read']);
+});
+
+it('derives the next version from the release label of the merged pull request', function (): void {
+    expect(releaseStep('Resolve release version')['run'] ?? null)->toBeString()
+        ->toContain('commits/${GITHUB_SHA}/pulls')
+        ->toContain('for candidate in major minor patch; do')
+        ->toContain('major) version="$((major + 1)).0.0" ;;')
+        ->toContain('minor) version="${major}.$((minor + 1)).0" ;;')
+        ->toContain('patch) version="${major}.${minor}.$((patch + 1))" ;;')
+        ->toContain('echo "release=false" >> "$GITHUB_OUTPUT"');
+});
+
+it('can resume a release only when the existing tag belongs to the released commit', function (): void {
     $validation = releaseStep('Validate release version');
     $tagCreation = releaseStep('Create and push tag');
     $releaseCreation = releaseStep('Create GitHub release');
@@ -69,54 +89,133 @@ it('can resume a release only when the existing tag belongs to the dispatched co
         ->toContain('exit 0');
 });
 
-it('pins every external action to a full commit sha', function (): void {
-    $workflow = releaseWorkflow();
-    $jobs = $workflow['jobs'] ?? [];
-    $actionReferences = [];
+it('publishes the Pest TIA baseline from main', function (): void {
+    $triggers = releaseWorkflowSection(releaseWorkflow('tia-baseline.yml'), 'on');
+    $upload = [];
 
-    if (is_array($jobs)) {
-        foreach ($jobs as $job) {
-            if (! is_array($job)) {
-                continue;
-            }
+    foreach (releaseWorkflowSteps('baseline', 'tia-baseline.yml') as $step) {
+        if (($step['name'] ?? null) === 'Upload the baseline') {
+            $upload = $step;
+        }
+    }
 
-            foreach ($job['steps'] ?? [] as $step) {
-                if (is_array($step) && is_string($step['uses'] ?? null)) {
-                    $actionReferences[] = $step['uses'];
-                }
+    expect($triggers['push'] ?? null)->toBe(['branches' => ['main']])
+        ->and(releaseWorkflowRuns('baseline', 'tia-baseline.yml'))->toContain('--tia --fresh')
+        ->and($upload['with'] ?? null)->toMatchArray([
+            'name' => 'pest-tia-baseline',
+            'include-hidden-files' => true,
+        ]);
+});
+
+it('pins every external action to a full commit sha', function (string $file): void {
+    $references = [];
+
+    foreach (array_keys(releaseWorkflowSection(releaseWorkflow($file), 'jobs')) as $job) {
+        foreach (releaseWorkflowSteps($job, $file) as $step) {
+            $uses = $step['uses'] ?? null;
+
+            if (is_string($uses)) {
+                $references[] = $uses;
             }
         }
     }
 
-    expect($actionReferences)->not->toBeEmpty();
+    expect($references)->not->toBeEmpty();
 
-    foreach ($actionReferences as $actionReference) {
-        expect($actionReference)->toMatch('/\A[^@]+@[a-f0-9]{40}\z/');
+    foreach ($references as $reference) {
+        expect($reference)->toMatch('/\A[^@]+@[a-f0-9]{40}\z/');
     }
-});
+})->with(['tests.yml', 'tia-baseline.yml']);
 
 /** @return array<string, mixed> */
-function releaseWorkflow(): array
+function releaseWorkflow(string $file = 'tests.yml'): array
 {
-    $workflow = Yaml::parseFile(__DIR__.'/../../.github/workflows/tests.yml');
+    $workflow = Yaml::parseFile(__DIR__.'/../../.github/workflows/'.$file);
 
     if (! is_array($workflow)) {
-        throw new RuntimeException('The release workflow must contain a YAML mapping.');
+        throw new RuntimeException("The {$file} workflow must contain a YAML mapping.");
     }
 
-    return $workflow;
+    return releaseWorkflowMapping($workflow);
+}
+
+/**
+ * @param  array<mixed>  $value
+ * @return array<string, mixed>
+ */
+function releaseWorkflowMapping(array $value): array
+{
+    $mapping = [];
+
+    foreach ($value as $key => $item) {
+        $mapping[(string) $key] = $item;
+    }
+
+    return $mapping;
+}
+
+/**
+ * @param  array<string, mixed>  $mapping
+ * @return array<string, mixed>
+ */
+function releaseWorkflowSection(array $mapping, string $key): array
+{
+    $section = $mapping[$key] ?? null;
+
+    if (! is_array($section)) {
+        throw new RuntimeException("The workflow section [{$key}] must be a mapping.");
+    }
+
+    return releaseWorkflowMapping($section);
+}
+
+/** @return array<string, mixed> */
+function releaseWorkflowJob(string $job, string $file = 'tests.yml'): array
+{
+    return releaseWorkflowSection(releaseWorkflowSection(releaseWorkflow($file), 'jobs'), $job);
+}
+
+/** @return list<array<string, mixed>> */
+function releaseWorkflowSteps(string $job, string $file = 'tests.yml'): array
+{
+    $steps = releaseWorkflowJob($job, $file)['steps'] ?? null;
+
+    if (! is_array($steps)) {
+        throw new RuntimeException("The {$job} job must define steps.");
+    }
+
+    $normalized = [];
+
+    foreach ($steps as $step) {
+        if (is_array($step)) {
+            $normalized[] = releaseWorkflowMapping($step);
+        }
+    }
+
+    return $normalized;
+}
+
+function releaseWorkflowRuns(string $job, string $file = 'tests.yml'): string
+{
+    $runs = [];
+
+    foreach (releaseWorkflowSteps($job, $file) as $step) {
+        $run = $step['run'] ?? null;
+
+        if (is_string($run)) {
+            $runs[] = $run;
+        }
+    }
+
+    return implode("\n", $runs);
 }
 
 /** @return array<string, mixed> */
 function releaseStep(string $name): array
 {
-    $steps = releaseWorkflow()['jobs']['release']['steps'] ?? [];
-
-    if (is_array($steps)) {
-        foreach ($steps as $step) {
-            if (is_array($step) && ($step['name'] ?? null) === $name) {
-                return $step;
-            }
+    foreach (releaseWorkflowSteps('release') as $step) {
+        if (($step['name'] ?? null) === $name) {
+            return $step;
         }
     }
 

@@ -2,6 +2,8 @@ name: Tests
 
 on:
   push:
+    branches:
+      - main
   pull_request:
   workflow_dispatch:
     inputs:
@@ -14,13 +16,14 @@ permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.event_name == 'workflow_dispatch' && 'release' || format('tests-{0}', github.ref) }}
-  cancel-in-progress: ${{ github.event_name != 'workflow_dispatch' }}
+  group: ${{ github.event_name == 'pull_request' && format('tests-{0}', github.ref) || format('tests-{0}', github.sha) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   compatibility:
     name: PHP ${{ matrix.php }} / Laravel ${{ matrix.laravel }} / Horizon ${{ matrix.horizon }}
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     services:
       redis:
@@ -170,8 +173,41 @@ jobs:
           HORIZON_COMPATIBILITY_REDIS_PORT: 6379
         run: vendor/bin/pest tests/Compatibility/RetainedJobRedisCompatibilityTest.php
 
+  audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        with:
+          php-version: '8.5'
+          coverage: none
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      - name: Audit Composer dependencies
+        run: composer audit --locked --no-interaction
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # 2.2.0
+        with:
+          bun-version: 1.3.14
+
+      - name: Install frontend dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Audit frontend dependencies
+        run: bun audit
+
   tests:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
       - name: Check out repository
@@ -189,19 +225,13 @@ jobs:
       - name: Validate Composer package metadata
         run: composer validate --strict
 
-      - name: Audit Composer dependencies
-        run: composer audit --locked --no-interaction
-
       - name: Set up Bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # 2.2.0
         with:
-          bun-version: 1.3.11
+          bun-version: 1.3.14
 
       - name: Install frontend dependencies
         run: bun install --frozen-lockfile
-
-      - name: Audit frontend dependencies
-        run: bun audit
 
       - name: Build frontend
         run: bun run build
@@ -227,17 +257,43 @@ jobs:
       - name: Verify generated assets
         run: git diff --exit-code -- dist/build resources/js/generated
 
-  release:
+  ci:
+    name: CI
+    if: always()
     needs:
       - compatibility
       - retained-job-redis
+      - audit
       - tests
-    if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
+    steps:
+      - name: Require every job to pass
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          for result in $RESULTS; do
+            if [[ "$result" != "success" ]]; then
+              echo "A required job finished with: $result" >&2
+              exit 1
+            fi
+          done
+
+  release:
+    needs:
+      - ci
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    concurrency:
+      group: release
+      cancel-in-progress: false
+
     permissions:
       contents: write
+      pull-requests: read
 
     steps:
       - name: Check out repository
@@ -245,10 +301,55 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Validate release version
+      - name: Resolve release version
+        id: version
         shell: bash
         env:
-          RELEASE_VERSION: ${{ inputs.version }}
+          GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+          MANUAL_VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+
+          latest="$(git tag --list | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1 || true)"
+          latest="${latest:-0.0.0}"
+
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            version="$MANUAL_VERSION"
+          else
+            labels="$(gh api "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/pulls" --jq '.[].labels[].name')"
+            bump=""
+
+            for candidate in major minor patch; do
+              if grep -qx "release:${candidate}" <<<"$labels"; then
+                bump="$candidate"
+                break
+              fi
+            done
+
+            if [[ -z "$bump" ]]; then
+              echo "The merged pull request has no release label; nothing to release."
+              echo "release=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+
+            IFS=. read -r major minor patch <<<"$latest"
+
+            case "$bump" in
+              major) version="$((major + 1)).0.0" ;;
+              minor) version="${major}.$((minor + 1)).0" ;;
+              patch) version="${major}.${minor}.$((patch + 1))" ;;
+            esac
+          fi
+
+          echo "release=true" >> "$GITHUB_OUTPUT"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+
+      - name: Validate release version
+        if: steps.version.outputs.release == 'true'
+        shell: bash
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
         run: |
           if [[ ! "$RELEASE_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "Release version must be a semantic version such as 1.2.3." >&2
@@ -267,8 +368,9 @@ jobs:
           fi
 
       - name: Create and push tag
+        if: steps.version.outputs.release == 'true'
         env:
-          RELEASE_VERSION: ${{ inputs.version }}
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
         run: |
           if git rev-parse --verify --quiet "refs/tags/$RELEASE_VERSION"; then
             echo "Tag $RELEASE_VERSION already exists on this commit; skipping tag creation."
@@ -281,9 +383,10 @@ jobs:
           git push origin "$RELEASE_VERSION"
 
       - name: Create GitHub release
+        if: steps.version.outputs.release == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_VERSION: ${{ inputs.version }}
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
         run: |
           if gh release view "$RELEASE_VERSION" >/dev/null 2>&1; then
             echo "GitHub release $RELEASE_VERSION already exists; nothing to do."
