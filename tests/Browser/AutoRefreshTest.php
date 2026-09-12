@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Http\Request;
+use Pest\Browser\Api\AwaitableWebpage;
+use Pest\Browser\Api\Webpage;
+use Pest\Browser\Playwright\Page;
+use Pest\Browser\Playwright\Playwright;
 use Symfony\Component\HttpFoundation\Response;
 
 use function DevactionLabs\Zenith\Tests\Support\bindBrowserInfiniteScrollRefreshFixtures;
@@ -727,7 +731,26 @@ describe('automatic refresh', function (): void {
         $page = visit('/horizon/jobs/pending')
             ->assertPresent('[aria-label="Auto load new entries"]');
 
-        $result = $page->script(<<<'JS'
+        // AwaitableWebpage::__call() retries any awaited method, including
+        // script(), by re-evaluating it from scratch every 1 second until
+        // usingTimeout()'s budget is spent: Execution::waitForExpectation()
+        // hard-codes that 1-second sub-timeout per attempt regardless of the
+        // caller's own override. That is fine for element assertions, but this
+        // probe arms a one-shot server-side fixture: a retried attempt
+        // consumes it again before the failed state is ever observed. Building
+        // a plain Webpage bypasses the retry wrapper so the script below runs
+        // exactly once, with the full timeout to itself. `$page` is already
+        // the underlying AwaitableWebpage at runtime (it swaps itself back in
+        // for fluent chaining), but PHPStan cannot resolve its `page` property
+        // through the pipe-separated `@mixin Webpage|AwaitableWebpage`, hence
+        // the reflection below instead of `$page->page()`.
+        $rawPage = new ReflectionProperty(AwaitableWebpage::class, 'page')->getValue($page);
+
+        if (! $rawPage instanceof Page) {
+            throw new LogicException('Expected the visited page to resolve to a raw Playwright page.');
+        }
+
+        $result = Playwright::usingTimeout(15_000, fn () => (new Webpage($rawPage, $page->url()))->script(<<<'JS'
             () => new Promise((resolve, reject) => {
                 let sawFailedState = false
                 let finished = false
@@ -841,7 +864,7 @@ describe('automatic refresh', function (): void {
 
                 afterPaint(enableAfterObserverReady)
             })
-        JS);
+        JS));
 
         if (! is_array($result)) {
             throw new LogicException('Expected the failed auto-refresh probe to resolve an object.');
