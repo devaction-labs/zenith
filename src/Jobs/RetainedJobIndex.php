@@ -3472,10 +3472,6 @@ final class RetainedJobIndex
     ): array {
         $values = $metadata->facetValues();
 
-        if ($type !== RetainedJobType::Failed && $type !== RetainedJobType::Completed) {
-            unset($values['tag']);
-        }
-
         if ($type !== RetainedJobType::Pending) {
             unset($values['target']);
         }

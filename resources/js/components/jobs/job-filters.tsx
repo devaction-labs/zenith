@@ -13,6 +13,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -33,10 +34,10 @@ export type JobFilterOption = {
 };
 
 const filterKeysByScope = {
-  pending: ["job", "queue", "connection", "state"],
-  failed: ["job", "queue", "connection"],
-  completed: ["job", "queue", "connection"],
-  silenced: ["job", "queue", "connection"],
+  pending: ["job", "queue", "connection", "state", "tag"],
+  failed: ["job", "queue", "connection", "tag"],
+  completed: ["job", "queue", "connection", "tag"],
+  silenced: ["job", "queue", "connection", "tag"],
 } as const satisfies Record<JobListType | "failed", readonly JobFilterKey[]>;
 
 const filterLabels = {
@@ -44,13 +45,17 @@ const filterLabels = {
   queue: { label: "Queue", allLabel: "All queues" },
   connection: { label: "Connection", allLabel: "All connections" },
   state: { label: "State", allLabel: "All pending states" },
+  tag: { label: "Tag", allLabel: "All tags" },
 } satisfies Record<JobFilterKey, { label: string; allLabel: string }>;
+
+const freeTextFilterKeys = new Set<JobFilterKey>(["tag"]);
 
 export const emptyJobFilterValues: JobFilterValues = {
   job: null,
   queue: null,
   connection: null,
   state: null,
+  tag: null,
 };
 
 export function jobFilterKeys(scope: JobListType | "failed"): readonly JobFilterKey[] {
@@ -113,16 +118,25 @@ export function JobFilters({
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
         <FieldGroup>
-          {filterKeys.map((filterKey) => (
-            <FilterSelect
-              key={filterKey}
-              label={filterLabels[filterKey].label}
-              allLabel={filterLabels[filterKey].allLabel}
-              options={filterOptions(filterKey, options)}
-              value={values[filterKey]}
-              onValueChange={(value) => onFilterChange(filterKey, value)}
-            />
-          ))}
+          {filterKeys.map((filterKey) =>
+            freeTextFilterKeys.has(filterKey) ? (
+              <FilterTextInput
+                key={filterKey}
+                label={filterLabels[filterKey].label}
+                value={values[filterKey]}
+                onValueChange={(value) => onFilterChange(filterKey, value)}
+              />
+            ) : (
+              <FilterSelect
+                key={filterKey}
+                label={filterLabels[filterKey].label}
+                allLabel={filterLabels[filterKey].allLabel}
+                options={filterOptions(filterKey, options)}
+                value={values[filterKey]}
+                onValueChange={(value) => onFilterChange(filterKey, value)}
+              />
+            ),
+          )}
         </FieldGroup>
         <DialogFooter className="sm:justify-between">
           <Button
@@ -193,6 +207,35 @@ function FilterSelect({
           </SelectGroup>
         </SelectContent>
       </Select>
+    </Field>
+  );
+}
+
+function FilterTextInput({
+  label,
+  value,
+  onValueChange,
+}: {
+  label: string;
+  value: string | null;
+  onValueChange: (value: string | null) => void;
+}) {
+  const inputId = useId();
+
+  return (
+    <Field>
+      <FieldLabel htmlFor={inputId}>{label}</FieldLabel>
+      <Input
+        id={inputId}
+        type="text"
+        value={value ?? ""}
+        placeholder={`Enter an exact ${label.toLowerCase()}`}
+        onChange={(event) => {
+          const nextValue = event.target.value;
+
+          onValueChange(nextValue === "" ? null : nextValue);
+        }}
+      />
     </Field>
   );
 }

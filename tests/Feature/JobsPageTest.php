@@ -139,6 +139,21 @@ describe('job pages', function (): void {
                 ->missing('jobs.data.0.exception'));
     });
 
+    it('accepts an exact tag facet alongside the existing job, queue, and connection filters', function (): void {
+        $repository = mockDashboardContract(JobRepository::class);
+        dashboardReturns($repository, 'getCompleted', new Collection);
+        dashboardReturns($repository, 'countCompleted', 0);
+        app()->instance(JobsData::class, new JobsData($repository));
+
+        get('/horizon/jobs/completed?filter_tag=tenant%3A42')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
+                ->where('filters.job', null)
+                ->where('filters.queue', null)
+                ->where('filters.connection', null)
+                ->where('filters.tag', 'tenant:42'));
+    });
+
     it('keeps the filter catalog out of the navigation deferred request', function (): void {
         $repository = mockDashboardContract(JobRepository::class);
         dashboardReturns($repository, 'getCompleted', new Collection);

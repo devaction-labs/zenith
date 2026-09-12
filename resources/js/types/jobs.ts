@@ -1,7 +1,7 @@
 import type { HorizonStatus } from "@/types/dashboard";
 
 export type JobListType = "pending" | "completed" | "silenced";
-export type JobFilterKey = "job" | "queue" | "connection" | "state";
+export type JobFilterKey = "job" | "queue" | "connection" | "state" | "tag";
 export type JobSort = "name" | "pushedAt" | "completedAt" | "failedAt" | "runtime";
 
 export type JobFilterValues = Record<JobFilterKey, string | null>;
