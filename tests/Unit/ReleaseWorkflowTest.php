@@ -97,6 +97,12 @@ it('derives the next version from the release label of the merged pull request',
         ->toContain('echo "release=false" >> "$GITHUB_OUTPUT"');
 });
 
+it('resumes a label-driven release whose tag already points to the released commit', function (): void {
+    expect(releaseStep('Resolve release version')['run'] ?? null)->toBeString()
+        ->toContain('existing="$(git tag --points-at "$RELEASE_SHA"')
+        ->toContain('echo "version=${existing}" >> "$GITHUB_OUTPUT"');
+});
+
 it('can resume a release only when the existing tag belongs to the released commit', function (): void {
     $validation = releaseStep('Validate release version');
     $tagCreation = releaseStep('Create and push tag');
