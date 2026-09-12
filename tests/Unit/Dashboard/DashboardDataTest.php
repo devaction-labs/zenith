@@ -20,6 +20,7 @@ use Illuminate\Contracts\Queue\Queue;
 use Illuminate\Contracts\Redis\Factory as RedisFactory;
 use Illuminate\Queue\QueueManager;
 use Illuminate\Redis\Connections\Connection;
+use Illuminate\Support\Arr;
 use Laravel\Horizon\Contracts\JobRepository;
 use Laravel\Horizon\Contracts\MasterSupervisorRepository;
 use Laravel\Horizon\Contracts\MetricsRepository;
@@ -87,7 +88,7 @@ function summaryDashboardData(array $masters): DashboardData
     dashboardReturnsFor($batches, 'get', [100, 'batch-0'], []);
 
     $connection = mockDashboardContract(Connection::class);
-    $failedRetentionMinutes = max(0, (int) config('horizon.trim.failed', 10080));
+    $failedRetentionMinutes = max(0, config()->integer('horizon.trim.failed', 10080));
     $failedHourCutoff = CarbonImmutable::now()->subMinutes(min(60, $failedRetentionMinutes));
     $failedDayCutoff = CarbonImmutable::now()->subMinutes(min(1440, $failedRetentionMinutes));
     dashboardReturnsFor(
@@ -223,7 +224,7 @@ describe('DashboardData', function (): void {
     });
 
     it('defaults completed retention minutes to 60 when the trim key is missing', function (): void {
-        $trim = config('horizon.trim', []);
+        $trim = config()->array('horizon.trim', []);
         unset($trim['completed']);
         config()->set('horizon.trim', $trim);
 
@@ -510,31 +511,19 @@ describe('DashboardData', function (): void {
         );
 
         $workload = $data->workload()->toArray();
-        /** @var list<array{name: string}> $workloadItems */
-        $workloadItems = $workload['items'];
 
-        expect(array_column($workloadItems, 'name'))->toBe([
+        expect(array_column(Arr::array($workload, 'items'), 'name'))->toBe([
             'default',
             'mail',
             'reports,exports',
         ]);
 
-        $grouped = $workload['items'][2];
+        expect(data_get($workload, 'items.2.waitThreshold.status'))->toBe('within_bounds')
+            ->and(data_get($workload, 'items.2.splitQueues.0.waitThreshold.status'))->toBe('within_bounds')
+            ->and(data_get($workload, 'items.2.splitQueues.1.waitThreshold.status'))->toBe('within_bounds');
 
-        expect($grouped['waitThreshold']['status'])->toBe('within_bounds')
-            ->and($grouped['splitQueues'][0]['waitThreshold']['status'])->toBe('within_bounds')
-            ->and($grouped['splitQueues'][1]['waitThreshold']['status'])->toBe('within_bounds');
-
-        foreach ($workload['items'] as &$item) {
-            unset($item['waitThreshold']);
-
-            if (is_array($item['splitQueues'])) {
-                foreach ($item['splitQueues'] as &$splitQueue) {
-                    unset($splitQueue['waitThreshold']);
-                }
-            }
-        }
-        unset($item, $splitQueue);
+        data_forget($workload, 'items.*.waitThreshold');
+        data_forget($workload, 'items.*.splitQueues.*.waitThreshold');
 
         expect($workload)->toBe([
             'available' => true,
@@ -641,7 +630,7 @@ describe('DashboardData', function (): void {
             new SnapshotJobsPerMinute(mockDashboardContract(RedisFactory::class)),
         );
 
-        $item = $data->workload()->toArray()['items'][0];
+        $item = Arr::array($data->workload()->toArray(), 'items.0');
 
         expect($item)->toMatchArray([
             'name' => 'reports,exports',
@@ -650,12 +639,12 @@ describe('DashboardData', function (): void {
             'processesShared' => true,
             'throughput' => null,
         ])
-            ->and($item['splitQueues'][0])->toMatchArray([
+            ->and(Arr::array($item, 'splitQueues.0'))->toMatchArray([
                 'name' => 'reports',
                 'wait' => 3,
                 'throughput' => null,
             ])
-            ->and($item['splitQueues'][1])->toMatchArray([
+            ->and(Arr::array($item, 'splitQueues.1'))->toMatchArray([
                 'name' => 'exports',
                 'wait' => 5,
                 'throughput' => 11,
@@ -707,9 +696,7 @@ describe('DashboardData', function (): void {
         );
 
         $workload = $data->workload();
-        /** @var list<array{name: string, processes: int, processesShared: bool, throughput: int|null}> $workloadItems */
-        $workloadItems = $workload->toArray()['items'];
-        $items = collect($workloadItems)->keyBy('name');
+        $items = collect(Arr::array($workload->toArray(), 'items'))->keyBy('name');
 
         expect($workload->available)->toBeTrue()
             ->and($items['default'])->toMatchArray([
@@ -760,12 +747,13 @@ describe('DashboardData', function (): void {
             new SnapshotJobsPerMinute(mockDashboardContract(RedisFactory::class)),
         );
 
-        $item = $data->workload()->toArray()['items'][0];
+        $item = Arr::array($data->workload()->toArray(), 'items.0');
+        $threshold = Arr::array($item, 'waitThreshold');
 
         expect($item['name'])->toBe('default')
-            ->and($item['waitThreshold']['status'])->toBe('exceeded')
-            ->and($item['waitThreshold']['waitSeconds'])->toBe(31)
-            ->and($item['waitThreshold']['thresholdSeconds'])->toBe(30);
+            ->and($threshold['status'])->toBe('exceeded')
+            ->and($threshold['waitSeconds'])->toBe(31)
+            ->and($threshold['thresholdSeconds'])->toBe(30);
     });
 
     it('does not mark a workload threshold exceeded before runtime data is available', function (): void {
@@ -803,7 +791,7 @@ describe('DashboardData', function (): void {
             new SnapshotJobsPerMinute(mockDashboardContract(RedisFactory::class)),
         );
 
-        $threshold = $data->workload()->toArray()['items'][0]['waitThreshold'];
+        $threshold = Arr::array($data->workload()->toArray(), 'items.0.waitThreshold');
 
         expect($threshold['status'])->toBe('calculating')
             ->and($threshold['waitSeconds'])->toBeNull();
@@ -857,12 +845,9 @@ describe('DashboardData', function (): void {
             new SnapshotJobsPerMinute(mockDashboardContract(RedisFactory::class)),
         );
 
-        $items = $data->workload()->toArray()['items'];
-        $byConnection = [];
-
-        foreach ($items as $item) {
-            $byConnection[$item['connection']] = $item;
-        }
+        $byConnection = collect(Arr::array($data->workload()->toArray(), 'items'))
+            ->keyBy('connection')
+            ->all();
 
         expect($byConnection)->toHaveKeys(['redis-a', 'redis-b'])
             ->and($byConnection['redis-a'])->toMatchArray([

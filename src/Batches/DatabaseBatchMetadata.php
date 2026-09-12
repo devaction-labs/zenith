@@ -84,7 +84,9 @@ final readonly class DatabaseBatchMetadata
             return [];
         }
 
-        return is_array($options) ? $options : [];
+        return is_array($options)
+            ? array_filter($options, is_string(...), ARRAY_FILTER_USE_KEY)
+            : [];
     }
 
     /** @param array<string, mixed> $options */

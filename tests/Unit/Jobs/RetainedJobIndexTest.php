@@ -529,7 +529,17 @@ function retainedJobIntegrityFixture(): array
         $repository,
         'getJobs',
         static function (array $ids) use (&$hydrations): Collection {
-            $hydrations[] = $ids;
+            $jobIds = [];
+
+            foreach ($ids as $offset => $id) {
+                if (! is_int($offset) || ! is_string($id)) {
+                    throw new LogicException('Expected positional Horizon job ID strings.');
+                }
+
+                $jobIds[$offset] = $id;
+            }
+
+            $hydrations[] = $jobIds;
 
             return new Collection(array_map(
                 static function (string $id, int $offset): object {
@@ -542,8 +552,8 @@ function retainedJobIntegrityFixture(): array
 
                     return $job;
                 },
-                $ids,
-                array_keys($ids),
+                $jobIds,
+                array_keys($jobIds),
             ));
         },
     );
@@ -616,11 +626,12 @@ describe('RetainedJobIndex', function (): void {
             static function (array $requestedIds) use (&$hydrations): Collection {
                 $hydrations[] = $requestedIds;
 
-                return new Collection(array_map(
-                    static fn (string $id, int $index): object => horizonJob($index, $id),
-                    $requestedIds,
-                    array_keys($requestedIds),
-                ));
+                return collect($requestedIds)->values()->map(
+                    static fn (mixed $id, int $index): object => horizonJob(
+                        $index,
+                        is_string($id) ? $id : throw new LogicException('Expected Horizon job IDs to be strings.'),
+                    ),
+                );
             },
         );
 
@@ -680,11 +691,12 @@ describe('RetainedJobIndex', function (): void {
         dashboardReturnsUsing(
             $repository,
             'getJobs',
-            static fn (array $ids): Collection => new Collection(array_map(
-                static fn (string $id, int $index): object => horizonJob($index, $id),
-                $ids,
-                array_keys($ids),
-            )),
+            static fn (array $ids): Collection => collect($ids)->values()->map(
+                static fn (mixed $id, int $index): object => horizonJob(
+                    $index,
+                    is_string($id) ? $id : throw new LogicException('Expected Horizon job IDs to be strings.'),
+                ),
+            ),
         );
         $firstRequest = new RetainedJobIndex(
             retainedJobIndexRedisFactory($client),
@@ -755,14 +767,12 @@ describe('RetainedJobIndex', function (): void {
                         );
                 }
 
-                return new Collection(array_map(
-                    static fn (string $id, int $index): object => horizonJob(
+                return collect($ids)->values()->map(
+                    static fn (mixed $id, int $index): object => horizonJob(
                         $index,
-                        $id,
+                        is_string($id) ? $id : throw new LogicException('Expected Horizon job IDs to be strings.'),
                     ),
-                    $ids,
-                    array_keys($ids),
-                ));
+                );
             },
         );
         $writer = new RetainedJobIndex(
@@ -825,14 +835,12 @@ describe('RetainedJobIndex', function (): void {
                     throw new RuntimeException('Hydration failed.');
                 }
 
-                return new Collection(array_map(
-                    static fn (string $id, int $index): object => horizonJob(
+                return collect($ids)->values()->map(
+                    static fn (mixed $id, int $index): object => horizonJob(
                         $index,
-                        $id,
+                        is_string($id) ? $id : throw new LogicException('Expected Horizon job IDs to be strings.'),
                     ),
-                    $ids,
-                    array_keys($ids),
-                ));
+                );
             },
         );
         $index = new RetainedJobIndex(
@@ -888,14 +896,12 @@ describe('RetainedJobIndex', function (): void {
         dashboardReturnsUsing(
             $repository,
             'getJobs',
-            static fn (array $ids): Collection => new Collection(array_map(
-                static fn (string $id, int $index): object => horizonJob(
+            static fn (array $ids): Collection => collect($ids)->values()->map(
+                static fn (mixed $id, int $index): object => horizonJob(
                     $index,
-                    $id,
+                    is_string($id) ? $id : throw new LogicException('Expected Horizon job IDs to be strings.'),
                 ),
-                $ids,
-                array_keys($ids),
-            )),
+            ),
         );
         $index = new RetainedJobIndex(
             retainedJobIndexRedisFactory($client),
@@ -935,14 +941,12 @@ describe('RetainedJobIndex', function (): void {
         dashboardReturnsUsing(
             $repository,
             'getJobs',
-            static fn (array $ids): Collection => new Collection(array_map(
-                static fn (string $id, int $index): object => horizonJob(
+            static fn (array $ids): Collection => collect($ids)->values()->map(
+                static fn (mixed $id, int $index): object => horizonJob(
                     $index,
-                    $id,
+                    is_string($id) ? $id : throw new LogicException('Expected Horizon job IDs to be strings.'),
                 ),
-                $ids,
-                array_keys($ids),
-            )),
+            ),
         );
         $index = new RetainedJobIndex(
             retainedJobIndexRedisFactory($client),
@@ -980,14 +984,12 @@ describe('RetainedJobIndex', function (): void {
         dashboardReturnsUsing(
             $repository,
             'getJobs',
-            static fn (array $ids): Collection => new Collection(array_map(
-                static fn (string $id, int $index): object => horizonJob(
+            static fn (array $ids): Collection => collect($ids)->values()->map(
+                static fn (mixed $id, int $index): object => horizonJob(
                     $index,
-                    $id,
+                    is_string($id) ? $id : throw new LogicException('Expected Horizon job IDs to be strings.'),
                 ),
-                $ids,
-                array_keys($ids),
-            )),
+            ),
         );
         $index = new RetainedJobIndex(
             retainedJobIndexRedisFactory($client),
@@ -1019,14 +1021,12 @@ describe('RetainedJobIndex', function (): void {
             static function (array $ids) use (&$hydrations): Collection {
                 $hydrations[] = $ids;
 
-                return new Collection(array_map(
-                    static fn (string $id, int $index): object => horizonJob(
+                return collect($ids)->values()->map(
+                    static fn (mixed $id, int $index): object => horizonJob(
                         $index,
-                        $id,
+                        is_string($id) ? $id : throw new LogicException('Expected Horizon job IDs to be strings.'),
                     ),
-                    $ids,
-                    array_keys($ids),
-                ));
+                );
             },
         );
         $index = new RetainedJobIndex(
@@ -1069,11 +1069,12 @@ describe('RetainedJobIndex', function (): void {
         dashboardReturnsUsing(
             $repository,
             'getJobs',
-            static fn (array $ids): Collection => new Collection(array_map(
-                static fn (string $id, int $index): object => horizonJob($index, $id),
-                $ids,
-                array_keys($ids),
-            )),
+            static fn (array $ids): Collection => collect($ids)->values()->map(
+                static fn (mixed $id, int $index): object => horizonJob(
+                    $index,
+                    is_string($id) ? $id : throw new LogicException('Expected Horizon job IDs to be strings.'),
+                ),
+            ),
         );
         $initialRequest = new RetainedJobIndex(
             retainedJobIndexRedisFactory($client),
@@ -1239,7 +1240,13 @@ describe('RetainedJobIndex', function (): void {
             'getJobs',
             static function (array $ids) use (&$hydrations): Collection {
                 $hydrations++;
-                $job = horizonJob(0, $ids[0]);
+                $id = $ids[0] ?? null;
+
+                if (! is_string($id)) {
+                    throw new LogicException('Expected Horizon job IDs to be strings.');
+                }
+
+                $job = horizonJob(0, $id);
                 $job->status = 'failed';
                 $job->completed_at = null;
                 $job->failed_at = '1800000000';
@@ -1248,6 +1255,11 @@ describe('RetainedJobIndex', function (): void {
                     true,
                     flags: JSON_THROW_ON_ERROR,
                 );
+
+                if (! is_array($payload)) {
+                    throw new LogicException('Expected the Horizon job payload to decode to an array.');
+                }
+
                 $payload['tags'] = [];
                 $job->payload = json_encode(
                     $payload,
@@ -1279,11 +1291,12 @@ describe('RetainedJobIndex', function (): void {
         dashboardReturnsUsing(
             $repository,
             'getJobs',
-            static fn (array $ids): Collection => new Collection(array_map(
-                static fn (string $id, int $index): object => horizonJob($index, $id),
-                $ids,
-                array_keys($ids),
-            )),
+            static fn (array $ids): Collection => collect($ids)->values()->map(
+                static fn (mixed $id, int $index): object => horizonJob(
+                    $index,
+                    is_string($id) ? $id : throw new LogicException('Expected Horizon job IDs to be strings.'),
+                ),
+            ),
         );
         $index = new RetainedJobIndex(
             retainedJobIndexRedisFactory($client),
@@ -1305,11 +1318,12 @@ describe('RetainedJobIndex', function (): void {
         dashboardReturnsUsing(
             $repository,
             'getJobs',
-            static fn (array $ids): Collection => new Collection(array_map(
-                static fn (string $id, int $index): object => horizonJob($index, $id),
-                $ids,
-                array_keys($ids),
-            )),
+            static fn (array $ids): Collection => collect($ids)->values()->map(
+                static fn (mixed $id, int $index): object => horizonJob(
+                    $index,
+                    is_string($id) ? $id : throw new LogicException('Expected Horizon job IDs to be strings.'),
+                ),
+            ),
         );
         $index = new RetainedJobIndex(
             retainedJobIndexRedisFactory($client),
@@ -1333,11 +1347,12 @@ describe('RetainedJobIndex', function (): void {
         dashboardReturnsUsing(
             $repository,
             'getJobs',
-            static fn (array $ids): Collection => new Collection(array_map(
-                static fn (string $id, int $index): object => horizonJob($index, $id),
-                $ids,
-                array_keys($ids),
-            )),
+            static fn (array $ids): Collection => collect($ids)->values()->map(
+                static fn (mixed $id, int $index): object => horizonJob(
+                    $index,
+                    is_string($id) ? $id : throw new LogicException('Expected Horizon job IDs to be strings.'),
+                ),
+            ),
         );
         $index = new RetainedJobIndex(
             retainedJobIndexRedisFactory($client),
@@ -1364,11 +1379,12 @@ describe('RetainedJobIndex', function (): void {
         dashboardReturnsUsing(
             $repository,
             'getJobs',
-            static fn (array $ids): Collection => new Collection(array_map(
-                static fn (string $id, int $index): object => horizonJob($index, $id),
-                $ids,
-                array_keys($ids),
-            )),
+            static fn (array $ids): Collection => collect($ids)->values()->map(
+                static fn (mixed $id, int $index): object => horizonJob(
+                    $index,
+                    is_string($id) ? $id : throw new LogicException('Expected Horizon job IDs to be strings.'),
+                ),
+            ),
         );
         $index = new RetainedJobIndex(
             retainedJobIndexRedisFactory($client),
@@ -1477,6 +1493,11 @@ describe('RetainedJobIndex', function (): void {
                     true,
                     flags: JSON_THROW_ON_ERROR,
                 );
+
+                if (! is_array($payload)) {
+                    throw new LogicException('Expected the Horizon job payload to decode to an array.');
+                }
+
                 $payload['tags'] = ['tenant:42'];
                 $job->payload = json_encode(
                     $payload,
@@ -1569,11 +1590,11 @@ describe('RetainedJobIndex', function (): void {
                 ),
                 array_values(array_filter(
                     $ids,
-                    static fn (string $id): bool => $id === 'stable-job',
+                    static fn (mixed $id): bool => $id === 'stable-job',
                 )),
                 array_keys(array_values(array_filter(
                     $ids,
-                    static fn (string $id): bool => $id === 'stable-job',
+                    static fn (mixed $id): bool => $id === 'stable-job',
                 ))),
             )),
         );

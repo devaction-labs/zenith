@@ -64,14 +64,38 @@ final class BulkOperationSnapshotRedisConnection extends Connection
 
         return match ($method) {
             'zrangestore' => $this->zrangestore(
-                (string) $parameters[0],
-                (string) $parameters[1],
-                (int) $parameters[2],
-                (int) $parameters[3],
+                $this->stringArgument($parameters, 0),
+                $this->stringArgument($parameters, 1),
+                $this->integerArgument($parameters, 2),
+                $this->integerArgument($parameters, 3),
             ),
-            'zrem' => $this->zrem((string) $parameters[0], ...array_slice($parameters, 1)),
+            'zrem' => $this->zrem($this->stringArgument($parameters, 0), ...array_slice($parameters, 1)),
             default => $this->{$method}(...$parameters),
         };
+    }
+
+    /** @param array<int, mixed> $parameters */
+    private function stringArgument(array $parameters, int $position): string
+    {
+        $argument = $parameters[$position] ?? null;
+
+        if (! is_scalar($argument)) {
+            throw new \InvalidArgumentException("Redis command argument {$position} must be a scalar.");
+        }
+
+        return (string) $argument;
+    }
+
+    /** @param array<int, mixed> $parameters */
+    private function integerArgument(array $parameters, int $position): int
+    {
+        $argument = $parameters[$position] ?? null;
+
+        if (! is_scalar($argument)) {
+            throw new \InvalidArgumentException("Redis command argument {$position} must be a scalar.");
+        }
+
+        return (int) $argument;
     }
 
     public function zrangestore(string $destination, string $source, int $start, int $stop): int

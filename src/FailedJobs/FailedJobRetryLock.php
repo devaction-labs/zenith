@@ -7,6 +7,7 @@ namespace DevactionLabs\Zenith\FailedJobs;
 use Closure;
 use DevactionLabs\Zenith\Support\RedisScript;
 use Illuminate\Contracts\Redis\Factory as RedisFactory;
+use Random\RandomException;
 use Throwable;
 
 final readonly class FailedJobRetryLock
@@ -27,7 +28,9 @@ LUA;
 
     public function __construct(private RedisFactory $redis) {}
 
-    /** @param Closure(): bool $callback */
+    /** @param Closure(): bool $callback
+     * @throws RandomException
+     */
     public function run(string $id, Closure $callback): bool
     {
         $connection = $this->redis->connection('horizon');

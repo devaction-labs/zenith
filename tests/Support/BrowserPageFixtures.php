@@ -95,6 +95,11 @@ function bindBrowserPageFixtures(
     $batchFailedParent->completed_at = null;
     $batchFailedParent->failed_at = '1784281004.50';
     $batchParentPayload = json_decode($batchFailedParent->payload, true, flags: JSON_THROW_ON_ERROR);
+
+    if (! is_array($batchParentPayload) || ! is_array($batchParentPayload['data'] ?? null)) {
+        throw new \LogicException('Expected the batch parent payload to contain job data.');
+    }
+
     $batchParentPayload['attempts'] = 1;
     $batchParentPayload['data']['batchId'] = 'batch-1';
     $batchFailedParent->payload = json_encode($batchParentPayload, JSON_THROW_ON_ERROR);
@@ -107,6 +112,11 @@ function bindBrowserPageFixtures(
     $batchFailedRetry->completed_at = null;
     $batchFailedRetry->failed_at = '1784281005.50';
     $batchRetryPayload = json_decode($batchFailedRetry->payload, true, flags: JSON_THROW_ON_ERROR);
+
+    if (! is_array($batchRetryPayload) || ! is_array($batchRetryPayload['data'] ?? null)) {
+        throw new \LogicException('Expected the batch retry payload to contain job data.');
+    }
+
     $batchRetryPayload['attempts'] = 2;
     $batchRetryPayload['retry_of'] = 'batch-failed-parent';
     $batchRetryPayload['data']['batchId'] = 'batch-1';
@@ -127,7 +137,12 @@ function bindBrowserPageFixtures(
         $jobs,
         'getJobs',
         static fn (array $ids, int $startingAt = 0): Collection => new Collection(array_values(array_filter(
-            array_map(static fn (string $id): ?object => $jobsById[$id] ?? null, $ids),
+            array_map(
+                static fn (mixed $id): ?object => is_string($id)
+                    ? ($jobsById[$id] ?? null)
+                    : throw new \LogicException('Expected Horizon job ids to be strings.'),
+                $ids,
+            ),
         ))),
     );
     dashboardReturns($jobs, 'getPending', new Collection);
@@ -408,6 +423,11 @@ function bindBrowserFailedJobIdentifierOverflowFixtures(): array
     $failed->completed_at = null;
     $failed->failed_at = '1784281003.50';
     $payload = json_decode($failed->payload, true, flags: JSON_THROW_ON_ERROR);
+
+    if (! is_array($payload) || ! is_array($payload['data'] ?? null)) {
+        throw new \LogicException('Expected the failed job payload to contain job data.');
+    }
+
     $payload['data']['batchId'] = $batchId;
     $failed->payload = json_encode($payload, JSON_THROW_ON_ERROR);
 
@@ -625,7 +645,7 @@ function bindBrowserInfiniteScrollRefreshFixtures(bool $emptyOnRefresh = false):
     dashboardReturnsUsing(
         $jobs,
         'getFailed',
-        static function (mixed $startingAt) use (
+        static function (int|string|null $startingAt) use (
             &$useRefreshedFirstPage,
             $initialFirstPage,
             $refreshedFirstPage,

@@ -16,6 +16,7 @@ final readonly class AuthorizeHorizonAbility
         private HorizonAbilityAuthorizer $authorizer,
     ) {}
 
+    /** @param Closure(Request): Response $next */
     public function handle(Request $request, Closure $next, string $ability): Response
     {
         $this->authorizer->authorize(HorizonAbility::from($ability));

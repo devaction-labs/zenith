@@ -275,7 +275,8 @@ final class AssetsPublisher
 
             foreach ($stagingDirectories as $stagingDirectory) {
                 if (
-                    ! $this->filesystem->isDirectory($stagingDirectory)
+                    ! is_string($stagingDirectory)
+                    || ! $this->filesystem->isDirectory($stagingDirectory)
                     || $this->filesystem->lastModified($stagingDirectory) > $abandonedBefore
                 ) {
                     continue;

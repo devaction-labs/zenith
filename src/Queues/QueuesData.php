@@ -139,7 +139,7 @@ final readonly class QueuesData
         $queues = [];
 
         foreach ($this->supervisors->all() as $supervisor) {
-            $processes = is_array($supervisor->processes ?? null)
+            $processes = is_object($supervisor) && is_array($supervisor->processes ?? null)
                 ? $supervisor->processes
                 : [];
 

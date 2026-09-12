@@ -16,6 +16,7 @@ use Illuminate\Bus\BatchFactory;
 use Illuminate\Bus\BatchRepository;
 use Illuminate\Bus\DatabaseBatchRepository;
 use Illuminate\Contracts\Bus\Dispatcher;
+use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Bus;
@@ -65,9 +66,12 @@ it('continues through short non-empty repository pages until the batch scan is e
     dashboardReturnsFor($batches, 'get', [50, 'batch-001'], []);
 
     $jobs = mockDashboardContract(JobRepository::class);
-    dashboardReturnsUsing($jobs, 'getJobs', fn (array $ids): Collection => new Collection(
-        array_map(static fn (string $id): object => horizonJob(0, $id), $ids),
-    ));
+    dashboardReturnsUsing($jobs, 'getJobs', fn (array $ids): Collection => new Collection(array_map(
+        static fn (mixed $id): object => is_string($id)
+            ? horizonJob(0, $id)
+            : throw new LogicException('Retained job ids must be strings.'),
+        $ids,
+    )));
 
     $result = queueBatchRetryAction($batches, $jobs)->processChunk('reports');
 
@@ -114,9 +118,12 @@ it('retries failed jobs from every retained batch page', function (): void {
     dashboardReturnsFor($batches, 'get', [50, 'batch-001'], []);
 
     $jobs = mockDashboardContract(JobRepository::class);
-    dashboardReturnsUsing($jobs, 'getJobs', fn (array $ids): Collection => new Collection(
-        array_map(static fn (string $id): object => horizonJob(0, $id), $ids),
-    ));
+    dashboardReturnsUsing($jobs, 'getJobs', fn (array $ids): Collection => new Collection(array_map(
+        static fn (mixed $id): object => is_string($id)
+            ? horizonJob(0, $id)
+            : throw new LogicException('Retained job ids must be strings.'),
+        $ids,
+    )));
 
     $result = queueBatchRetryAction($batches, $jobs)->processChunk('reports');
 
@@ -137,9 +144,12 @@ it('counts and retries duplicate failed job ids across batches only once', funct
     dashboardReturnsFor($batches, 'get', [50, 'batch-001'], []);
 
     $jobs = mockDashboardContract(JobRepository::class);
-    dashboardReturnsUsing($jobs, 'getJobs', fn (array $ids): Collection => new Collection(
-        array_map(static fn (string $id): object => horizonJob(0, $id), $ids),
-    ));
+    dashboardReturnsUsing($jobs, 'getJobs', fn (array $ids): Collection => new Collection(array_map(
+        static fn (mixed $id): object => is_string($id)
+            ? horizonJob(0, $id)
+            : throw new LogicException('Retained job ids must be strings.'),
+        $ids,
+    )));
 
     $result = queueBatchRetryAction($batches, $jobs)->processChunk('reports');
 
@@ -172,6 +182,11 @@ it('uses stored first-observed attribution instead of rescanning live batch defa
         $table->integer('finished_at')->nullable();
     });
     $migration = require __DIR__.'/../../../database/migrations/2026_07_26_000000_create_zenith_batch_metadata_table.php';
+
+    if (! $migration instanceof Migration || ! method_exists($migration, 'up')) {
+        throw new LogicException('The Zenith batch metadata migration could not be loaded.');
+    }
+
     $migration->up();
 
     try {
@@ -215,9 +230,12 @@ it('uses stored first-observed attribution instead of rescanning live batch defa
         $fallbackRepository = mockDashboardContract(BatchRepository::class);
         dashboardNeverReceives($fallbackRepository, 'get');
         $jobs = mockDashboardContract(JobRepository::class);
-        dashboardReturnsUsing($jobs, 'getJobs', fn (array $ids): Collection => new Collection(
-            array_map(static fn (string $id): object => horizonJob(0, $id), $ids),
-        ));
+        dashboardReturnsUsing($jobs, 'getJobs', fn (array $ids): Collection => new Collection(array_map(
+            static fn (mixed $id): object => is_string($id)
+                ? horizonJob(0, $id)
+                : throw new LogicException('Retained job ids must be strings.'),
+            $ids,
+        )));
 
         $result = queueBatchRetryAction($fallbackRepository, $jobs, $query)
             ->processChunk('default');

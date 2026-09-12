@@ -24,8 +24,8 @@ final readonly class MetricsData
             };
             $metrics = [];
 
-            foreach (array_unique($names) as $name) {
-                if (! is_string($name) || $name === '') {
+            foreach (array_unique(array_filter($names, is_string(...))) as $name) {
+                if ($name === '') {
                     continue;
                 }
 

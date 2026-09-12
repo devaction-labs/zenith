@@ -115,7 +115,8 @@ it('retries eligible failed jobs for a monitored tag from a point-in-time snapsh
 
     $retryJob = $jobsById['failed-1'];
     $retryPayload = json_decode($retryJob->payload, true, flags: JSON_THROW_ON_ERROR);
-    $retryJob->payload = json_encode([...$retryPayload, 'retry_of' => 'original-1'], JSON_THROW_ON_ERROR);
+    data_set($retryPayload, 'retry_of', 'original-1');
+    $retryJob->payload = json_encode($retryPayload, JSON_THROW_ON_ERROR);
 
     $retriedJob = $jobsById['failed-3'];
     $retriedJob->retried_by = json_encode([
@@ -136,7 +137,12 @@ it('retries eligible failed jobs for a monitored tag from a point-in-time snapsh
     $jobs = mockDashboardContract(JobRepository::class);
     dashboardReturnsUsing($jobs, 'getJobs', function (array $requested) use ($jobsById): Collection {
         return new Collection(array_values(array_filter(
-            array_map(static fn (string $id): ?object => $jobsById[$id] ?? null, $requested),
+            array_map(
+                static fn (mixed $id): ?object => is_string($id)
+                    ? ($jobsById[$id] ?? null)
+                    : throw new LogicException('Failed job ids must be strings.'),
+                $requested,
+            ),
         )));
     });
 

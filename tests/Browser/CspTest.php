@@ -27,6 +27,7 @@ it('loads the compiled dashboard under a nonce-only content security policy', fu
 
 final class ZenithBrowserCsp
 {
+    /** @param Closure(Request): Response $next */
     public function handle(Request $request, Closure $next): Response
     {
         $response = $next($request);

@@ -196,6 +196,10 @@ describe('Horizon interface interactions', function (): void {
             })
         JS);
 
+        if (! is_array($result)) {
+            throw new LogicException('Expected the queue metrics prefetch probe to resolve an object.');
+        }
+
         expect($result['fallbackSeen'])->toBeFalse()
             ->and($result['partialRequests'])->toContain('view,preview')
             ->and($result['search'])->toBe('?tab=pending&view=metrics')
@@ -322,6 +326,10 @@ describe('Horizon interface interactions', function (): void {
             'documentHasHorizontalOverflow' => false,
         ]);
 
+        if (! is_array($identifierOverflow)) {
+            throw new LogicException('Expected the identifier overflow probe to resolve an object.');
+        }
+
         foreach (['failedJobId', 'batchId'] as $identifier) {
             $overflow = $identifierOverflow[$identifier];
 
@@ -338,6 +346,11 @@ describe('Horizon interface interactions', function (): void {
                     'backAtStart' => ['left' => false, 'right' => true],
                 ],
             ]);
+
+            if (! is_array($overflow) || ! is_numeric($overflow['clientWidth'] ?? null)) {
+                throw new LogicException("Expected the {$identifier} overflow probe to report its client width.");
+            }
+
             expect($overflow['scrollWidth'])->toBeGreaterThan($overflow['clientWidth']);
             expect($overflow['fadeWidths'])->each->toBe(40);
         }

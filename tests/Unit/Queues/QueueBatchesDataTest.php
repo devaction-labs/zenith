@@ -111,9 +111,9 @@ it('filters retained batches and counts only genuinely active matching batches',
 
     expect($summary->total)->toBe(5)
         ->and($summary->active)->toBe(2)
-        ->and(array_column($summary->toArray()['previews'], 'id'))->toBe(['active-1', 'active-2'])
+        ->and(data_get($summary->toArray(), 'previews.*.id'))->toBe(['active-1', 'active-2'])
         ->and($summary->complete)->toBeTrue()
-        ->and(array_column($page->toArray()['rows'], 'id'))->toBe([
+        ->and(data_get($page->toArray(), 'rows.*.id'))->toBe([
             'active-2',
             'active-1',
             'failed-only',
@@ -142,12 +142,12 @@ it('previews the best three active batches by progress descending with id tie-br
     expect($summary->total)->toBe(6)
         ->and($summary->active)->toBe(5)
         ->and($summary->complete)->toBeTrue()
-        ->and(array_column($summary->toArray()['previews'], 'id'))->toBe([
+        ->and(data_get($summary->toArray(), 'previews.*.id'))->toBe([
             'preview-old-high',
             'preview-mid-z',
             'preview-mid-a',
         ])
-        ->and(array_column($summary->toArray()['previews'], 'progress'))->toBe([80, 30, 30]);
+        ->and(data_get($summary->toArray(), 'previews.*.progress'))->toBe([80, 30, 30]);
 });
 
 it('replaces unserializable legacy summary objects with scalar cache payloads', function (): void {
@@ -217,7 +217,15 @@ it('uses the configured or default poll interval for its summary cache ttl', fun
             Mockery::type(Closure::class),
         ],
         'once',
-        returnUsing: static fn (string $key, int $seconds, Closure $callback): array => $callback(),
+        returnUsing: static function (string $key, int $seconds, Closure $callback): array {
+            $summary = $callback();
+
+            if (! is_array($summary)) {
+                throw new LogicException('Expected the cached queue batch summary to be an array.');
+            }
+
+            return $summary;
+        },
     );
 
     $jobs = mockDashboardContract(JobRepository::class);

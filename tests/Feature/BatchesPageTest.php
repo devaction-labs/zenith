@@ -15,6 +15,7 @@ use Illuminate\Bus\BatchRepository;
 use Illuminate\Bus\DatabaseBatchRepository;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Illuminate\Contracts\Queue\Queue;
+use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
@@ -285,6 +286,11 @@ describe('batch pages', function (): void {
             $table->integer('finished_at')->nullable();
         });
         $migration = require __DIR__.'/../../database/migrations/2026_07_26_000000_create_zenith_batch_metadata_table.php';
+
+        if (! $migration instanceof Migration || ! method_exists($migration, 'up')) {
+            throw new LogicException('Expected the batch metadata migration to define an up method.');
+        }
+
         $migration->up();
 
         try {
@@ -628,6 +634,11 @@ function batchFeatureJob(int $index, string $id, string $batchId, string $status
 {
     $job = horizonJob($index, $id);
     $payload = json_decode($job->payload, true, flags: JSON_THROW_ON_ERROR);
+
+    if (! is_array($payload) || ! is_array($payload['data'] ?? null)) {
+        throw new LogicException('Expected the batch job payload to contain job data.');
+    }
+
     $payload['data']['batchId'] = $batchId;
     $job->payload = json_encode($payload, JSON_THROW_ON_ERROR);
     $job->status = $status;

@@ -31,7 +31,7 @@ final class RetryQueueFailedJobsRequest extends FormRequest
                 'required',
                 'string',
                 'max:255',
-                Rule::in(array_keys(config('queue.connections', []))),
+                Rule::in(array_keys(config()->array('queue.connections', []))),
             ],
             'queue' => ['required', 'string', 'max:255'],
         ];
@@ -39,11 +39,11 @@ final class RetryQueueFailedJobsRequest extends FormRequest
 
     public function getData(): QueueTargetData
     {
-        $validated = $this->validated();
+        $validated = $this->safe();
 
         return new QueueTargetData(
-            connection: $validated['connection'],
-            queue: $validated['queue'],
+            connection: $validated->string('connection')->value(),
+            queue: $validated->string('queue')->value(),
         );
     }
 }

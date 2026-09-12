@@ -108,7 +108,15 @@ it('uses the configured or default poll interval for its cache ttl', function (
             Mockery::type(Closure::class),
         ],
         'once',
-        returnUsing: static fn (string $key, int $seconds, Closure $callback): array => $callback(),
+        returnUsing: static function (string $key, int $seconds, Closure $callback): array {
+            $payload = $callback();
+
+            if (! is_array($payload)) {
+                throw new LogicException('The batch repository overview cache callback must build an array payload.');
+            }
+
+            return $payload;
+        },
     );
 
     $overview = new BatchRepositoryOverview($repository, $factory);

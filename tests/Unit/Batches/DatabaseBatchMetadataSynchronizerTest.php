@@ -8,6 +8,7 @@ use Illuminate\Bus\BatchFactory;
 use Illuminate\Bus\BatchRepository;
 use Illuminate\Bus\DatabaseBatchRepository;
 use Illuminate\Database\Connection;
+use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Schema\Builder;
 use Illuminate\Support\Facades\Schema;
@@ -39,6 +40,11 @@ beforeEach(function (): void {
     });
 
     $migration = require __DIR__.'/../../../database/migrations/2026_07_26_000000_create_zenith_batch_metadata_table.php';
+
+    if (! $migration instanceof Migration || ! method_exists($migration, 'up')) {
+        throw new LogicException('The Zenith batch metadata migration could not be loaded.');
+    }
+
     $migration->up();
 });
 

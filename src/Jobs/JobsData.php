@@ -459,7 +459,11 @@ final readonly class JobsData
         return is_numeric($cursor) ? (int) $cursor : -1;
     }
 
-    /** @param Collection<int, mixed> $jobs */
+    /**
+     * @template TJob
+     *
+     * @param  Collection<int, TJob>  $jobs
+     */
     private function pageData(
         Collection $jobs,
         int $total,
@@ -514,7 +518,9 @@ final readonly class JobsData
         try {
             $decoded = json_decode($payload, true, flags: JSON_THROW_ON_ERROR);
 
-            return is_array($decoded) ? $decoded : [];
+            return is_array($decoded)
+                ? array_filter($decoded, is_string(...), ARRAY_FILTER_USE_KEY)
+                : [];
         } catch (JsonException) {
             return [];
         }
@@ -711,7 +717,9 @@ final readonly class JobsData
             return null;
         }
 
-        if (is_numeric($payload['zenith']['madeAvailableAt'] ?? null)) {
+        $zenith = $payload['zenith'] ?? null;
+
+        if (is_array($zenith) && is_numeric($zenith['madeAvailableAt'] ?? null)) {
             return null;
         }
 

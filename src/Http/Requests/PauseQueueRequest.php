@@ -31,7 +31,7 @@ final class PauseQueueRequest extends FormRequest
                 'required',
                 'string',
                 'max:255',
-                Rule::in(array_keys(config('queue.connections', []))),
+                Rule::in(array_keys(config()->array('queue.connections', []))),
             ],
             'queue' => ['required', 'string', 'max:255'],
             'duration_minutes' => ['nullable', 'integer', 'min:1', 'max:525600'],
@@ -40,13 +40,14 @@ final class PauseQueueRequest extends FormRequest
 
     public function getData(): PauseQueueData
     {
-        $validated = $this->validated();
-        $duration = $validated['duration_minutes'] ?? null;
+        $validated = $this->safe();
 
         return new PauseQueueData(
-            connection: $validated['connection'],
-            queue: $validated['queue'],
-            durationMinutes: $duration === null ? null : (int) $duration,
+            connection: $validated->string('connection')->value(),
+            queue: $validated->string('queue')->value(),
+            durationMinutes: $validated->input('duration_minutes') === null
+                ? null
+                : $validated->integer('duration_minutes'),
         );
     }
 }

@@ -79,13 +79,9 @@ final readonly class DashboardData
                 }
             }
 
-            $waits = [];
-
-            foreach ($this->waitTimes->calculate() as $queue => $wait) {
-                if (is_string($queue) && (is_int($wait) || is_float($wait))) {
-                    $waits[$queue] = $wait;
-                }
-            }
+            $waits = array_filter($this->waitTimes->calculate(), static function ($wait, $queue) {
+                return is_string($queue) && (is_int($wait) || is_float($wait));
+            }, ARRAY_FILTER_USE_BOTH);
 
             $maxWaitQueue = null;
             $maxWaitSeconds = 0;
@@ -99,7 +95,7 @@ final readonly class DashboardData
 
             $pendingState = $this->pendingState->forQueues($waits);
             $batchSummary = $this->batchSummary->get();
-            $failedRetentionMinutes = max(0, (int) config('horizon.trim.failed', 10080));
+            $failedRetentionMinutes = $this->nonNegativeInteger(config('horizon.trim.failed', 10080));
             $recentlyFailedPeriodMinutes = $this->recentlyFailedPeriodMinutes();
             $recentJobsPeriodMinutes = $this->recentJobsPeriodMinutes();
             $completedRetentionMinutes = $this->completedRetentionMinutes();
@@ -178,17 +174,17 @@ final readonly class DashboardData
     {
         $period = config('horizon.trim.recent_failed') ?? config('horizon.trim.failed', 10080);
 
-        return max(0, (int) $period);
+        return $this->nonNegativeInteger($period);
     }
 
     private function recentJobsPeriodMinutes(): int
     {
-        return max(0, (int) (config('horizon.trim.recent') ?? 60));
+        return $this->nonNegativeInteger(config('horizon.trim.recent') ?? 60);
     }
 
     private function completedRetentionMinutes(): int
     {
-        return max(0, (int) config('horizon.trim.completed', 60));
+        return $this->nonNegativeInteger(config('horizon.trim.completed', 60));
     }
 
     /** @return array{hour: int, day: int} */
@@ -197,16 +193,12 @@ final readonly class DashboardData
         $connection = $this->redis->connection('horizon');
 
         return [
-            'hour' => $this->jobsSince(
-                $connection,
-                'failed_jobs',
-                CarbonImmutable::now()->subMinutes(min(60, $retentionMinutes)),
-            ),
-            'day' => $this->jobsSince(
-                $connection,
-                'failed_jobs',
-                CarbonImmutable::now()->subMinutes(min(1440, $retentionMinutes)),
-            ),
+            'hour' => min(60, $retentionMinutes)
+                    |> CarbonImmutable::now()->subMinutes(...)
+                    |> (fn (CarbonImmutable $cutoff): int => $this->jobsSince($connection, 'failed_jobs', $cutoff)),
+            'day' => min(1440, $retentionMinutes)
+                    |> CarbonImmutable::now()->subMinutes(...)
+                    |> (fn (CarbonImmutable $cutoff): int => $this->jobsSince($connection, 'failed_jobs', $cutoff)),
         ];
     }
 
@@ -258,8 +250,8 @@ final readonly class DashboardData
                     ? $supervisor->master
                     : Str::beforeLast($supervisor->name, ':');
                 $master = $master === '' ? 'Horizon' : $master;
-                $processes = is_array($supervisor->processes ?? null) ? $supervisor->processes : [];
-                $options = is_array($supervisor->options ?? null) ? $supervisor->options : [];
+                $processes = $this->stringKeyed($supervisor->processes ?? null);
+                $options = $this->stringKeyed($supervisor->options ?? null);
                 $connection = is_string($options['connection'] ?? null)
                     ? $options['connection']
                     : $this->connectionFromProcesses($processes);
@@ -452,9 +444,9 @@ final readonly class DashboardData
         array $poolWorkloads,
         string $strategy,
     ): int {
-        $minimumProcesses = max(0, (int) ($options['minProcesses'] ?? 1));
-        $maximumProcesses = max(0, (int) ($options['maxProcesses'] ?? 1));
-        $maximumShift = max(0, (int) ($options['balanceMaxShift'] ?? 1));
+        $minimumProcesses = $this->nonNegativeInteger($options['minProcesses'] ?? 1);
+        $maximumProcesses = $this->nonNegativeInteger($options['maxProcesses'] ?? 1);
+        $maximumShift = $this->nonNegativeInteger($options['balanceMaxShift'] ?? 1);
         $totalReadyJobs = array_sum(array_column($poolWorkloads, 'readyJobs'));
         $totalTimeToClear = array_sum(array_column($poolWorkloads, 'timeToClear'));
         $desiredProcesses = [];
@@ -552,6 +544,19 @@ final readonly class DashboardData
     private function normalizeQueueName(mixed $queue): ?string
     {
         return is_string($queue) && $queue !== '' ? $queue : null;
+    }
+
+    private function nonNegativeInteger(mixed $value): int
+    {
+        return is_numeric($value) ? max(0, (int) $value) : 0;
+    }
+
+    /** @return array<string, mixed> */
+    private function stringKeyed(mixed $values): array
+    {
+        return is_array($values)
+            ? array_filter($values, is_string(...), ARRAY_FILTER_USE_KEY)
+            : [];
     }
 
     /** @return array{0: ?string, 1: ?string} */

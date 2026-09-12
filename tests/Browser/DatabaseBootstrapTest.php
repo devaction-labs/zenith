@@ -15,16 +15,19 @@ it('initializes the sqlite database file and migrates package batch metadata', f
     $batchConnection = config('queue.batching.database');
     $connection = is_string($batchConnection) && $batchConnection !== ''
         ? $batchConnection
-        : (string) config('database.default');
+        : config()->string('database.default');
 
     $database = config("database.connections.{$connection}.database");
 
     expect($connection)->toBe('sqlite')
         ->and($database)->toBeString()
         ->and(
-            $database === ':memory:'
-            || str_contains($database, 'mode=memory')
-            || is_file($database),
+            is_string($database)
+            && (
+                $database === ':memory:'
+                || str_contains($database, 'mode=memory')
+                || is_file($database)
+            ),
         )->toBeTrue()
         ->and(Schema::connection($connection)->hasTable('zenith_batch_metadata'))
         ->toBeTrue();

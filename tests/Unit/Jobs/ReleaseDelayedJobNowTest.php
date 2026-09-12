@@ -65,7 +65,10 @@ describe('ReleaseDelayedJobNow', function (): void {
             ->and($queue->migrations)->toBe([]);
 
         [$method, $arguments] = $redis->commands[0];
-        $replacementPayload = json_decode((string) ($arguments[6] ?? ''), true);
+        $replacementPayloadJson = $arguments[6] ?? null;
+        $replacementPayload = is_string($replacementPayloadJson)
+            ? json_decode($replacementPayloadJson, true)
+            : null;
 
         expect($method)->toBe('eval')
             ->and($arguments[0] ?? '')->toContain("redis.call('zrem', KEYS[1], ARGV[1])")
@@ -77,16 +80,19 @@ describe('ReleaseDelayedJobNow', function (): void {
             ->and($arguments[3] ?? null)->toBe('queues:imports')
             ->and($arguments[4] ?? null)->toBe('queues:imports:notify')
             ->and($arguments[5] ?? null)->toBe($job->payload)
-            ->and($replacementPayload['displayName'] ?? null)->toBe('App\\Jobs\\ImportFeed')
-            ->and($replacementPayload['zenith']['madeAvailableAt'] ?? null)
+            ->and(data_get($replacementPayload, 'displayName'))->toBe('App\\Jobs\\ImportFeed')
+            ->and(data_get($replacementPayload, 'zenith.madeAvailableAt'))
             ->toBe(Date::now()->getTimestamp());
+
+        $migratedPayload = $migratedPayloads?->first();
 
         expect($migratedConnection)->toBe('redis')
             ->and($migratedQueue)->toBe('imports')
             ->and($migratedPayloads)->toBeInstanceOf(Collection::class)
             ->and($migratedPayloads)->toHaveCount(1)
-            ->and($migratedPayloads?->first())->toBeInstanceOf(JobPayload::class)
-            ->and($migratedPayloads?->first()?->value)->toBe($arguments[6]);
+            ->and($migratedPayload)->toBeInstanceOf(JobPayload::class)
+            ->and($migratedPayload instanceof JobPayload ? $migratedPayload->value : null)
+            ->toBe($arguments[6]);
     });
 
     it('does not migrate a job that left the delayed set before the action ran', function (): void {
@@ -178,6 +184,10 @@ describe('ReleaseDelayedJobNow', function (): void {
                 expect($connection)->toBe('redis')
                     ->and($queue)->toBe('imports')
                     ->and($payload)->toBeInstanceOf(JobPayload::class);
+
+                if (! $payload instanceof JobPayload) {
+                    throw new LogicException('Expected Horizon to migrate a job payload.');
+                }
 
                 $job->payload = $payload->value;
                 $job->delay = 0;
@@ -290,7 +300,9 @@ final class ReleaseThenCancelRedisConnection extends Connection
     {
         $this->commands[] = [$method, $parameters];
 
-        return str_contains((string) ($parameters[0] ?? ''), "redis.call('zscore'")
+        $script = $parameters[0] ?? null;
+
+        return is_string($script) && str_contains($script, "redis.call('zscore'")
             ? 1_784_281_200
             : 1;
     }

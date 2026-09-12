@@ -275,7 +275,10 @@ final readonly class BatchJobsData
         ?DatabaseBatchMetadata $attribution,
     ): array {
         $metadata = $attribution
-            ?? DatabaseBatchMetadata::fromOptions($batch->id, $batch->options);
+            ?? DatabaseBatchMetadata::fromOptions(
+                $batch->id,
+                array_filter($batch->options, is_string(...), ARRAY_FILTER_USE_KEY),
+            );
 
         $connection = $metadata->connection;
 

@@ -11,7 +11,7 @@ final class FailedJobDetailData extends Data
     /**
      * @param  array<int, string>  $tags
      * @param  array<string, mixed>  $payload
-     * @param  array<string, mixed>  $context
+     * @param  array<array-key, mixed>  $context
      * @param  array<int, FailedJobRetryData>  $retriedBy
      */
     public function __construct(

@@ -27,9 +27,54 @@ use Illuminate\Support\Collection;
 use Laravel\Horizon\Contracts\JobRepository;
 use Laravel\Horizon\Contracts\MetricsRepository;
 use Laravel\Horizon\Contracts\TagRepository;
+use LogicException;
+use Predis\Client;
+
+final class RetainedJobBrowserPredisClient extends Client
+{
+    public function __construct(private readonly RetainedJobBrowserRedisConnection $connection)
+    {
+        parent::__construct(options: ['prefix' => '']);
+    }
+
+    /**
+     * @param  string  $commandID
+     * @param  array<array-key, mixed>  $arguments
+     */
+    public function __call($commandID, $arguments): mixed
+    {
+        return $this->connection->{$commandID}(...array_values($arguments));
+    }
+
+    /** @return array<int, mixed> */
+    public function pipeline(mixed ...$arguments): array
+    {
+        return $this->connection->pipeline($this->callback($arguments));
+    }
+
+    /** @return array<int, mixed> */
+    public function transaction(mixed ...$arguments): array
+    {
+        return $this->connection->transaction($this->callback($arguments));
+    }
+
+    /** @param  array<array-key, mixed>  $arguments */
+    private function callback(array $arguments): Closure
+    {
+        $callback = $arguments[0] ?? null;
+
+        if (! $callback instanceof Closure) {
+            throw new LogicException('The browser Redis fixture only supports closure pipelines and transactions.');
+        }
+
+        return $callback;
+    }
+}
 
 final class RetainedJobBrowserRedisConnection extends Connection
 {
+    private ?RetainedJobBrowserPredisClient $predisClient = null;
+
     /** @var array<string, array<string, float>> */
     public array $sortedSets = [];
 
@@ -62,9 +107,9 @@ final class RetainedJobBrowserRedisConnection extends Connection
     /** @param array<int, string>|string $channels */
     public function createSubscription($channels, Closure $callback, $method = 'subscribe'): void {}
 
-    public function client(): self
+    public function client(): RetainedJobBrowserPredisClient
     {
-        return $this;
+        return $this->predisClient ??= new RetainedJobBrowserPredisClient($this);
     }
 
     /** @return array<int|string, float|string> */
@@ -688,12 +733,16 @@ function bindRetainedJobBrowserFixtures(
     dashboardReturns($jobs, 'trimRecentJobs', null);
     dashboardReturns($jobs, 'trimFailedJobs', null);
     $hydrate = static fn (array $ids, int $startingAt = 0): Collection => new Collection(array_map(
-        static function (string $id) use (
+        static function (mixed $id) use (
             $matchingId,
             $type,
             $allMatching,
             $allInQueue,
         ): HorizonJob {
+            if (! is_string($id)) {
+                throw new LogicException('Expected Horizon job ids to be strings.');
+            }
+
             $index = (int) substr($id, strrpos($id, '-') + 1);
             $job = horizonJob($index, $id);
             $isMatching = $allMatching || $id === $matchingId;
@@ -718,6 +767,11 @@ function bindRetainedJobBrowserFixtures(
                 ? (string) (1_784_281_100.25 + $index)
                 : null;
             $payload = json_decode($job->payload, true, flags: JSON_THROW_ON_ERROR);
+
+            if (! is_array($payload)) {
+                throw new LogicException('Expected the retained job payload to decode to an array.');
+            }
+
             $job->payload = json_encode([
                 ...$payload,
                 'uuid' => $id,

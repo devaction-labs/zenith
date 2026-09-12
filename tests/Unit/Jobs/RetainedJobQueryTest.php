@@ -12,6 +12,7 @@ use DevactionLabs\Zenith\Jobs\RetainedJobFilterCatalog;
 use DevactionLabs\Zenith\Jobs\RetainedJobIndex;
 use DevactionLabs\Zenith\Jobs\RetainedJobIndexWarming;
 use DevactionLabs\Zenith\Jobs\RetainedJobQuery;
+use DevactionLabs\Zenith\Jobs\RetainedJobQueryPage;
 use DevactionLabs\Zenith\Jobs\RetainedJobType;
 use DevactionLabs\Zenith\Queues\QueueActivityTab;
 use DevactionLabs\Zenith\Queues\QueueJobsData;
@@ -884,6 +885,7 @@ final class ClusteredRetainedJobQueryConnection extends PredisConnection
 }
 
 /**
+ * @param  (Closure(string, int): object)|null  $jobFactory
  * @return array{
  *     query: RetainedJobQuery,
  *     catalog: RetainedJobFilterCatalog,
@@ -907,7 +909,17 @@ function retainedJobQueryFixture(
             &$hydrations,
             $jobFactory,
         ): Collection {
-            $hydrations[] = $requestedIds;
+            $jobIds = [];
+
+            foreach ($requestedIds as $position => $id) {
+                if (! is_int($position) || ! is_string($id)) {
+                    throw new LogicException('Expected positional Horizon job ID strings.');
+                }
+
+                $jobIds[$position] = $id;
+            }
+
+            $hydrations[] = $jobIds;
 
             return new Collection(array_map(
                 static function (
@@ -930,6 +942,11 @@ function retainedJobQueryFixture(
                         $job->queue = 'reports';
                         $job->connection = 'redis-secondary';
                         $payload = json_decode($job->payload, true, flags: JSON_THROW_ON_ERROR);
+
+                        if (! is_array($payload)) {
+                            throw new LogicException('Expected the Horizon job payload to decode to an array.');
+                        }
+
                         $job->payload = json_encode([
                             ...$payload,
                             'displayName' => $job->name,
@@ -948,8 +965,8 @@ function retainedJobQueryFixture(
 
                     return $job;
                 },
-                $requestedIds,
-                array_keys($requestedIds),
+                $jobIds,
+                array_keys($jobIds),
             ));
         },
     );
@@ -1017,7 +1034,14 @@ function retainedPublishedGenerationKey(
     throw new RuntimeException("The {$type->value} generation was not published.");
 }
 
-describe('RetainedJobQuery', function (): void {
+$retainedPageJobIds = static fn (RetainedJobQueryPage $page): array => $page->jobs
+    ->pluck('id')
+    ->map(static fn (mixed $id): string => is_string($id)
+        ? $id
+        : throw new LogicException('Expected a retained job ID string.'))
+    ->all();
+
+describe('RetainedJobQuery', function () use ($retainedPageJobIds): void {
     afterEach(function (): void {
         Date::setTestNow();
     });
@@ -1871,7 +1895,7 @@ describe('RetainedJobQuery', function (): void {
         string $sourceKey,
         string $prefix,
         bool $ascending,
-    ): void {
+    ) use ($retainedPageJobIds): void {
         $redis = new RetainedJobQueryRedisClient;
         $source = array_fill_keys(
             array_map(
@@ -1888,7 +1912,7 @@ describe('RetainedJobQuery', function (): void {
             JobIndexFiltersData::none(),
             -1,
         );
-        $firstIds = $first->jobs->pluck('id')->all();
+        $firstIds = $retainedPageJobIds($first);
         $lastKey = array_key_last($firstIds);
 
         if ($lastKey === null) {
@@ -1928,7 +1952,7 @@ describe('RetainedJobQuery', function (): void {
         ],
     ]);
 
-    it('keeps pending equal-score pagination stable when its cursor disappears', function (): void {
+    it('keeps pending equal-score pagination stable when its cursor disappears', function () use ($retainedPageJobIds): void {
         $redis = new RetainedJobQueryRedisClient;
         $source = array_fill_keys(
             array_map(
@@ -1946,7 +1970,7 @@ describe('RetainedJobQuery', function (): void {
             $filters,
             -1,
         );
-        $firstIds = $first->jobs->pluck('id')->all();
+        $firstIds = $retainedPageJobIds($first);
         $lastKey = array_key_last($firstIds);
 
         if ($lastKey === null) {
@@ -1961,7 +1985,7 @@ describe('RetainedJobQuery', function (): void {
             $filters,
             $first->next,
         );
-        $secondIds = $second->jobs->pluck('id')->all();
+        $secondIds = $retainedPageJobIds($second);
         $expected = array_keys($source);
         rsort($expected, SORT_STRING);
 
@@ -2006,7 +2030,7 @@ describe('RetainedJobQuery', function (): void {
             ->and($page->jobs->pluck('id')->all())->toBe(['pending-75']);
     });
 
-    it('surfaces live reserved jobs at the start of unfiltered pending pages without duplicates', function (): void {
+    it('surfaces live reserved jobs at the start of unfiltered pending pages without duplicates', function () use ($retainedPageJobIds): void {
         $horizonRedis = new RetainedJobQueryRedisClient;
         $horizonRedis->seedSortedSet('pending_jobs', retainedSource(60, 'pending'));
         $queueRedis = new RetainedJobQueryRedisClient;
@@ -2034,13 +2058,13 @@ describe('RetainedJobQuery', function (): void {
         $filters = JobIndexFiltersData::none();
 
         $first = $fixture['query']->page(RetainedJobType::Pending, $filters, -1);
-        $firstIds = $first->jobs->pluck('id')->all();
+        $firstIds = $retainedPageJobIds($first);
         $second = $fixture['query']->page(
             RetainedJobType::Pending,
             $filters,
             $first->next ?? -1,
         );
-        $secondIds = $second->jobs->pluck('id')->all();
+        $secondIds = $retainedPageJobIds($second);
 
         expect($first->total)->toBe(60)
             ->and(array_slice($firstIds, 0, 2))->toBe(['pending-55', 'pending-58'])
@@ -2052,7 +2076,7 @@ describe('RetainedJobQuery', function (): void {
             ->and([...$firstIds, ...$secondIds])->toHaveCount(60);
     });
 
-    it('continues reserved lead pages when more than one page of jobs is reserved', function (): void {
+    it('continues reserved lead pages when more than one page of jobs is reserved', function () use ($retainedPageJobIds): void {
         $horizonRedis = new RetainedJobQueryRedisClient;
         $source = retainedSource(80, 'pending');
         $horizonRedis->seedSortedSet('pending_jobs', $source);
@@ -2086,8 +2110,8 @@ describe('RetainedJobQuery', function (): void {
             $filters,
             $first->next ?? -1,
         );
-        $firstIds = $first->jobs->pluck('id')->all();
-        $secondIds = $second->jobs->pluck('id')->all();
+        $firstIds = $retainedPageJobIds($first);
+        $secondIds = $retainedPageJobIds($second);
         $reservedIds = array_map(
             static fn (int $index): string => "pending-{$index}",
             range(20, 74),
@@ -2143,7 +2167,7 @@ describe('RetainedJobQuery', function (): void {
             ->toBe(['pending-55', 'pending-58']);
     });
 
-    it('orders actively delayed pending jobs by delayed availability among the non-reserved rest', function (): void {
+    it('orders actively delayed pending jobs by delayed availability among the non-reserved rest', function () use ($retainedPageJobIds): void {
         Date::setTestNow(Date::createFromTimestamp(0));
         $horizonRedis = new RetainedJobQueryRedisClient;
         $horizonRedis->seedSortedSet('pending_jobs', retainedSource(60, 'pending'));
@@ -2168,7 +2192,7 @@ describe('RetainedJobQuery', function (): void {
         $filters = JobIndexFiltersData::none();
 
         $first = $fixture['query']->page(RetainedJobType::Pending, $filters, -1);
-        $firstIds = $first->jobs->pluck('id')->all();
+        $firstIds = $retainedPageJobIds($first);
 
         expect($first->total)->toBe(60)
             ->and($firstIds)->toHaveCount(50)
@@ -2182,7 +2206,7 @@ describe('RetainedJobQuery', function (): void {
             $filters,
             $first->next ?? -1,
         );
-        $secondIds = $second->jobs->pluck('id')->all();
+        $secondIds = $retainedPageJobIds($second);
         $combined = [...$firstIds, ...$secondIds];
 
         expect($combined)->toHaveCount(60)
@@ -3146,7 +3170,7 @@ describe('RetainedJobQuery', function (): void {
 
         expect($initial->total)->toBe(1)
             ->and($refreshed->total)->toBe(2)
-            ->and(array_column($refreshed->toArray()['rows'], 'id'))
+            ->and(data_get($refreshed->toArray(), 'rows.*.id'))
             ->toBe(['completed-1', 'completed-0']);
     });
 
@@ -3302,7 +3326,7 @@ describe('RetainedJobQuery', function (): void {
         $refreshed = $queues->page('reports', QueueActivityTab::Completed, -1);
 
         expect($refreshed->total)->toBe(2)
-            ->and(array_column($refreshed->toArray()['rows'], 'id'))
+            ->and(data_get($refreshed->toArray(), 'rows.*.id'))
             ->toBe(['completed-1', 'completed-0']);
     });
 

@@ -168,7 +168,12 @@ describe('CancelPendingJob', function (): void {
             ];
 
             return new Collection(array_values(array_filter(
-                array_map(static fn (string $id): ?object => $map[$id] ?? null, $ids),
+                array_map(
+                    static fn (mixed $id): ?object => is_string($id)
+                        ? $map[$id] ?? null
+                        : throw new LogicException('Expected Horizon job IDs to be strings.'),
+                    $ids,
+                ),
             )));
         });
 
@@ -223,7 +228,12 @@ describe('CancelPendingJob', function (): void {
             ];
 
             return new Collection(array_values(array_filter(
-                array_map(static fn (string $id): ?object => $map[$id] ?? null, $ids),
+                array_map(
+                    static fn (mixed $id): ?object => is_string($id)
+                        ? $map[$id] ?? null
+                        : throw new LogicException('Expected Horizon job IDs to be strings.'),
+                    $ids,
+                ),
             )));
         });
 

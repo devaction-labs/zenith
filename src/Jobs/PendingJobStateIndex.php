@@ -1379,7 +1379,9 @@ final readonly class PendingJobStateIndex implements PendingJobEntryScanner
             return [];
         }
 
-        return is_array($decoded) ? $decoded : [];
+        return is_array($decoded)
+            ? array_filter($decoded, is_string(...), ARRAY_FILTER_USE_KEY)
+            : [];
     }
 
     /** @param array<string, mixed> $payload */
@@ -1389,7 +1391,9 @@ final readonly class PendingJobStateIndex implements PendingJobEntryScanner
             return false;
         }
 
-        if (is_numeric($payload['zenith']['madeAvailableAt'] ?? null)) {
+        $zenith = $payload['zenith'] ?? null;
+
+        if (is_array($zenith) && is_numeric($zenith['madeAvailableAt'] ?? null)) {
             return false;
         }
 

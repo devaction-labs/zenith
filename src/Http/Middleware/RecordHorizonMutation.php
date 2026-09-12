@@ -15,6 +15,7 @@ final readonly class RecordHorizonMutation
         private HorizonAuditRecorder $audit,
     ) {}
 
+    /** @param Closure(Request): Response $next */
     public function handle(Request $request, Closure $next): Response
     {
         return $next($request);

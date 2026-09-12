@@ -10,13 +10,9 @@ final class PollInterval
 
     public static function milliseconds(): int
     {
-        return max(
-            0,
-            (int) config(
-                'zenith.poll_interval',
-                self::DEFAULT_MILLISECONDS,
-            ),
-        );
+        $milliseconds = config('zenith.poll_interval', self::DEFAULT_MILLISECONDS);
+
+        return is_numeric($milliseconds) ? max(0, (int) $milliseconds) : 0;
     }
 
     public static function cacheSeconds(): int

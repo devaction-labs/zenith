@@ -177,8 +177,8 @@ final readonly class DatabaseBatchQuery
             ->first();
 
         return [
-            'total' => (int) ($counts->total ?? 0),
-            'active' => (int) ($counts->active ?? 0),
+            'total' => self::integerValue($counts->total ?? 0),
+            'active' => self::integerValue($counts->active ?? 0),
             'complete' => true,
             'message' => null,
             'previews' => $previews,
@@ -219,8 +219,8 @@ final readonly class DatabaseBatchQuery
             ->first();
 
         return new QueueRetainedBatchesData(
-            total: (int) ($counts->total ?? 0),
-            active: (int) ($counts->active ?? 0),
+            total: self::integerValue($counts->total ?? 0),
+            active: self::integerValue($counts->active ?? 0),
             previews: $previews,
             complete: true,
             message: null,
@@ -525,10 +525,10 @@ final readonly class DatabaseBatchQuery
             ->groupBy('status')
             ->get()
             ->each(static function (object $row) use (&$counts): void {
-                $status = (string) $row->status;
+                $status = $row->status;
 
-                if (array_key_exists($status, $counts)) {
-                    $counts[$status] = (int) $row->aggregate;
+                if (is_string($status) && array_key_exists($status, $counts)) {
+                    $counts[$status] = self::integerValue($row->aggregate);
                 }
             });
 
@@ -591,7 +591,7 @@ final readonly class DatabaseBatchQuery
     private function clearCandidateFailedJobIds(object $row): ?array
     {
         $encoded = $row->failed_job_ids ?? null;
-        $failedJobs = max(0, (int) ($row->failed_jobs ?? 0));
+        $failedJobs = max(0, self::integerValue($row->failed_jobs ?? 0));
 
         if (! is_string($encoded)) {
             return $failedJobs === 0 ? [] : null;
@@ -626,6 +626,11 @@ final readonly class DatabaseBatchQuery
         }
 
         return array_keys($failedJobIds);
+    }
+
+    private static function integerValue(mixed $value): int
+    {
+        return is_numeric($value) ? (int) $value : 0;
     }
 
     private function row(DatabaseBatchQueryRow $row): BatchRowData

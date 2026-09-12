@@ -571,7 +571,7 @@ it('appends the Composer asset refresh hook during a normal install', function (
 
     $composer = json_decode($filesystem->get($composerJson), true, flags: JSON_THROW_ON_ERROR);
 
-    expect($composer['scripts']['post-autoload-dump'])->toBe([
+    expect(data_get($composer, 'scripts.post-autoload-dump'))->toBe([
         '@php artisan package:discover --ansi',
         ComposerAssetHook::SCRIPT,
     ]);
@@ -634,15 +634,21 @@ it('warns and continues when composer.json cannot be updated', function (): void
 });
 
 /**
- * @param  array<int|string, mixed>  $overrideManifest
+ * @param  array<string, array<string, list<string>|string>>  $overrideManifest
  * @param  array{missing?: list<string>, override?: array<string, string>}  $mutations
  */
 function publishBrokenPublication(Filesystem $filesystem, string $destination, array $overrideManifest, array $mutations = []): void
 {
-    $baseManifest = completePublicationManifest();
-    $manifest = array_is_list($overrideManifest)
-        ? $overrideManifest
-        : array_replace_recursive($baseManifest, $overrideManifest);
+    $manifest = $overrideManifest === [] ? [] : completePublicationManifest();
+
+    foreach ($overrideManifest as $entry => $fields) {
+        foreach ($fields as $field => $value) {
+            $baseValue = $manifest[$entry][$field] ?? null;
+            $manifest[$entry][$field] = is_array($baseValue) && is_array($value)
+                ? array_replace($baseValue, $value)
+                : $value;
+        }
+    }
 
     $files = completePublicationFiles();
 
@@ -733,7 +739,7 @@ function completePublicationFiles(): array
     ];
 }
 
-/** @return array<string, array<string, list<string>|string>> */
+/** @return array<string, array<mixed>> */
 function installedManifest(string $buildDirectory): array
 {
     $manifest = json_decode(
@@ -746,5 +752,15 @@ function installedManifest(string $buildDirectory): array
         throw new RuntimeException('The installed Vite manifest is invalid.');
     }
 
-    return $manifest;
+    $entries = [];
+
+    foreach ($manifest as $entry => $chunk) {
+        if (! is_string($entry) || ! is_array($chunk)) {
+            throw new RuntimeException('The installed Vite manifest is invalid.');
+        }
+
+        $entries[$entry] = $chunk;
+    }
+
+    return $entries;
 }

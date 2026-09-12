@@ -65,6 +65,8 @@ final readonly class DashboardPendingState
             throw new LogicException("Queue connection does not support {$method}().");
         }
 
-        return (int) $callback($queueName);
+        $count = $callback($queueName);
+
+        return is_numeric($count) ? (int) $count : 0;
     }
 }

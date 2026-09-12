@@ -56,8 +56,8 @@ final readonly class SupervisorDetails
             ? $supervisor->master
             : Str::beforeLast($id, ':');
         $master = $master !== '' ? $master : 'Horizon';
-        $options = is_array($supervisor->options ?? null) ? $supervisor->options : [];
-        $processes = is_array($supervisor->processes ?? null) ? $supervisor->processes : [];
+        $options = $this->stringKeyed($supervisor->options ?? null);
+        $processes = $this->stringKeyed($supervisor->processes ?? null);
         $connection = $this->stringOption($options, 'connection')
             ?? $this->connectionFromProcesses($processes)
             ?? 'default';
@@ -237,5 +237,13 @@ final readonly class SupervisorDetails
         $value = $options[$key] ?? null;
 
         return is_bool($value) ? $value : null;
+    }
+
+    /** @return array<string, mixed> */
+    private function stringKeyed(mixed $values): array
+    {
+        return is_array($values)
+            ? array_filter($values, is_string(...), ARRAY_FILTER_USE_KEY)
+            : [];
     }
 }

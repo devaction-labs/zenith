@@ -67,7 +67,7 @@ final class DatabaseBatchMetadataSynchronizer
             $payload = $rows
                 ->map(fn (object $row): array => $this->resolvedMetadata(
                     DatabaseBatchMetadata::fromSerializedOptions(
-                        batchId: (string) $row->id,
+                        batchId: $this->stringValue($row->id),
                         serializedOptions: $row->options,
                         postgres: $connection instanceof PostgresConnection,
                     ),
@@ -84,7 +84,7 @@ final class DatabaseBatchMetadataSynchronizer
                 throw new RuntimeException('The batch metadata synchronizer could not advance.');
             }
 
-            $nextId = (string) $last->id;
+            $nextId = $this->stringValue($last->id);
 
             if ($lastId !== null && strcmp($nextId, $lastId) <= 0) {
                 throw new RuntimeException('The batch metadata synchronizer did not advance.');
@@ -125,7 +125,7 @@ final class DatabaseBatchMetadataSynchronizer
 
         $metadata = $this->resolvedMetadata(
             DatabaseBatchMetadata::fromSerializedOptions(
-                batchId: (string) $source->id,
+                batchId: $this->stringValue($source->id),
                 serializedOptions: $source->options,
                 postgres: $connection instanceof PostgresConnection,
             ),
@@ -144,7 +144,7 @@ final class DatabaseBatchMetadataSynchronizer
         }
 
         return new DatabaseBatchMetadata(
-            batchId: (string) $stored->batch_id,
+            batchId: $this->stringValue($stored->batch_id),
             queue: $this->nullableString($stored->queue ?? null),
             connection: $this->nullableString($stored->connection ?? null),
             queueIsExplicit: (bool) $stored->queue_is_explicit,
@@ -229,5 +229,10 @@ final class DatabaseBatchMetadataSynchronizer
     private function nullableString(mixed $value): ?string
     {
         return is_string($value) && $value !== '' ? $value : null;
+    }
+
+    private function stringValue(mixed $value): string
+    {
+        return is_scalar($value) ? (string) $value : '';
     }
 }

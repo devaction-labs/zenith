@@ -120,7 +120,9 @@ final readonly class RetainedJobMetadata
             return [];
         }
 
-        return is_array($decoded) ? $decoded : [];
+        return is_array($decoded)
+            ? array_filter($decoded, is_string(...), ARRAY_FILTER_USE_KEY)
+            : [];
     }
 
     /**

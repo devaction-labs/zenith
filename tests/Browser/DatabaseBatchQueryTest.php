@@ -9,6 +9,7 @@ use DevactionLabs\Zenith\Jobs\JobsData;
 use Illuminate\Bus\BatchFactory;
 use Illuminate\Bus\BatchRepository;
 use Illuminate\Bus\DatabaseBatchRepository;
+use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -40,6 +41,11 @@ it('filters statuses and sorts the complete retained database batch set', functi
     });
 
     $migration = require __DIR__.'/../../database/migrations/2026_07_26_000000_create_zenith_batch_metadata_table.php';
+
+    if (! $migration instanceof Migration || ! method_exists($migration, 'up')) {
+        throw new LogicException('Expected the batch metadata migration to define an up method.');
+    }
+
     $migration->up();
 
     $longBatchName = 'Large export batch for every European customer and accounting period that must stay inside its table column';
@@ -148,6 +154,11 @@ it('filters statuses and sorts the complete retained database batch set', functi
         'whiteSpace' => 'nowrap',
         'title' => $longBatchName,
     ]);
+
+    if (! is_array($layout) || ! is_numeric($layout['clientWidth'] ?? null)) {
+        throw new LogicException('Expected the batch name layout probe to report its client width.');
+    }
+
     expect($layout['scrollWidth'])->toBeGreaterThan($layout['clientWidth']);
     expect($layout['progressWidth'])->toBeLessThanOrEqual(132);
 
@@ -238,6 +249,11 @@ it('filters statuses and sorts the complete retained database batch set', functi
 
     expect($visibleNames)
         ->toHaveCount(50);
+
+    if (! is_array($visibleNames)) {
+        throw new LogicException('Expected the visible batch names probe to resolve a list.');
+    }
+
     expect(array_slice($visibleNames, 0, 3))->toBe([
         'Aardvark retained priority batch',
         $longBatchName,

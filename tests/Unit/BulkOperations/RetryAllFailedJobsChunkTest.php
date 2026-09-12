@@ -60,7 +60,12 @@ function bindFailedJobsForChunkRetry(array $jobs): JobRepository
         }
 
         return new Collection(array_values(array_filter(
-            array_map(static fn (string $id): ?object => $byId[$id] ?? null, $ids),
+            array_map(
+                static fn (mixed $id): ?object => is_string($id)
+                    ? ($byId[$id] ?? null)
+                    : throw new LogicException('Failed job ids must be strings.'),
+                $ids,
+            ),
         )));
     });
 
@@ -168,6 +173,11 @@ it('retries unacknowledged targets after a mutation throws mid-chunk', function 
     $bus = mockDashboardContract(Dispatcher::class);
     dashboardReturnsUsing($bus, 'dispatch', function (mixed $command) use (&$dispatches): void {
         expect($command)->toBeInstanceOf(HorizonRetryFailedJob::class);
+
+        if (! $command instanceof HorizonRetryFailedJob) {
+            throw new LogicException('Expected a Horizon retry job dispatch.');
+        }
+
         $dispatches++;
 
         if ($command->id === 'failed-2' && $dispatches <= 3) {
@@ -209,8 +219,13 @@ it('does not reschedule after a crash between successful dispatch and acknowledg
     $dispatches = 0;
     $bus = mockDashboardContract(Dispatcher::class);
     dashboardReturnsUsing($bus, 'dispatch', function (mixed $command) use (&$dispatches, $job): void {
-        expect($command)->toBeInstanceOf(HorizonRetryFailedJob::class)
-            ->and($command->id)->toBe('failed-0');
+        expect($command)->toBeInstanceOf(HorizonRetryFailedJob::class);
+
+        if (! $command instanceof HorizonRetryFailedJob) {
+            throw new LogicException('Expected a Horizon retry job dispatch.');
+        }
+
+        expect($command->id)->toBe('failed-0');
 
         $dispatches++;
         $job->retried_by = json_encode([
@@ -330,7 +345,8 @@ it('bulk retries the failed leaf instead of branching again from its parent', fu
     ], JSON_THROW_ON_ERROR);
     $retryLeaf = horizonJob(1, 'retry-leaf');
     $payload = json_decode($retryLeaf->payload, true, flags: JSON_THROW_ON_ERROR);
-    $retryLeaf->payload = json_encode([...$payload, 'retry_of' => 'parent'], JSON_THROW_ON_ERROR);
+    data_set($payload, 'retry_of', 'parent');
+    $retryLeaf->payload = json_encode($payload, JSON_THROW_ON_ERROR);
 
     $repository = bindFailedJobsForChunkRetry([$parent, $retryLeaf]);
     $result = chunkedRetryAction($repository)->processChunk();

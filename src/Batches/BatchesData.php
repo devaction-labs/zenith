@@ -199,7 +199,10 @@ final readonly class BatchesData
      */
     private function attribution(Batch $batch): array
     {
-        $metadata = DatabaseBatchMetadata::fromOptions($batch->id, $batch->options);
+        $metadata = DatabaseBatchMetadata::fromOptions(
+            $batch->id,
+            array_filter($batch->options, is_string(...), ARRAY_FILTER_USE_KEY),
+        );
         $connection = $metadata->connection;
 
         if ($connection === null) {
@@ -243,7 +246,7 @@ final readonly class BatchesData
         $cursor = $beforeId;
 
         while (count($batches) < self::PAGE_SIZE) {
-            $candidates = $this->batches->get(self::PAGE_SIZE - count($batches), $cursor);
+            $candidates = array_values($this->batches->get(self::PAGE_SIZE - count($batches), $cursor));
 
             if ($candidates === []) {
                 return [$batches, null];

@@ -188,7 +188,7 @@ final readonly class BatchFailedJobLineages
         return false;
     }
 
-    /** @return array<string, mixed> */
+    /** @return array<mixed> */
     private function decode(mixed $value): array
     {
         if (! is_string($value) || $value === '') {

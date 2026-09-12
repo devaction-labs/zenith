@@ -14,9 +14,14 @@ use Illuminate\Redis\Connections\PredisClusterConnection;
 use Illuminate\Redis\Connections\PredisConnection;
 use Illuminate\Support\Str;
 use Laravel\Horizon\Contracts\JobRepository;
+use Predis\Client;
+use Predis\ClientContextInterface;
 use Predis\Command\CommandInterface;
+use Predis\Command\Factory;
 use Predis\Command\Processor\KeyPrefixProcessor;
 use Predis\Response\Status;
+use Redis;
+use RedisCluster;
 use RuntimeException;
 use Throwable;
 
@@ -1633,6 +1638,7 @@ final class RetainedJobIndex
             if (
                 ! is_array($result)
                 || ! isset($result[0], $result[1])
+                || (! is_int($result[0]) && ! is_string($result[0]))
                 || ! is_array($result[1])
             ) {
                 throw new RuntimeException(
@@ -1658,17 +1664,27 @@ final class RetainedJobIndex
     {
         $connection = $this->connection();
 
-        return $connection instanceof PhpRedisConnection
-            ? $connection->sscan(
-                $key,
-                $cursor,
-                ['count' => self::CATALOG_SCAN_CHUNK_SIZE],
-            )
-            : $connection->client()->sscan(
+        if ($connection instanceof PhpRedisConnection) {
+            return $connection->sscan(
                 $key,
                 $cursor,
                 ['count' => self::CATALOG_SCAN_CHUNK_SIZE],
             );
+        }
+
+        $predisCursor = filter_var($cursor, FILTER_VALIDATE_INT);
+
+        if ($predisCursor === false) {
+            throw new RuntimeException(
+                'The retained job facet catalog could not be scanned.',
+            );
+        }
+
+        return $this->predisClient($connection)->sscan(
+            $key,
+            $predisCursor,
+            ['count' => self::CATALOG_SCAN_CHUNK_SIZE],
+        );
     }
 
     private function materializeSourceSnapshot(
@@ -3414,6 +3430,7 @@ final class RetainedJobIndex
     }
 
     /**
+     * @param  Redis|RedisCluster|ClientContextInterface  $transaction
      * @param  array<int, string>  $keys
      * @param  array<int, int>  $weights
      */
@@ -3431,7 +3448,10 @@ final class RetainedJobIndex
         );
     }
 
-    /** @param array<int, string> $keys */
+    /**
+     * @param  Redis|RedisCluster|ClientContextInterface  $transaction
+     * @param  array<int, string>  $keys
+     */
     private function union(
         mixed $transaction,
         string $destination,
@@ -3655,7 +3675,7 @@ final class RetainedJobIndex
                 self::SYNCHRONIZATION_LOCK_SECONDS,
                 'NX',
             )
-            : $connection->client()->set(
+            : $this->predisClient($connection)->set(
                 $this->lockKey($type),
                 $token,
                 'EX',
@@ -3663,11 +3683,7 @@ final class RetainedJobIndex
                 'NX',
             );
 
-        return $acquired === true
-            || $acquired === 'OK'
-            || ($acquired instanceof Status && $acquired->getPayload() === 'OK')
-                ? $token
-                : null;
+        return $this->redisReplyIsOk($acquired) ? $token : null;
     }
 
     private function publishGenerationState(
@@ -3683,19 +3699,12 @@ final class RetainedJobIndex
                     $this->synchronizationRevisionKey($type),
                     $revision,
                 )
-                : $connection->client()->set(
+                : $this->predisClient($connection)->set(
                     $this->synchronizationRevisionKey($type),
                     $revision,
                 );
 
-            if (
-                $revisionStored !== true
-                && $revisionStored !== 'OK'
-                && ! (
-                    $revisionStored instanceof Status
-                    && $revisionStored->getPayload() === 'OK'
-                )
-            ) {
+            if (! $this->redisReplyIsOk($revisionStored)) {
                 throw new RuntimeException(
                     'The retained job synchronization revision could not be stored.',
                 );
@@ -3708,23 +3717,23 @@ final class RetainedJobIndex
                 $this->publishedGenerationKey($type),
                 $publishedState,
             )
-            : $connection->client()->set(
+            : $this->predisClient($connection)->set(
                 $this->publishedGenerationKey($type),
                 $publishedState,
             );
 
-        if (
-            $published !== true
-            && $published !== 'OK'
-            && ! (
-                $published instanceof Status
-                && $published->getPayload() === 'OK'
-            )
-        ) {
+        if (! $this->redisReplyIsOk($published)) {
             throw new RuntimeException(
                 'The retained job generation could not be published.',
             );
         }
+    }
+
+    private function redisReplyIsOk(mixed $reply): bool
+    {
+        return $reply === true
+            || $reply === 'OK'
+            || ($reply instanceof Status && $reply->getPayload() === 'OK');
     }
 
     private function ensureSynchronizationRevision(
@@ -3855,7 +3864,7 @@ final class RetainedJobIndex
             (string) self::SYNCHRONIZATION_LOCK_SECONDS,
         );
 
-        if ((int) $renewed !== 1) {
+        if (! is_numeric($renewed) || (int) $renewed !== 1) {
             throw new RuntimeException(
                 'The retained job synchronization lock expired.',
             );
@@ -3915,19 +3924,12 @@ final class RetainedJobIndex
                 $this->generationInitializationKey($type, $generation),
                 '1',
             )
-            : $connection->client()->set(
+            : $this->predisClient($connection)->set(
                 $this->generationInitializationKey($type, $generation),
                 '1',
             );
 
-        if (
-            $initialized !== true
-            && $initialized !== 'OK'
-            && ! (
-                $initialized instanceof Status
-                && $initialized->getPayload() === 'OK'
-            )
-        ) {
+        if (! $this->redisReplyIsOk($initialized)) {
             throw new RuntimeException(
                 'The retained job generation could not be initialized.',
             );
@@ -4159,10 +4161,15 @@ final class RetainedJobIndex
             return;
         }
 
-        $processor = $connection
-            ->client()
-            ->getCommandFactory()
-            ->getProcessor();
+        $commandFactory = $this->predisClient($connection)->getCommandFactory();
+
+        if (! $commandFactory instanceof Factory) {
+            throw new RuntimeException(
+                'Predis could not prefix the retained job difference.',
+            );
+        }
+
+        $processor = $commandFactory->getProcessor();
 
         if (! $processor instanceof KeyPrefixProcessor) {
             return;
@@ -4175,7 +4182,10 @@ final class RetainedJobIndex
                 string $prefix,
             ): void {
                 $arguments = $command->getArguments();
-                $keyCount = (int) ($arguments[1] ?? 0);
+                $keyCountArgument = $arguments[1] ?? null;
+                $keyCount = is_numeric($keyCountArgument)
+                    ? (int) $keyCountArgument
+                    : 0;
 
                 if (! is_string($arguments[0] ?? null) || $keyCount < 1) {
                     throw new RuntimeException(
@@ -4200,19 +4210,23 @@ final class RetainedJobIndex
         );
     }
 
-    /** @return array<int, mixed> */
+    /**
+     * @param  Closure(Redis|ClientContextInterface): void  $callback
+     * @return array<int, mixed>
+     */
     private function pipeline(Closure $callback): array
     {
         return $this->withAtomicGenerationSnapshot(function () use ($callback): array {
             $connection = $this->connection();
             $results = $connection instanceof PhpRedisConnection
                 ? $connection->pipeline($callback)
-                : $connection->client()->pipeline($callback);
+                : $this->predisClient($connection)->pipeline($callback);
 
             return is_array($results) ? array_values($results) : [];
         });
     }
 
+    /** @param  Closure(Redis|RedisCluster|ClientContextInterface): void  $callback */
     private function transaction(Closure $callback): void
     {
         $this->withAtomicGenerationSnapshot(function () use ($callback): null {
@@ -4221,11 +4235,24 @@ final class RetainedJobIndex
             if ($connection instanceof PhpRedisConnection) {
                 $connection->transaction($callback);
             } else {
-                $connection->client()->transaction($callback);
+                $this->predisClient($connection)->transaction($callback);
             }
 
             return null;
         });
+    }
+
+    private function predisClient(Connection $connection): Client
+    {
+        $client = $connection->client();
+
+        if (! $client instanceof Client) {
+            throw new RuntimeException(
+                'The retained job index requires a PhpRedis or Predis connection.',
+            );
+        }
+
+        return $client;
     }
 
     /**

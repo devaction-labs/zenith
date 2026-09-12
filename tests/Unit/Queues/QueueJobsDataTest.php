@@ -91,13 +91,13 @@ it('filters pending completed failed and silenced retained pages by exact queue 
     $completedPage = $data->page('reports', QueueActivityTab::Completed, -1);
     $failedPage = $data->page('reports', QueueActivityTab::Failed, -1);
     $silencedPage = $data->page('reports', QueueActivityTab::Silenced, -1);
-    $failedRow = $failedPage->toArray()['rows'][0];
+    $failedRow = data_get($failedPage->toArray(), 'rows.0');
 
-    expect(array_column($pendingPage->toArray()['rows'], 'id'))->toBe(['pending-0'])
-        ->and(array_column($completedPage->toArray()['rows'], 'id'))->toBe(['completed-0'])
-        ->and(array_column($failedPage->toArray()['rows'], 'id'))->toBe(['failed-0'])
-        ->and(array_column($silencedPage->toArray()['rows'], 'id'))->toBe(['completed-0'])
-        ->and($failedRow['retried'])->toBeTrue()
+    expect(data_get($pendingPage->toArray(), 'rows.*.id'))->toBe(['pending-0'])
+        ->and(data_get($completedPage->toArray(), 'rows.*.id'))->toBe(['completed-0'])
+        ->and(data_get($failedPage->toArray(), 'rows.*.id'))->toBe(['failed-0'])
+        ->and(data_get($silencedPage->toArray(), 'rows.*.id'))->toBe(['completed-0'])
+        ->and(data_get($failedRow, 'retried'))->toBeTrue()
         ->and($pendingPage->pageName)->toBe('starting_at')
         ->and($pendingPage->complete)->toBeTrue()
         ->and($pendingPage->next)->toBeNull();
@@ -130,7 +130,7 @@ it('continues from the raw Horizon page boundary when missing hashes leave an em
 
     $page = retainedQueueJobsData($repository)->page('reports', QueueActivityTab::Pending, -1);
 
-    expect(array_column($page->toArray()['rows'], 'id'))->toBe(['pending-50'])
+    expect(data_get($page->toArray(), 'rows.*.id'))->toBe(['pending-50'])
         ->and($page->total)->toBe(1)
         ->and($page->complete)->toBeFalse()
         ->and($page->next)->toBeNull()
@@ -151,7 +151,7 @@ it('does not process hydrated jobs beyond the final raw page allowance', functio
 
     $page = retainedQueueJobsData($repository)->page('reports', QueueActivityTab::Pending, -1);
 
-    expect(array_column($page->toArray()['rows'], 'id'))->toBe(['pending-50'])
+    expect(data_get($page->toArray(), 'rows.*.id'))->toBe(['pending-50'])
         ->and($page->total)->toBe(1)
         ->and($page->complete)->toBeFalse()
         ->and($page->next)->toBeNull();
@@ -182,7 +182,7 @@ it('keeps a clean final continuation incomplete when earlier hydration provenanc
 
     expect($firstPage->complete)->toBeFalse()
         ->and($firstPage->next)->toBe(99)
-        ->and(array_column($finalPage->toArray()['rows'], 'id'))->toBe(['pending-100'])
+        ->and(data_get($finalPage->toArray(), 'rows.*.id'))->toBe(['pending-100'])
         ->and($finalPage->complete)->toBeFalse()
         ->and($finalPage->next)->toBeNull()
         ->and($finalPage->message)->toBe('More retained entries may exist for this queue.');
@@ -326,7 +326,15 @@ it('uses the configured or default poll interval for its summary cache ttl', fun
             Mockery::type(Closure::class),
         ],
         'once',
-        returnUsing: static fn (string $key, int $seconds, Closure $callback): array => $callback(),
+        returnUsing: static function (string $key, int $seconds, Closure $callback): array {
+            $summary = $callback();
+
+            if (! is_array($summary)) {
+                throw new LogicException('Expected the cached queue job summary to be an array.');
+            }
+
+            return $summary;
+        },
     );
 
     $jobs = new JobsData($repository);

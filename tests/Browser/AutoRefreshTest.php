@@ -106,6 +106,10 @@ describe('automatic refresh', function (): void {
             })
         JS);
 
+        if (! is_array($pollMetadata)) {
+            throw new LogicException('Expected the automatic refresh probe to resolve an object.');
+        }
+
         expect($pollMetadata)->toMatchArray([
             'mergeIntent' => null,
             'reset' => 'jobs',
@@ -340,6 +344,10 @@ describe('automatic refresh', function (): void {
             })
         JS);
 
+        if (! is_array($result) || ! is_int($result['loadedRowCount'] ?? null)) {
+            throw new LogicException('Expected the infinite-scroll refresh probe to report the loaded row count.');
+        }
+
         expect($result['loadedRowCount'])->toBeGreaterThanOrEqual(100)
             ->and($result['refreshedRowCount'])->toBe($result['loadedRowCount'] + 1)
             ->and($result['existingRowUpdated'])->toBeTrue()
@@ -514,6 +522,10 @@ describe('automatic refresh', function (): void {
                 }))
             })
         JS);
+
+        if (! is_array($result)) {
+            throw new LogicException('Expected the third-page frontier probe to resolve an object.');
+        }
 
         expect($result['rowCount'])->toBe(150)
             ->and($result['uniqueRowCount'])->toBe(150)
@@ -831,6 +843,10 @@ describe('automatic refresh', function (): void {
             })
         JS);
 
+        if (! is_array($result)) {
+            throw new LogicException('Expected the failed auto-refresh probe to resolve an object.');
+        }
+
         expect($result['recoveredStatus'])->toBe('idle')
             ->and($result['recoveredLabel'])->toBe('Auto load new entries')
             ->and($result['toastCount'])->toBe(0);
@@ -929,6 +945,10 @@ describe('automatic refresh', function (): void {
             })
         JS);
 
+        if (! is_array($result)) {
+            throw new LogicException('Expected the completed queue summary probe to resolve an object.');
+        }
+
         expect($result['retainedCountOccurrences'])->toBeGreaterThanOrEqual(2)
             ->and($result['recoveredCountOccurrences'])->toBeGreaterThanOrEqual(2)
             ->and($result['warningVisible'])->toBeFalse();
@@ -947,6 +967,7 @@ describe('automatic refresh', function (): void {
  */
 final class FailNextTrackedListRefreshOnce
 {
+    /** @param Closure(Request): Response $next */
     public function handle(Request $request, Closure $next): Response
     {
         $partialData = (string) $request->headers->get('X-Inertia-Partial-Data', '');

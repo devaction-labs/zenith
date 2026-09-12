@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Bus\BatchFactory;
 use Illuminate\Bus\BatchRepository;
 use Illuminate\Bus\DatabaseBatchRepository;
+use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schema;
@@ -36,6 +37,11 @@ afterEach(function (): void {
 
 it('warms first-observed destination metadata before operator requests', function (): void {
     $migration = require __DIR__.'/../../database/migrations/2026_07_26_000000_create_zenith_batch_metadata_table.php';
+
+    if (! $migration instanceof Migration || ! method_exists($migration, 'up')) {
+        throw new LogicException('Expected the batch metadata migration to define an up method.');
+    }
+
     $migration->up();
     app('db')->table('job_batches')->insert([
         'id' => 'batch-001',

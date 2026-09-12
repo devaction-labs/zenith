@@ -194,7 +194,7 @@ final class RetainedJobCursor
             throw new RuntimeException('The retained job cursor is invalid.');
         }
 
-        return $decoded;
+        return array_filter($decoded, is_string(...), ARRAY_FILTER_USE_KEY);
     }
 
     private function signingKey(): string

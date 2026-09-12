@@ -139,6 +139,10 @@ describe('JobsData', function (): void {
                 $jobs = [];
 
                 foreach ($requestedIds as $offset => $id) {
+                    if (! is_string($id)) {
+                        throw new LogicException('Expected Horizon job IDs to be strings.');
+                    }
+
                     if ($id === 'completed-20') {
                         continue;
                     }
@@ -179,14 +183,10 @@ describe('JobsData', function (): void {
         dashboardReturnsUsing(
             $repository,
             'getJobs',
-            static fn (array $requestedIds, int $startingAt = 0): Collection => new Collection(
-                array_map(
-                    static fn (string $id, int $offset): object => horizonJob(
-                        $startingAt + $offset,
-                        $id,
-                    ),
-                    $requestedIds,
-                    array_keys($requestedIds),
+            static fn (array $requestedIds, int $startingAt = 0): Collection => collect($requestedIds)->values()->map(
+                static fn (mixed $id, int $offset): object => horizonJob(
+                    $startingAt + $offset,
+                    is_string($id) ? $id : throw new LogicException('Expected Horizon job IDs to be strings.'),
                 ),
             ),
         );
@@ -254,8 +254,8 @@ describe('JobsData', function (): void {
             ->and($detail?->scheduledAt)->toBeNull()
             ->and($detail?->originalScheduledAt)->toBe((float) $delayedUntil)
             ->and($data)->toBeArray()
-            ->and($data['decodedCommand']['customerId'] ?? null)->toBe(42)
-            ->and($data['decodedCommand']['delay']['class'] ?? null)->toBe('DateTimeImmutable')
+            ->and(data_get($data, 'decodedCommand.customerId'))->toBe(42)
+            ->and(data_get($data, 'decodedCommand.delay.class'))->toBe('DateTimeImmutable')
             ->and(json_encode($detail?->payload))->not->toContain(serialize($command));
     });
 

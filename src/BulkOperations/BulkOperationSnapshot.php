@@ -7,6 +7,7 @@ namespace DevactionLabs\Zenith\BulkOperations;
 use Illuminate\Contracts\Redis\Factory as RedisFactory;
 use Illuminate\Redis\Connections\Connection;
 use InvalidArgumentException;
+use Random\RandomException;
 
 /**
  * Point-in-time bulk-operation target sets stored on the Horizon Redis connection.
@@ -30,8 +31,11 @@ final class BulkOperationSnapshot
      */
     public const int IDLE_TTL_SECONDS = 604_800;
 
-    public function __construct(private RedisFactory $redis) {}
+    public function __construct(private readonly RedisFactory $redis) {}
 
+    /**
+     * @throws RandomException
+     */
     public function createFromSortedSet(string $sourceKey): string
     {
         $sourceKey = trim($sourceKey);
@@ -72,6 +76,8 @@ final class BulkOperationSnapshot
 
     /**
      * @param  iterable<int, string>  $ids
+     *
+     * @throws RandomException
      */
     public function createFromIds(iterable $ids): string
     {
@@ -221,6 +227,9 @@ final class BulkOperationSnapshot
         }
     }
 
+    /**
+     * @throws RandomException
+     */
     private function newOperationId(): string
     {
         return bin2hex(random_bytes(16));
