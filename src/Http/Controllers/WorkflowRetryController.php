@@ -13,8 +13,8 @@ final class WorkflowRetryController
     public function store(Request $request, string $workflow): RedirectResponse
     {
         $step = $request->string('step')->toString();
-        $model = Workflow::query()->findOrFail($workflow);
-        $model->retryFrom($step !== '' ? $step : (string) $model->steps()->where('status', 'failed')->value('name'));
+
+        Workflow::query()->findOrFail($workflow)->retryFrom($step !== '' ? $step : null);
 
         return back()->with('toast.success', 'Retried the workflow from the failed step.');
     }

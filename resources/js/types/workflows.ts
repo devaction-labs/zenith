@@ -5,7 +5,10 @@ export type WorkflowStatus =
   | "completed"
   | "failed"
   | "cancelled"
-  | "dispatched";
+  | "dispatched"
+  | "compensating"
+  | "compensated"
+  | "compensation_failed";
 
 export type WorkflowStep = {
   name: string;

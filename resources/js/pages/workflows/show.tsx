@@ -41,7 +41,9 @@ function WorkflowShow({ horizon, workflow }: HorizonPageProps & WorkflowDetailPa
 
   usePageRefresh(horizon.pollInterval, ["workflow"], autoLoad);
 
-  const failedStep = workflow.steps.find((step) => step.status === "failed");
+  const retryStep = workflow.steps.find(
+    (step) => step.status === "failed" || step.status === "compensation_failed",
+  );
   const workflowUrl = (id: string) => resolveHorizonRoute(workflowShow(id), horizon.baseUrl).url;
 
   return (
@@ -65,19 +67,21 @@ function WorkflowShow({ horizon, workflow }: HorizonPageProps & WorkflowDetailPa
                   Cancel
                 </Button>
               ) : null}
-              {workflow.retryable && failedStep && abilities.manageWorkflows ? (
+              {workflow.retryable && retryStep && abilities.manageWorkflows ? (
                 <Button
                   size="sm"
                   onClick={() =>
                     router.post(
                       resolveHorizonRoute(retryWorkflow(workflow.id), horizon.baseUrl).url,
                       {
-                        step: failedStep.name,
+                        step: retryStep.name,
                       },
                     )
                   }
                 >
-                  Retry failed
+                  {retryStep.status === "compensation_failed"
+                    ? "Retry compensation"
+                    : "Retry failed"}
                 </Button>
               ) : null}
             </CardAction>

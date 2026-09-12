@@ -8,7 +8,7 @@ use InvalidArgumentException;
 use RuntimeException;
 
 /**
- * @phpstan-type StepDefinition array{name: string, job: class-string, payload: array<string, mixed>, deps: list<string>, cascade: bool, workflow: WorkflowDefinition|null}
+ * @phpstan-type StepDefinition array{name: string, job: class-string, payload: array<string, mixed>, deps: list<string>, cascade: bool, compensate: class-string|null, workflow: WorkflowDefinition|null}
  */
 final class WorkflowDefinition
 {
@@ -49,15 +49,23 @@ final class WorkflowDefinition
      * @param  class-string  $job
      * @param  array<string, mixed>  $payload
      * @param  list<string>  $deps
+     * @param  class-string|null  $compensate  Runs in reverse order when a later step fails.
      */
-    public function add(string $name, string $job, array $payload = [], array $deps = [], bool $cascade = false): self
-    {
+    public function add(
+        string $name,
+        string $job,
+        array $payload = [],
+        array $deps = [],
+        bool $cascade = false,
+        ?string $compensate = null,
+    ): self {
         return $this->push([
             'name' => $name,
             'job' => $job,
             'payload' => $payload,
             'deps' => $deps,
             'cascade' => $cascade,
+            'compensate' => $compensate,
             'workflow' => null,
         ]);
     }
@@ -66,10 +74,16 @@ final class WorkflowDefinition
      * @param  class-string  $job
      * @param  array<string, mixed>  $payload
      * @param  list<string>  $deps
+     * @param  class-string|null  $compensate
      */
-    public function cascade(string $name, string $job, array $payload = [], array $deps = []): self
-    {
-        return $this->add($name, $job, $payload, $deps, true);
+    public function cascade(
+        string $name,
+        string $job,
+        array $payload = [],
+        array $deps = [],
+        ?string $compensate = null,
+    ): self {
+        return $this->add($name, $job, $payload, $deps, true, $compensate);
     }
 
     /**
@@ -86,6 +100,7 @@ final class WorkflowDefinition
             'payload' => [],
             'deps' => $deps,
             'cascade' => false,
+            'compensate' => null,
             'workflow' => $workflow,
         ]);
     }

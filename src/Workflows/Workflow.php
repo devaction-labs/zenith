@@ -83,7 +83,7 @@ final class Workflow extends Model
         app(AdvanceWorkflow::class)->cancel($this);
     }
 
-    public function retryFrom(string $step): void
+    public function retryFrom(?string $step = null): void
     {
         app(AdvanceWorkflow::class)->retry($this, $step);
     }

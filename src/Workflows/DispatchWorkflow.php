@@ -61,6 +61,7 @@ final readonly class DispatchWorkflow
                 'payload' => $step['payload'],
                 'deps' => $step['deps'],
                 'cascade' => $step['cascade'],
+                'compensate_job' => $step['compensate'],
                 'status' => WorkflowStatus::Pending->value,
             ]);
 

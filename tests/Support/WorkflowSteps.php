@@ -238,6 +238,27 @@ final class CompensateWorkflowStep implements ShouldQueue
     }
 }
 
+final class FailingCompensateWorkflowStep implements ShouldQueue
+{
+    use Queueable;
+
+    public static bool $shouldFail = true;
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @param  array<string, mixed>  $output
+     * @param  array<string, mixed>  $context
+     */
+    public function handle(array $payload, array $output, array $context): void
+    {
+        if (self::$shouldFail) {
+            throw new RuntimeException('compensation failed');
+        }
+
+        CompensateWorkflowStep::$released[] = $output;
+    }
+}
+
 final class AwaitingSignalWorkflowStep implements ShouldQueue
 {
     use Queueable;

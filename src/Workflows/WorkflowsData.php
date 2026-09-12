@@ -63,8 +63,11 @@ final class WorkflowsData
             childId: $workflow->children->firstWhere('parent_step', $step->name)?->id,
         ))->all();
 
-        $failed = $workflow->steps->contains(
-            fn (WorkflowStep $step): bool => $step->status === WorkflowStatus::Failed->value,
+        $retryable = $workflow->steps->contains(
+            static fn (WorkflowStep $step): bool => in_array($step->status, [
+                WorkflowStatus::Failed->value,
+                WorkflowStatus::CompensationFailed->value,
+            ], true),
         );
 
         return new WorkflowDetailData(
@@ -76,7 +79,7 @@ final class WorkflowsData
             createdAt: $workflow->created_at?->getTimestamp(),
             finishedAt: $workflow->finished_at?->getTimestamp(),
             cancellable: ! $workflow->status->finished(),
-            retryable: $failed && $workflow->parent_id === null,
+            retryable: $retryable && $workflow->parent_id === null,
             parentId: $workflow->parent_id,
             children: $this->children($workflow),
         );

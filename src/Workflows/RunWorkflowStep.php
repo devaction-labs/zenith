@@ -4,17 +4,16 @@ declare(strict_types=1);
 
 namespace DevactionLabs\Zenith\Workflows;
 
-use DateTimeInterface;
 use DevactionLabs\Zenith\Signals\SignalWaiting;
+use DevactionLabs\Zenith\Workflows\Concerns\AdoptsStepQueueOptions;
 use Illuminate\Contracts\Queue\Job;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
-use Illuminate\Queue\Jobs\SyncJob;
 use Throwable;
 
 final class RunWorkflowStep implements ShouldQueue
 {
-    use Queueable;
+    use AdoptsStepQueueOptions, Queueable;
 
     /**
      * Seconds to wait before a step that reported waiting for a signal runs again.
@@ -26,21 +25,6 @@ final class RunWorkflowStep implements ShouldQueue
      * while a step waits. It is only present once the signals module ships it.
      */
     private const string RELEASE_WHILE_WAITING = 'DevactionLabs\Zenith\Signals\ReleaseWhileWaiting';
-
-    public ?int $tries = null;
-
-    /**
-     * @var array<int>|int|null
-     */
-    public array|int|null $backoff = null;
-
-    public ?int $timeout = null;
-
-    public bool $failOnTimeout = false;
-
-    public ?int $maxExceptions = null;
-
-    public ?string $jobClass = null;
 
     /**
      * @param  string  $token  The claim token stored on the step when this job was dispatched.
@@ -56,17 +40,7 @@ final class RunWorkflowStep implements ShouldQueue
      */
     public static function for(string $workflowId, string $stepName, string $token, string $jobClass): self
     {
-        $options = StepQueueOptions::of($jobClass);
-        $job = new self($workflowId, $stepName, $token);
-
-        $job->jobClass = $jobClass;
-        $job->tries = $options->tries;
-        $job->backoff = $options->backoff;
-        $job->timeout = $options->timeout;
-        $job->failOnTimeout = $options->failOnTimeout;
-        $job->maxExceptions = $options->maxExceptions;
-
-        return $job->onConnection($options->connection)->onQueue($options->queue);
+        return (new self($workflowId, $stepName, $token))->adoptQueueOptions($jobClass);
     }
 
     /**
@@ -83,27 +57,6 @@ final class RunWorkflowStep implements ShouldQueue
         $instance = new $middleware;
 
         return is_object($instance) ? [$instance] : [];
-    }
-
-    /**
-     * The deadline declared by the step class, which lets a step that waits for a signal
-     * be released repeatedly without exhausting its attempts.
-     */
-    public function retryUntil(): ?DateTimeInterface
-    {
-        if ($this->jobClass === null) {
-            return null;
-        }
-
-        $instance = app($this->jobClass);
-
-        if (! is_object($instance) || ! method_exists($instance, 'retryUntil')) {
-            return null;
-        }
-
-        $deadline = $instance->retryUntil();
-
-        return $deadline instanceof DateTimeInterface ? $deadline : null;
     }
 
     /**
@@ -151,13 +104,5 @@ final class RunWorkflowStep implements ShouldQueue
         if ($this->redeliverable()) {
             $advance->redeliver($this->workflowId, $this->stepName, $this->token, self::SIGNAL_RETRY_SECONDS);
         }
-    }
-
-    /**
-     * The sync driver runs a job inline and cannot redeliver it, so a failed attempt is final there.
-     */
-    private function redeliverable(): bool
-    {
-        return $this->job !== null && ! $this->job instanceof SyncJob;
     }
 }

@@ -12,6 +12,9 @@ const statusVariants: Partial<Record<string, BadgeVariant>> = {
   completed: "success",
   failed: "destructive",
   cancelled: "outline",
+  compensating: "warning",
+  compensated: "secondary",
+  compensation_failed: "destructive",
 };
 
 export function workflowStatusVariant(status: string): BadgeVariant {

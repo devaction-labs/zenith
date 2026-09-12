@@ -17,6 +17,7 @@ use Illuminate\Support\Carbon;
  * @property array<string, mixed>|null $payload
  * @property list<string>|null $deps
  * @property bool $cascade
+ * @property string|null $compensate_job
  * @property string $status
  * @property mixed $output
  * @property string|null $error
@@ -39,6 +40,7 @@ final class WorkflowStep extends Model
         'payload',
         'deps',
         'cascade',
+        'compensate_job',
         'status',
         'output',
         'error',

@@ -13,6 +13,9 @@ enum WorkflowStatus: string
     case Cancelled = 'cancelled';
     case Dispatched = 'dispatched';
     case Retrying = 'retrying';
+    case Compensating = 'compensating';
+    case Compensated = 'compensated';
+    case CompensationFailed = 'compensation_failed';
 
     /**
      * @return list<string>

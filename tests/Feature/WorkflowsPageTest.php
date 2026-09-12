@@ -104,6 +104,24 @@ it('shows a retrying step with its attempt count and last error', function (): v
             ->where('workflow.retryable', false));
 });
 
+it('shows a failed compensation as retryable', function (): void {
+    FailingCompensateWorkflowStep::$shouldFail = true;
+
+    $workflow = WorkflowDefinition::make('saga')
+        ->add('fetch', FetchWorkflowStep::class, ['seed' => [1]], compensate: FailingCompensateWorkflowStep::class)
+        ->add('boom', FailingWorkflowStep::class, deps: ['fetch'])
+        ->dispatch();
+
+    get("/horizon/workflows/{$workflow->id}")
+        ->assertSuccessful()
+        ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
+            ->component('Workflows/Show')
+            ->where('workflow.status', WorkflowStatus::Failed->value)
+            ->where('workflow.steps.0.status', WorkflowStatus::CompensationFailed->value)
+            ->where('workflow.steps.0.error', 'compensation failed')
+            ->where('workflow.retryable', true));
+});
+
 it('cancels a running workflow from the dashboard', function (): void {
     $workflow = WorkflowDefinition::make('open')
         ->add('fetch', FetchWorkflowStep::class, ['seed' => [1]])

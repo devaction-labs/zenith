@@ -115,6 +115,50 @@ final readonly class AdvanceWorkflow
     }
 
     /**
+     * Run the compensation of a step that was undone after a later step failed.
+     *
+     * @throws Throwable
+     */
+    public function runCompensation(string $workflowId, string $stepName, string $token): void
+    {
+        $workflow = Workflow::query()->with('steps')->find($workflowId);
+
+        if (! $workflow instanceof Workflow) {
+            return;
+        }
+
+        $step = $workflow->steps->firstWhere('name', $stepName);
+
+        if (! $step instanceof WorkflowStep || $step->job_uuid !== $token) {
+            return;
+        }
+
+        $compensateJob = $step->compensate_job;
+
+        if ($compensateJob === null || $step->status !== WorkflowStatus::Compensating->value) {
+            return;
+        }
+
+        try {
+            $this->compensateStep($workflow, $step, $compensateJob);
+        } catch (Throwable $exception) {
+            $step->transition([WorkflowStatus::Compensating], ['error' => $exception->getMessage()]);
+
+            throw $exception;
+        }
+
+        $compensated = $step->transition([WorkflowStatus::Compensating], [
+            'status' => WorkflowStatus::Compensated->value,
+            'error' => null,
+            'finished_at' => Date::now(),
+        ]);
+
+        if ($compensated) {
+            $this->compensate($workflow);
+        }
+    }
+
+    /**
      * Fail a step whose job ran out of attempts, which fails its workflow.
      */
     public function failStep(string $workflowId, string $stepName, string $token, ?Throwable $exception): void
@@ -146,6 +190,29 @@ final readonly class AdvanceWorkflow
     }
 
     /**
+     * Record a compensation that ran out of attempts. The remaining compensations wait
+     * until this one is retried from the dashboard.
+     */
+    public function failCompensation(string $workflowId, string $stepName, string $token, ?Throwable $exception): void
+    {
+        $step = WorkflowStep::query()
+            ->where('workflow_id', $workflowId)
+            ->where('name', $stepName)
+            ->where('job_uuid', $token)
+            ->first();
+
+        if (! $step instanceof WorkflowStep) {
+            return;
+        }
+
+        $step->transition([WorkflowStatus::Compensating], [
+            'status' => WorkflowStatus::CompensationFailed->value,
+            'error' => $exception?->getMessage() ?? $step->error,
+            'finished_at' => Date::now(),
+        ]);
+    }
+
+    /**
      * Queue a fresh job for a step that is waiting for a signal, so waiting does not use
      * up the attempts of the job that runs it.
      */
@@ -165,19 +232,38 @@ final readonly class AdvanceWorkflow
         }
     }
 
-    public function retry(Workflow $workflow, string $stepName): void
+    /**
+     * Run a workflow again from the given step, or from its first failed step. Steps that
+     * were compensated run again too, since their work was undone.
+     */
+    public function retry(Workflow $workflow, ?string $stepName = null): void
     {
         $workflow->load('steps');
-        $step = $workflow->steps->firstWhere('name', $stepName);
+
+        $step = $stepName === null
+            ? $this->firstRetryableStep($workflow)
+            : $workflow->steps->firstWhere('name', $stepName);
 
         if (! $step instanceof WorkflowStep) {
             return;
         }
 
-        $reset = [$stepName, ...$this->descendants($workflow, $stepName)];
+        if ($step->status === WorkflowStatus::CompensationFailed->value) {
+            $this->retryCompensation($workflow, $step);
+
+            return;
+        }
+
+        $reset = [$step->name, ...$this->descendants($workflow, $step->name)];
+
+        foreach ($workflow->steps as $candidate) {
+            if ($candidate->status === WorkflowStatus::Compensated->value) {
+                $reset = [...$reset, $candidate->name, ...$this->descendants($workflow, $candidate->name)];
+            }
+        }
 
         $workflow->steps()
-            ->whereIn('name', $reset)
+            ->whereIn('name', array_values(array_unique($reset)))
             ->update([
                 'status' => WorkflowStatus::Pending->value,
                 'error' => null,
@@ -227,6 +313,141 @@ final readonly class AdvanceWorkflow
         $output = $instance->handle($this->payload($workflow, $step), $workflow->context ?? []);
 
         return is_array($output) ? $output : ['value' => $output];
+    }
+
+    private function compensateStep(Workflow $workflow, WorkflowStep $step, string $compensateJob): void
+    {
+        $instance = $this->container->make($compensateJob);
+
+        if (! is_object($instance) || ! method_exists($instance, 'handle')) {
+            throw new RuntimeException("Workflow compensation class [{$compensateJob}] has no handle method.");
+        }
+
+        $instance->handle($this->payload($workflow, $step), $step->outputValues(), $workflow->context ?? []);
+    }
+
+    /**
+     * Queue the next compensation of a failed workflow. Compensations run one at a time,
+     * in reverse completion order, so a step is undone before the steps it depended on.
+     */
+    private function compensate(Workflow $workflow): void
+    {
+        $workflow->load('steps');
+
+        $step = $this->nextCompensation($workflow);
+
+        if (! $step instanceof WorkflowStep) {
+            return;
+        }
+
+        $compensateJob = $step->compensate_job;
+
+        if ($compensateJob === null) {
+            return;
+        }
+
+        $token = Str::uuid()->toString();
+
+        $claimed = $step->transition([WorkflowStatus::Completed], [
+            'status' => WorkflowStatus::Compensating->value,
+            'job_uuid' => $token,
+        ]);
+
+        if ($claimed) {
+            $this->bus->dispatch(
+                RunWorkflowCompensation::for($workflow->id, $step->name, $token, $compensateJob),
+            );
+        }
+    }
+
+    private function retryCompensation(Workflow $workflow, WorkflowStep $step): void
+    {
+        $compensateJob = $step->compensate_job;
+
+        if ($compensateJob === null) {
+            return;
+        }
+
+        $token = Str::uuid()->toString();
+
+        $claimed = $step->transition([WorkflowStatus::CompensationFailed], [
+            'status' => WorkflowStatus::Compensating->value,
+            'error' => null,
+            'job_uuid' => $token,
+            'finished_at' => null,
+        ]);
+
+        if ($claimed) {
+            $this->bus->dispatch(
+                RunWorkflowCompensation::for($workflow->id, $step->name, $token, $compensateJob),
+            );
+        }
+    }
+
+    private function nextCompensation(Workflow $workflow): ?WorkflowStep
+    {
+        $pending = $workflow->steps
+            ->filter(static fn (WorkflowStep $step): bool => $step->status === WorkflowStatus::Completed->value
+                && $step->compensate_job !== null)
+            ->all();
+
+        if ($pending === []) {
+            return null;
+        }
+
+        $depths = [];
+
+        foreach ($workflow->steps as $step) {
+            $this->depth($workflow, $step, $depths);
+        }
+
+        usort(
+            $pending,
+            static fn (WorkflowStep $first, WorkflowStep $second): int => [
+                $second->finished_at?->getTimestamp() ?? 0,
+                $depths[$second->name] ?? 0,
+                $second->id,
+            ] <=> [
+                $first->finished_at?->getTimestamp() ?? 0,
+                $depths[$first->name] ?? 0,
+                $first->id,
+            ],
+        );
+
+        return $pending[0];
+    }
+
+    /**
+     * The longest dependency chain that leads to a step, which orders steps that finished
+     * within the same second so that a step is undone before its dependencies.
+     *
+     * @param  array<string, int>  $depths
+     */
+    private function depth(Workflow $workflow, WorkflowStep $step, array &$depths): int
+    {
+        if (isset($depths[$step->name])) {
+            return $depths[$step->name];
+        }
+
+        $depth = 0;
+
+        foreach ($step->dependencies() as $dependency) {
+            $dependencyStep = $workflow->steps->firstWhere('name', $dependency);
+
+            if ($dependencyStep instanceof WorkflowStep) {
+                $depth = max($depth, $this->depth($workflow, $dependencyStep, $depths) + 1);
+            }
+        }
+
+        return $depths[$step->name] = $depth;
+    }
+
+    private function firstRetryableStep(Workflow $workflow): ?WorkflowStep
+    {
+        return $workflow->steps->first(static fn (WorkflowStep $step): bool => in_array($step->status, [
+            WorkflowStatus::Failed->value,
+            WorkflowStatus::CompensationFailed->value,
+        ], true));
     }
 
     /**
@@ -336,6 +557,7 @@ final readonly class AdvanceWorkflow
         $this->cancelActiveSteps($workflow);
         $this->cancelChildren($workflow);
         $this->failParentStep($workflow, sprintf('Nested workflow [%s] failed.', $this->label($workflow)));
+        $this->compensate($workflow);
     }
 
     private function finishIfDone(Workflow $workflow): void
