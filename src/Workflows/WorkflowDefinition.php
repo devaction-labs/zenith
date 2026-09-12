@@ -82,11 +82,44 @@ final class WorkflowDefinition
 
     public function dispatch(): Workflow
     {
+        $this->validate();
+
+        return app(DispatchWorkflow::class)->handle($this);
+    }
+
+    /**
+     * @throws InvalidArgumentException
+     * @throws RuntimeException
+     */
+    public function validate(): void
+    {
         if ($this->steps === []) {
             throw new RuntimeException('A workflow needs at least one step.');
         }
 
-        return app(DispatchWorkflow::class)->handle($this);
+        $names = array_column($this->steps, 'name');
+
+        foreach ($this->steps as $step) {
+            foreach ($step['deps'] as $dependency) {
+                if ($dependency === $step['name']) {
+                    throw new InvalidArgumentException("Workflow step [{$step['name']}] cannot depend on itself.");
+                }
+
+                if (! in_array($dependency, $names, true)) {
+                    throw new InvalidArgumentException(
+                        "Workflow step [{$step['name']}] depends on unknown step [{$dependency}].",
+                    );
+                }
+            }
+        }
+
+        $cycle = $this->findCycle();
+
+        if ($cycle !== null) {
+            throw new InvalidArgumentException(
+                sprintf('Workflow steps form a dependency cycle: [%s].', implode(' -> ', $cycle)),
+            );
+        }
     }
 
     public function name(): ?string
@@ -122,5 +155,62 @@ final class WorkflowDefinition
         }
 
         return hash('xxh3', $this->name);
+    }
+
+    /**
+     * @return list<string>|null
+     */
+    private function findCycle(): ?array
+    {
+        $dependencies = [];
+
+        foreach ($this->steps as $step) {
+            $dependencies[$step['name']] = $step['deps'];
+        }
+
+        $explored = [];
+
+        foreach ($this->steps as $step) {
+            $cycle = $this->walk($step['name'], $dependencies, [], $explored);
+
+            if ($cycle !== null) {
+                return $cycle;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param  array<string, list<string>>  $dependencies
+     * @param  list<string>  $path
+     * @param  array<string, true>  $explored
+     * @return list<string>|null
+     */
+    private function walk(string $name, array $dependencies, array $path, array &$explored): ?array
+    {
+        $position = array_search($name, $path, true);
+
+        if ($position !== false) {
+            return [...array_slice($path, $position), $name];
+        }
+
+        if (isset($explored[$name])) {
+            return null;
+        }
+
+        $path[] = $name;
+
+        foreach ($dependencies[$name] ?? [] as $dependency) {
+            $cycle = $this->walk($dependency, $dependencies, $path, $explored);
+
+            if ($cycle !== null) {
+                return $cycle;
+            }
+        }
+
+        $explored[$name] = true;
+
+        return null;
     }
 }
