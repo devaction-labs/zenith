@@ -209,8 +209,7 @@ export function QueueOverview({
         <div className="border-b border-separator px-6 py-3 text-sm">
           {summary.routing.forwardedQueue ? (
             <p className="text-muted-foreground">
-              Forwarded to{" "}
-              <span className="text-foreground">{summary.routing.forwardedQueue}</span>
+              Forwarded to <span className="text-foreground">{summary.routing.forwardedQueue}</span>
               {summary.routing.forwardedConnection
                 ? ` on ${summary.routing.forwardedConnection}`
                 : null}
