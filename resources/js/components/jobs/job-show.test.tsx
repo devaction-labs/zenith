@@ -38,6 +38,7 @@ const props: JobDetailPageProps = {
         decodedCommand: { customerId: 42 },
       },
     },
+    attemptTimeline: { available: false, attempts: [], message: null },
   },
 };
 

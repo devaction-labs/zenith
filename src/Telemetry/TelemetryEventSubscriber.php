@@ -4,11 +4,15 @@ declare(strict_types=1);
 
 namespace DevactionLabs\Zenith\Telemetry;
 
+use Carbon\CarbonImmutable;
+use DevactionLabs\Zenith\Telemetry\Data\JobAttemptData;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Queue\Job as JobContract;
 use Illuminate\Queue\Events\JobAttempted;
 use Illuminate\Queue\Events\JobProcessing;
 use Illuminate\Queue\Events\JobTimedOut;
+use Illuminate\Support\Str;
+use Throwable;
 
 /**
  * Turns Laravel's queue events into recorded telemetry attempts.
@@ -36,15 +40,23 @@ use Illuminate\Queue\Events\JobTimedOut;
  * `Interruptible` job is running) is deliberately not observed here: it only
  * asks the job to wind down, it does not end the attempt, so clearing the
  * in-flight entry on it would show a still-running job as finished.
+ *
+ * Every terminal event also appends one entry to that job's attempt
+ * history via `AttemptHistory`, whether or not an exception occurred: a job
+ * that fails twice and then succeeds should show three attempts, the last
+ * one without exception details.
  */
 final class TelemetryEventSubscriber
 {
+    private const int MAXIMUM_MESSAGE_LENGTH = 500;
+
     /** @var array<string, array{startedAt: float, waitMilliseconds: int|null}> */
     private array $pending = [];
 
     public function __construct(
         private readonly TelemetryRecorder $recorder,
         private readonly InFlightJobTracker $inFlight,
+        private readonly AttemptHistory $attempts,
     ) {}
 
     /** @return array<class-string, string> */
@@ -80,7 +92,7 @@ final class TelemetryEventSubscriber
 
     public function handleAttempted(JobAttempted $event): void
     {
-        $this->recordTerminal($event->job, $this->outcomeFor($event->job));
+        $this->recordTerminal($event->job, $this->outcomeFor($event->job), $event->exception);
     }
 
     public function handleTimedOut(JobTimedOut $event): void
@@ -88,23 +100,37 @@ final class TelemetryEventSubscriber
         $this->recordTerminal($event->job, TelemetryOutcome::TimedOut);
     }
 
-    private function recordTerminal(JobContract $job, TelemetryOutcome $outcome): void
+    private function recordTerminal(JobContract $job, TelemetryOutcome $outcome, ?Throwable $exception = null): void
     {
         $timing = $this->popTiming($job);
+        $runtimeMilliseconds = $timing !== null ? $this->elapsedMilliseconds($timing['startedAt']) : null;
+        $worker = WorkerIdentity::current();
 
         $this->recorder->record(
             outcome: $outcome,
             job: JobIdentity::fromJob($job),
-            worker: WorkerIdentity::current(),
-            runtimeMilliseconds: $timing !== null ? $this->elapsedMilliseconds($timing['startedAt']) : null,
+            worker: $worker,
+            runtimeMilliseconds: $runtimeMilliseconds,
             waitMilliseconds: $timing['waitMilliseconds'] ?? null,
         );
 
         $uuid = $job->uuid();
 
-        if ($uuid !== null) {
-            $this->inFlight->finish($uuid);
+        if ($uuid === null) {
+            return;
         }
+
+        $this->inFlight->finish($uuid);
+        $this->attempts->record($uuid, new JobAttemptData(
+            attempt: $job->attempts(),
+            outcome: $outcome->value,
+            exceptionClass: $exception !== null ? $exception::class : null,
+            message: $exception !== null ? Str::limit($exception->getMessage(), self::MAXIMUM_MESSAGE_LENGTH) : null,
+            fingerprint: $exception !== null ? AttemptFingerprint::for($exception) : null,
+            runtimeMilliseconds: $runtimeMilliseconds,
+            node: $worker->node,
+            occurredAt: CarbonImmutable::now()->getTimestamp(),
+        ));
     }
 
     /** @return array{startedAt: float, waitMilliseconds: int|null}|null */

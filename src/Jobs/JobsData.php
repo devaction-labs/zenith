@@ -11,6 +11,9 @@ use DevactionLabs\Zenith\Jobs\Data\JobFilterCatalogData;
 use DevactionLabs\Zenith\Jobs\Data\JobIndexFiltersData;
 use DevactionLabs\Zenith\Jobs\Data\JobPageData;
 use DevactionLabs\Zenith\Jobs\Data\JobRowData;
+use DevactionLabs\Zenith\Telemetry\AttemptHistory;
+use DevactionLabs\Zenith\Telemetry\Data\AttemptTimelineData;
+use DevactionLabs\Zenith\Telemetry\TelemetryRegistration;
 use Illuminate\Contracts\Redis\Factory as RedisFactory;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Date;
@@ -28,7 +31,35 @@ final readonly class JobsData
         private ?RedisFactory $redis = null,
         private ?RetainedJobQuery $retainedQuery = null,
         private ?RetainedJobFilterCatalog $filterCatalog = null,
+        private ?AttemptHistory $attemptHistory = null,
     ) {}
+
+    public function attemptTimeline(string $jobId): AttemptTimelineData
+    {
+        if ($this->attemptHistory === null || ! TelemetryRegistration::enabled()) {
+            return new AttemptTimelineData(
+                available: false,
+                attempts: [],
+                message: 'Enable the telemetry recorder (zenith.telemetry.enabled) to see per-attempt history.',
+            );
+        }
+
+        try {
+            return new AttemptTimelineData(
+                available: true,
+                attempts: $this->attemptHistory->forJob($jobId),
+                message: null,
+            );
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return new AttemptTimelineData(
+                available: false,
+                attempts: [],
+                message: 'Attempt history is currently unavailable.',
+            );
+        }
+    }
 
     public function page(
         JobListType $type,
@@ -381,6 +412,7 @@ final readonly class JobsData
             failedAt: $row->failedAt,
             runtime: $row->runtime,
             payload: $this->safePayload($payload, $decodedCommand),
+            attemptTimeline: $this->attemptTimeline($row->id),
             composition: JobComposition::fromPayload($payload, $decodedCommand),
         );
     }

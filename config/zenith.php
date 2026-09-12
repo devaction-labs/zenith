@@ -64,5 +64,14 @@ return [
             'default_timeout_seconds' => 60,
             'grace_seconds' => 60,
         ],
+
+        // Per-job attempt history, shown on job and failed-job detail
+        // pages. Bounded per job (oldest attempts are trimmed first) and
+        // by a TTL so a job that is never revisited does not retain its
+        // history forever.
+        'attempts' => [
+            'per_job_limit' => 25,
+            'ttl_seconds' => 604800,
+        ],
     ],
 ];

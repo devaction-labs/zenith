@@ -57,6 +57,23 @@ export type JobComposition = {
   chain: Array<{ class: string }>;
 };
 
+export type JobAttempt = {
+  attempt: number;
+  outcome: string;
+  exceptionClass: string | null;
+  message: string | null;
+  fingerprint: string | null;
+  runtimeMilliseconds: number | null;
+  node: string;
+  occurredAt: number;
+};
+
+export type AttemptTimeline = {
+  available: boolean;
+  attempts: JobAttempt[];
+  message: string | null;
+};
+
 export type JobDetail = Omit<
   JobRow,
   | "index"
@@ -70,6 +87,7 @@ export type JobDetail = Omit<
 > & {
   batchId: string | null;
   payload: Record<string, unknown>;
+  attemptTimeline: AttemptTimeline;
   composition?: JobComposition;
 };
 

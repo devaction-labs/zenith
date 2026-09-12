@@ -330,6 +330,7 @@ describe('job pages', function (): void {
                 ->where('meta.title', 'Job Detail')
                 ->where('job.id', 'job-1')
                 ->where('job.payload.displayName', 'App\\Jobs\\ImportFeed')
+                ->where('job.attemptTimeline.available', false)
                 ->missing('job.exception'));
 
         $missingRepository = mockDashboardContract(JobRepository::class);

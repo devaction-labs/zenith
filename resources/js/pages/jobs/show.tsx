@@ -1,6 +1,7 @@
 import { Head, Link } from "@inertiajs/react";
 import { useState } from "react";
 
+import { AttemptTimeline } from "@/components/jobs/attempt-timeline";
 import { DetailList, DetailListItem } from "@/components/detail-list";
 import { Duration } from "@/components/duration";
 import { JobStatus, type JobStatusValue } from "@/components/jobs/job-status";
@@ -213,6 +214,7 @@ function JobShow({ horizon, type, job }: JobDetailPageProps) {
 
         <JobCompositionPanel composition={job.composition} />
         <JobDataTabs payload={job.payload} tags={job.tags} />
+        <AttemptTimeline timeline={job.attemptTimeline} />
       </div>
     </>
   );

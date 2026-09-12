@@ -40,6 +40,7 @@ use DevactionLabs\Zenith\Schedule\InternalScheduledEvent;
 use DevactionLabs\Zenith\Support\FrameworkCapabilities;
 use DevactionLabs\Zenith\Support\HorizonRuntime;
 use DevactionLabs\Zenith\Support\HorizonWorkCommandCompatibility;
+use DevactionLabs\Zenith\Telemetry\AttemptHistory;
 use DevactionLabs\Zenith\Telemetry\TelemetryEventSubscriber;
 use DevactionLabs\Zenith\Telemetry\TelemetryRegistration;
 use Illuminate\Console\Scheduling\Schedule;
@@ -161,6 +162,7 @@ final class ZenithServiceProvider extends ServiceProvider
                 redis: $this->app->make(RedisFactory::class),
                 retainedQuery: $this->app->make(RetainedJobQuery::class),
                 filterCatalog: $this->app->make(RetainedJobFilterCatalog::class),
+                attemptHistory: $this->app->make(AttemptHistory::class),
             ),
         );
         $this->app->resolving(

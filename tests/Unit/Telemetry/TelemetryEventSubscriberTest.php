@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
+use DevactionLabs\Zenith\Telemetry\AttemptHistory;
 use DevactionLabs\Zenith\Telemetry\InFlightJobTracker;
 use DevactionLabs\Zenith\Telemetry\TelemetryEventSubscriber;
 use DevactionLabs\Zenith\Telemetry\TelemetryKeys;
@@ -28,7 +29,11 @@ function telemetryHashFields(TelemetryRedisConnection $connection): array
 
 function telemetrySubscriber(RedisFactory $redis): TelemetryEventSubscriber
 {
-    return new TelemetryEventSubscriber(new TelemetryRecorder($redis), new InFlightJobTracker($redis));
+    return new TelemetryEventSubscriber(
+        new TelemetryRecorder($redis),
+        new InFlightJobTracker($redis),
+        new AttemptHistory($redis),
+    );
 }
 
 it('records a processed outcome with runtime and wait timings', function (): void {
@@ -150,4 +155,52 @@ it('clears the in-flight entry when a job times out instead of attempting', func
 
     expect($connection->hashes[TelemetryKeys::inFlightJob('job-timed-out')] ?? [])->toBe([]);
     expect($connection->sortedSets[TelemetryKeys::inFlightIndex()] ?? [])->not->toHaveKey('job-timed-out');
+});
+
+it('shows three attempts with the right outcomes for a job that fails twice then succeeds', function (): void {
+    ['redis' => $redis] = telemetryRedis();
+    $subscriber = telemetrySubscriber($redis);
+    $history = new AttemptHistory($redis);
+
+    $job = telemetryFakeJob(['uuid' => 'job-flaky'], attempts: 1);
+    $job->markFailedForTest();
+    $subscriber->handleProcessing(new JobProcessing('redis', $job));
+    $subscriber->handleAttempted(new JobAttempted('redis', $job, new RuntimeException('boom')));
+
+    $job = telemetryFakeJob(['uuid' => 'job-flaky'], attempts: 2);
+    $job->markFailedForTest();
+    $subscriber->handleProcessing(new JobProcessing('redis', $job));
+    $subscriber->handleAttempted(new JobAttempted('redis', $job, new RuntimeException('boom again')));
+
+    $job = telemetryFakeJob(['uuid' => 'job-flaky'], attempts: 3);
+    $subscriber->handleProcessing(new JobProcessing('redis', $job));
+    $subscriber->handleAttempted(new JobAttempted('redis', $job, null));
+
+    $attempts = $history->forJob('job-flaky');
+
+    expect($attempts)->toHaveCount(3);
+    expect(array_map(static fn ($attempt) => $attempt->outcome, $attempts))
+        ->toBe(['failed', 'failed', 'processed']);
+    expect($attempts[0]->exceptionClass)->toBe(RuntimeException::class);
+    expect($attempts[0]->message)->toBe('boom');
+    expect($attempts[0]->fingerprint)->not->toBeNull();
+    expect($attempts[2]->exceptionClass)->toBeNull();
+    expect($attempts[2]->message)->toBeNull();
+});
+
+it('records a timed out attempt without exception details', function (): void {
+    ['redis' => $redis] = telemetryRedis();
+    $subscriber = telemetrySubscriber($redis);
+    $history = new AttemptHistory($redis);
+
+    $job = telemetryFakeJob(['uuid' => 'job-stuck']);
+
+    $subscriber->handleProcessing(new JobProcessing('redis', $job));
+    $subscriber->handleTimedOut(new JobTimedOut('redis', $job, 60));
+
+    $attempts = $history->forJob('job-stuck');
+
+    expect($attempts)->toHaveCount(1);
+    expect($attempts[0]->outcome)->toBe('timed_out');
+    expect($attempts[0]->exceptionClass)->toBeNull();
 });

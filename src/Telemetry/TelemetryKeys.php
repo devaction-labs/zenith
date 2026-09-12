@@ -48,4 +48,9 @@ final class TelemetryKeys
     {
         return self::PREFIX."in-flight:{$jobId}";
     }
+
+    public static function attempts(string $jobId): string
+    {
+        return self::PREFIX."attempts:{$jobId}";
+    }
 }
