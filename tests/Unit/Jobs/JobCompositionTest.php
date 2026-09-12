@@ -53,9 +53,14 @@ function chainedHorizonJob(object $command, string $commandName): HorizonJob
 {
     $job = horizonJob(0, 'job-chain');
     $payload = json_decode($job->payload, true, flags: JSON_THROW_ON_ERROR);
-    $payload['displayName'] = $commandName;
-    $payload['data']['commandName'] = $commandName;
-    $payload['data']['command'] = serialize($command);
+
+    if (! is_array($payload)) {
+        throw new LogicException('The Horizon job payload must decode to an array.');
+    }
+
+    data_set($payload, 'displayName', $commandName);
+    data_set($payload, 'data.commandName', $commandName);
+    data_set($payload, 'data.command', serialize($command));
     $job->payload = json_encode($payload, JSON_THROW_ON_ERROR);
     $job->name = $commandName;
 
