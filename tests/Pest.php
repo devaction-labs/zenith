@@ -16,6 +16,7 @@ require_once __DIR__.'/Support/HorizonJobs.php';
 
 pest()->extend(TestCase::class)->in('Compatibility', 'Feature', 'Unit');
 pest()->extend(BrowserTestCase::class)->in('Browser');
+pest()->tia()->locally()->baselined();
 
 function queuePausingIsSupported(): bool
 {
