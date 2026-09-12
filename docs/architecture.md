@@ -340,6 +340,12 @@ Decision: `php artisan zenith:export-metrics` prints Prometheus text-format samp
 - **Pushgateway**: pipe the output through `curl --data-binary @- http://pushgateway:9091/metrics/job/zenith` on a schedule.
 - **KEDA / HPA**: point a `ScaledObject` or the Prometheus custom-metrics adapter at whichever of the above populates Prometheus; Zenith itself stays unaware of the autoscaler.
 
+### AI-assisted failure explanations (issue #40): go, as a hook with no new dependency
+
+Explaining a failure well needs an LLM call, but Zenith has no opinion on which provider a host application uses, and adding one as a package dependency would force that choice (and its cost) on every consumer, including those who never touch the feature.
+
+Decision: `Zenith::explainFailureUsing(callable $callback)` lets the host register `fn (string $jobClass, string $exceptionMessage): ?string` from its own service provider, backed by whatever AI client it already depends on. Zenith never talks to a provider itself. The failed-job detail page shows an "Explain this failure" action only when a callback is registered, gated by the existing `retryJobs` ability, so hosts that skip the hook see no change.
+
 ## Development environment
 
 Orchestra Testbench verifies package behavior in isolation. The Workbench application provides deterministic successful and failing jobs for live dashboard development.
