@@ -29,4 +29,7 @@ return [
         'store' => null,
         'ttl' => 86400,
     ],
+    'starvation' => [
+        'threshold_seconds' => 300,
+    ],
 ];

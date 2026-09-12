@@ -126,6 +126,11 @@ it('discovers supervised queues and aggregates duplicate names across connection
                         'oldestReadyAgeSeconds' => null,
                     ]],
                 ],
+                'starvation' => [
+                    'status' => 'monitoring',
+                    'thresholdSeconds' => 300,
+                    'oldestReadyAgeSeconds' => null,
+                ],
             ],
             [
                 'name' => 'default',
@@ -161,6 +166,11 @@ it('discovers supervised queues and aggregates duplicate names across connection
                         'thresholdSeconds' => 10,
                         'oldestReadyAgeSeconds' => 60,
                     ]],
+                ],
+                'starvation' => [
+                    'status' => 'monitoring',
+                    'thresholdSeconds' => 300,
+                    'oldestReadyAgeSeconds' => 60,
                 ],
             ],
             [
@@ -216,6 +226,11 @@ it('discovers supervised queues and aggregates duplicate names across connection
                             'oldestReadyAgeSeconds' => 120,
                         ],
                     ],
+                ],
+                'starvation' => [
+                    'status' => 'monitoring',
+                    'thresholdSeconds' => 300,
+                    'oldestReadyAgeSeconds' => 300,
                 ],
             ],
         ],
