@@ -5,38 +5,37 @@ declare(strict_types=1);
 namespace DevactionLabs\Zenith\Limits;
 
 use Closure;
-use Illuminate\Contracts\Queue\Job;
 
-final readonly class EnforceQueueBudget
+/**
+ * Enforce a global rate budget on a queued job.
+ *
+ * While the budget is exhausted the job is released back to its queue until
+ * the window resets, or after `releaseAfter()` seconds. Each release counts as
+ * an attempt, so a throttled job fails once it reaches `$tries` unless it
+ * defines `retryUntil()`; call `dontRelease()` to delete it instead.
+ */
+final class EnforceQueueBudget
 {
+    use ReleasesThrottledJobs;
+
     public function __construct(
-        private QueueBudget $budget,
-        private string $name,
-        private int $allowed,
-        private int $period,
-        private int $weight = 1,
-        private ?string $partition = null,
+        private readonly QueueBudget $budget,
+        private readonly string $name,
+        private readonly int $allowed,
+        private readonly int $period,
+        private readonly int $weight = 1,
+        private readonly ?string $partition = null,
     ) {}
 
     /**
-     * @param  Closure(): mixed  $next
+     * @param  Closure(object): mixed  $next
      */
     public function handle(object $job, Closure $next): mixed
     {
-        if (! $this->budget->consume($this->name, $this->allowed, $this->period, $this->weight, $this->partition)) {
-            if (method_exists($job, 'release')) {
-                $job->release($this->period);
-
-                return null;
-            }
-
-            if ($job instanceof Job) {
-                $job->release($this->period);
-
-                return null;
-            }
+        if ($this->budget->consume($this->name, $this->allowed, $this->period, $this->weight, $this->partition)) {
+            return $next($job);
         }
 
-        return $next();
+        return $this->throttle($job, max(1, $this->budget->availableIn($this->name, $this->partition)));
     }
 }
