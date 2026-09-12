@@ -12,6 +12,7 @@ use DevactionLabs\Zenith\BulkOperations\BulkOperationSnapshot;
 use DevactionLabs\Zenith\Chunks\ChunkBuffer;
 use DevactionLabs\Zenith\Console\AssetsCommand;
 use DevactionLabs\Zenith\Console\InstallCommand;
+use DevactionLabs\Zenith\Console\PruneJobHistoryCommand;
 use DevactionLabs\Zenith\Console\WarmBatchMetadataCommand;
 use DevactionLabs\Zenith\Console\WarmRetainedJobsCommand;
 use DevactionLabs\Zenith\Dashboard\DashboardPendingState;
@@ -19,6 +20,8 @@ use DevactionLabs\Zenith\FailedJobs\Actions\RetryAllFailedJobs;
 use DevactionLabs\Zenith\FailedJobs\Actions\RetryFailedJob;
 use DevactionLabs\Zenith\FailedJobs\FailedJobRetryEligibility;
 use DevactionLabs\Zenith\FailedJobs\FailedJobRetryLock;
+use DevactionLabs\Zenith\History\JobHistoryRecorder;
+use DevactionLabs\Zenith\History\JobHistoryStopwatch;
 use DevactionLabs\Zenith\Http\Controllers\BatchesApiController;
 use DevactionLabs\Zenith\Http\Controllers\HomeController;
 use DevactionLabs\Zenith\Http\Controllers\MonitoringApiController;
@@ -46,7 +49,11 @@ use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Illuminate\Contracts\Container\BindingResolutionException;
 use Illuminate\Contracts\Foundation\CachesRoutes;
 use Illuminate\Contracts\Redis\Factory as RedisFactory;
+use Illuminate\Queue\Events\JobFailed as QueueJobFailed;
+use Illuminate\Queue\Events\JobProcessed as QueueJobProcessed;
+use Illuminate\Queue\Events\JobProcessing as QueueJobProcessing;
 use Illuminate\Routing\Router;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 use Inertia\Inertia;
 use Inertia\Ssr\ExcludesSsrPaths;
@@ -171,6 +178,7 @@ final class ZenithServiceProvider extends ServiceProvider
             FrameworkCapabilities::class,
             fn (): FrameworkCapabilities => FrameworkCapabilities::detect(),
         );
+        $this->app->singleton(JobHistoryStopwatch::class);
         $this->app->bind(
             HorizonRuntime::class,
             fn (): HorizonRuntime => new HorizonRuntime(
@@ -205,12 +213,22 @@ final class ZenithServiceProvider extends ServiceProvider
             $this->commands([
                 AssetsCommand::class,
                 InstallCommand::class,
+                PruneJobHistoryCommand::class,
                 WarmBatchMetadataCommand::class,
                 WarmRetainedJobsCommand::class,
             ]);
         }
 
+        $this->registerJobHistoryListeners();
+
         $this->callAfterResolving(Schedule::class, $this->registerScheduledEvents(...));
+    }
+
+    private function registerJobHistoryListeners(): void
+    {
+        Event::listen(QueueJobProcessing::class, [JobHistoryRecorder::class, 'handleProcessing']);
+        Event::listen(QueueJobProcessed::class, [JobHistoryRecorder::class, 'handleProcessed']);
+        Event::listen(QueueJobFailed::class, [JobHistoryRecorder::class, 'handleFailed']);
     }
 
     private function registerScheduledEvents(Schedule $schedule): void

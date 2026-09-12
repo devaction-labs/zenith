@@ -304,6 +304,90 @@ its own Vite configuration. Deployments that disable Composer scripts or ship
 an immutable `public/vendor/zenith/build` artifact can skip the
 Artisan publish step and call `zenith:assets` only when needed.
 
+## Job history
+
+### Context
+
+Horizon trims its own retained job history globally, on a single schedule
+measured in minutes or hours, using Horizon's `trim` configuration. Some
+operators want a longer-lived, queryable record of terminal job outcomes for
+audits, dashboards, or debugging past that window, similar to how Oban keeps
+completed and discarded jobs in Postgres with configurable pruning rules.
+Zenith did not previously persist any job outcome beyond what Horizon retains
+in Redis, and Horizon's own retention carries no granularity below its single
+global `trim` window.
+
+### Decision
+
+An opt-in `zenith_job_history` migration adds a package table storing one row
+per terminal job attempt: `job_class`, `queue`, `connection`, `status`
+(`completed`, `silenced`, or `failed`), `attempts`, `runtime_ms`, `tags` as
+JSON, a truncated `error` summary, and `pushed_at`, `completed_at`, and
+`failed_at` timestamps. Consistent with the package's existing rule against
+exposing raw payloads or exception internals, no job payload and no exception
+trace are ever stored; the `error` column is a short, truncated `class:
+message` summary only, and payload access is limited to reading known JSON
+keys (`tags`, `createdAt`, `silenced`) rather than unserializing the job.
+
+`ZenithServiceProvider` registers a `JobHistoryRecorder` against Laravel's own
+`Illuminate\Queue\Events\JobProcessing`, `JobProcessed`, and `JobFailed`
+events rather than Horizon-specific events, so history recording behaves
+identically across every queue connection Horizon supervises, and does not
+depend on the separate event-driven telemetry recorder built for live,
+short-term metrics. Each handler checks `zenith.history.enabled` first; when
+the flag is `false` (the default), it returns immediately without touching
+the stopwatch, the schema, or the database, so the feature costs nothing when
+it is off. When enabled, a package-owned `JobHistoryStopwatch` singleton times
+each attempt independently of Horizon's own `Stopwatch`, so recording never
+depends on the relative order Horizon's internal listeners run in for a
+different event chain.
+
+Retention rules are configuration-first and stored under
+`zenith.history.retention` as an ordered list of rule arrays, each with an
+optional `queue`, `class`, and/or `status` filter and a required `days` value.
+`zenith:prune-history` evaluates rules top to bottom: the first rule (in
+config order) whose filters match a row governs that row's retention, the
+same way an ordered firewall or routing table works. Each rule's delete query
+excludes rows already claimed by every earlier rule, so a specific rule
+listed before a broad or default rule is never overridden by it. A rule with
+no filters at all is a catch-all; once one runs, no later rule can match
+anything, so operators should list catch-all rules last. Rows that no
+configured rule matches are kept indefinitely rather than guessed at, which is
+the safer default for a feature whose entire purpose is durable history. The
+command is a plain Artisan command meant to be scheduled with
+`withoutOverlapping()` from the host application, matching how
+`horizon:snapshot` is documented in the README, rather than a package-owned
+internal scheduled event; a runtime-editable retention UI is intentionally
+out of scope here and tracked separately.
+
+A dedicated `zenith_job_history_archive` table was considered so pruning could
+move rows out instead of deleting them, mirroring Oban's optional archive.
+This iteration decides against it: `zenith_job_history` is already the
+durable, queryable record the feature exists to provide, and duplicating it
+into a second archive tier before any consumer needs one would be speculative
+complexity. If audit-grade retention of pruned rows becomes a real
+requirement, it is a natural follow-up rather than a reason to delay this
+feature.
+
+A minimal read view on the Jobs pages is also out of scope for this
+iteration; the storage, retention, and pruning primitives are the
+deliverable.
+
+### Consequences
+
+Recording is best-effort: a `JobHistoryRecorder` write failure is reported and
+swallowed rather than allowed to fail the job or the worker, matching
+`HorizonAuditRecorder`'s existing pattern. `pushed_at` is populated only when
+the job's own payload carries Laravel's `createdAt` timestamp, which is not
+guaranteed for every possible job source; when absent, `pushed_at` is `null`
+rather than an inferred value. Runtime is measured per attempt, not
+cumulatively across retries, so a job that failed twice before succeeding
+reports the successful attempt's own runtime, not the total wall time across
+every attempt. Operators who enable history recording without configuring any
+retention rules will grow `zenith_job_history` unbounded until they add rules
+and schedule the prune command; this is intentional so enabling history never
+silently deletes data before an operator has decided a retention policy.
+
 ## Extension boundaries
 
 Use Horizon contracts when a feature already exists in Horizon. Add a focused package service or action when Zenith needs normalization, repository-backed aggregation, or a mutation Horizon does not expose through a suitable contract.
