@@ -1,6 +1,8 @@
 # Zenith
 
-This is the DevAction Labs fork of [nckrtl/horizon-new-dawn](https://github.com/nckrtl/horizon-new-dawn). The original authors retain copyright in the MIT license.
+**The operator console and orchestration layer for Laravel Horizon.**
+
+Zenith is the DevAction Labs fork of [nckrtl/horizon-new-dawn](https://github.com/nckrtl/horizon-new-dawn), renamed and extended. The original authors retain copyright under the MIT license.
 
 > [!IMPORTANT]
 > Zenith is pre-1.0 software. Production use is supported only within
@@ -29,6 +31,35 @@ Compared with Horizon's bundled interface, Zenith adds:
 - individual and bulk cancellation of eligible pending jobs, while protecting batched jobs so they are cancelled through their batch;
 - bulk and scoped failure recovery, with controls to retry or remove one failed job, retry or clear all failures, and retry failures by queue, monitored tag, or batch;
 - batch management, including cancelling active batches, retrying failed batch jobs, clearing retained failures, and clearing finished batches.
+
+## Roadmap
+
+Zenith is working toward parity with [Oban Pro and Oban Web](https://oban.pro): live metrics, durable workflows, dynamic crons, and cluster-wide concurrency control, built on Horizon and Laravel 13 primitives. Planned work is tracked as [GitHub issues](https://github.com/devaction-labs/zenith/issues) in four milestones; [#43](https://github.com/devaction-labs/zenith/issues/43) is the overview.
+
+| Milestone | Focus |
+| --- | --- |
+| [P0 · Correctness](https://github.com/devaction-labs/zenith/milestone/1) | Finish and harden the experimental orchestration modules (workflows, signals, relay, chunks, backfills, queue budgets, dynamic crons). |
+| [P1 · Telemetry](https://github.com/devaction-labs/zenith/milestone/2) | Event-driven telemetry: live throughput, wait and runtime percentiles, attempt history, and durable job history. |
+| [P2 · Dashboard parity](https://github.com/devaction-labs/zenith/milestone/3) | Workflow graph, cron history and runtime editing, runtime scaling, multi-select bulk actions, and payload redaction. |
+| [P3 · Engine](https://github.com/devaction-labs/zenith/milestone/4) | Global limits and partitions, ordered chains, recorded output, a transactional outbox, and a workflow lifeline. |
+
+The orchestration modules live on the `feat/orchestration` branch and will reach `main` once their P0 issues close.
+
+## Renamed from Horizon New Dawn
+
+Zenith was previously developed as Horizon New Dawn. Every package identifier changed with the rename:
+
+| Before | After |
+| --- | --- |
+| `devaction-labs/horizon-new-dawn` | `devaction-labs/zenith` |
+| `DevactionLabs\HorizonNewDawn` | `DevactionLabs\Zenith` |
+| `php artisan horizon-new-dawn:*` | `php artisan zenith:*` |
+| `config/horizon-new-dawn.php` | `config/zenith.php` |
+| `horizon-new-dawn.*` Gates | `zenith.*` Gates |
+| `horizon_new_dawn_*` tables | `zenith_*` tables |
+| `public/vendor/horizon-new-dawn/build` | `public/vendor/zenith/build` |
+
+The previous name was never published to Packagist, so there is no automatic upgrade path. Applications that installed a pre-release build from source should run `php artisan zenith:install` and `php artisan migrate`, which creates the new `zenith_*` tables, rename any `horizon-new-dawn.*` Gate definitions, and drop the old `horizon_new_dawn_*` tables after copying any audit history they want to keep.
 
 ## Requirements
 
@@ -85,6 +116,17 @@ bounded snapshot chunks with safe continuations.
 ## Installation
 
 Install and configure Laravel Horizon in the host application first. Then install Zenith and publish its compiled assets:
+
+> [!NOTE]
+> Zenith is not on Packagist yet. Until the first tagged release, add the
+> repository to the host application's `composer.json` and require
+> `devaction-labs/zenith:dev-main` instead of `^0.1.0`:
+>
+> ```json
+> "repositories": [
+>     { "type": "vcs", "url": "https://github.com/devaction-labs/zenith" }
+> ]
+> ```
 
 ```bash
 composer require devaction-labs/zenith:^0.1.0
