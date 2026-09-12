@@ -10,4 +10,8 @@ return [
         'connection' => null,
         'queue' => null,
     ],
+    'signals' => [
+        'store' => null,
+        'ttl' => 86400,
+    ],
 ];
