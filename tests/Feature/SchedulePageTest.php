@@ -2,10 +2,15 @@
 
 declare(strict_types=1);
 
+use DevactionLabs\Zenith\Audit\HorizonAuditEvent;
+use DevactionLabs\Zenith\Schedule\Data\ScheduleRunData;
 use DevactionLabs\Zenith\Schedule\DynamicSchedule;
 use DevactionLabs\Zenith\Schedule\RunDynamicCron;
 use DevactionLabs\Zenith\Schedule\ScheduleCatalog;
+use DevactionLabs\Zenith\Schedule\SchedulePauseStatus;
+use DevactionLabs\Zenith\Schedule\ScheduleRunHistory;
 use Illuminate\Console\Scheduling\Schedule;
+use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Support\Facades\Artisan;
@@ -16,6 +21,7 @@ use Illuminate\Support\Facades\Schema;
 use Inertia\Testing\AssertableInertia;
 use Laravel\Horizon\Horizon;
 
+use function Pest\Laravel\delete;
 use function Pest\Laravel\get;
 use function Pest\Laravel\post;
 use function Pest\Laravel\withoutMiddleware;
@@ -24,6 +30,7 @@ beforeEach(function (): void {
     withoutMiddleware([PreventRequestForgery::class, ValidateCsrfToken::class]);
     Horizon::auth(static fn (): bool => true);
     Schema::dropIfExists('zenith_dynamic_crons');
+    app(CacheFactory::class)->store()->clear();
 });
 
 afterEach(function (): void {
@@ -80,6 +87,62 @@ it('forbids running a schedule when the manageSchedule gate is denied', function
     post("/horizon/schedule/{$id}/run")->assertForbidden();
 });
 
+it('shows recorded run history for a scheduled event', function (): void {
+    app(Schedule::class)->command('inspire')->hourly()->description('Inspire');
+    $id = app(ScheduleCatalog::class)->events()[0]->id;
+
+    app(ScheduleRunHistory::class)->record($id, new ScheduleRunData(
+        status: 'failed',
+        startedAt: 1_700_000_000.0,
+        durationMs: 15.0,
+        exitCode: 1,
+        outputTail: 'boom',
+    ));
+
+    get('/horizon/schedule')
+        ->assertSuccessful()
+        ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
+            ->component('Schedule/Index')
+            ->has('events.0.history', 1)
+            ->where('events.0.history.0.status', 'failed')
+            ->where('events.0.history.0.exitCode', 1)
+            ->where('events.0.history.0.outputTail', 'boom'));
+});
+
+it('pauses and resumes the scheduler, and audits both changes', function (): void {
+    post('/horizon/schedule/pause')
+        ->assertRedirect()
+        ->assertSessionHas('toast.success');
+
+    expect(app(SchedulePauseStatus::class)->paused())->toBeTrue();
+
+    delete('/horizon/schedule/pause')
+        ->assertRedirect()
+        ->assertSessionHas('toast.success');
+
+    expect(app(SchedulePauseStatus::class)->paused())->toBeFalse();
+
+    expect(HorizonAuditEvent::query()->where('route', 'zenith.schedule.pause.store')->count())
+        ->toBeGreaterThan(0)
+        ->and(HorizonAuditEvent::query()->where('route', 'zenith.schedule.pause.destroy')->count())
+        ->toBeGreaterThan(0);
+});
+
+it('reflects the scheduler pause state on the schedule page', function (): void {
+    Artisan::call('schedule:pause');
+
+    get('/horizon/schedule')
+        ->assertSuccessful()
+        ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
+            ->where('horizon.schedulePaused', true));
+});
+
+it('forbids pausing the scheduler when the manageSchedule gate is denied', function (): void {
+    Gate::define('zenith.manageSchedule', static fn (): bool => false);
+
+    post('/horizon/schedule/pause')->assertForbidden();
+});
+
 it('returns not found for an unknown schedule event', function (): void {
     post('/horizon/schedule/missing-event/run')->assertNotFound();
 });
@@ -90,6 +153,7 @@ describe('dynamic crons', function (): void {
             '--path' => dirname(__DIR__, 2).'/database/migrations/2026_08_30_020000_create_zenith_dynamic_crons_table.php',
             '--realpath' => true,
         ]);
+        config()->set('zenith.dynamic_cron_allowed_classes', [FetchWorkflowStep::class]);
     });
 
     afterEach(function (): void {

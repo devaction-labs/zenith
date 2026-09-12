@@ -1,1 +1,0 @@
-function e(e){return e instanceof Element&&e.closest(`a, button, input, select, textarea, [role="menuitem"], [role="dialog"]`)!==null}export{e as t};

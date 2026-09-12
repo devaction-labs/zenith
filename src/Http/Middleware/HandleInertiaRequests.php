@@ -8,6 +8,7 @@ use DevactionLabs\Zenith\Assets\AssetManifest;
 use DevactionLabs\Zenith\Authorization\HorizonAbilityAuthorizer;
 use DevactionLabs\Zenith\Monitoring\MonitoringData;
 use DevactionLabs\Zenith\Queues\QueuePauseStatus;
+use DevactionLabs\Zenith\Schedule\SchedulePauseStatus;
 use DevactionLabs\Zenith\Support\Data\HorizonShellData;
 use DevactionLabs\Zenith\Support\Data\NavigationCountsData;
 use DevactionLabs\Zenith\Support\FrameworkCapabilities;
@@ -32,6 +33,7 @@ final class HandleInertiaRequests extends Middleware
         private readonly AssetManifest $assets,
         private readonly FrameworkCapabilities $capabilities,
         private readonly QueuePauseStatus $queuePauseStatus,
+        private readonly SchedulePauseStatus $schedulePauseStatus,
         private readonly HorizonAbilityAuthorizer $abilities,
     ) {}
 
@@ -64,6 +66,7 @@ final class HandleInertiaRequests extends Middleware
                         false,
                     ) === true,
                     allQueuesPaused: $this->queuePauseStatus->allPaused(),
+                    schedulePaused: $this->schedulePauseStatus->paused(),
                     abilities: $this->abilities->abilities(),
                     telemetryEnabled: TelemetryRegistration::enabled(),
                 );

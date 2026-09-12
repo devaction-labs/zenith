@@ -40,12 +40,16 @@ use DevactionLabs\Zenith\Queues\ClearQueueMetadata;
 use DevactionLabs\Zenith\Queues\ClearsQueueMetadata;
 use DevactionLabs\Zenith\Schedule\DynamicSchedule;
 use DevactionLabs\Zenith\Schedule\InternalScheduledEvent;
+use DevactionLabs\Zenith\Schedule\ScheduleHistoryRecorder;
 use DevactionLabs\Zenith\Support\FrameworkCapabilities;
 use DevactionLabs\Zenith\Support\HorizonRuntime;
 use DevactionLabs\Zenith\Support\HorizonWorkCommandCompatibility;
 use DevactionLabs\Zenith\Telemetry\AttemptHistory;
 use DevactionLabs\Zenith\Telemetry\TelemetryEventSubscriber;
 use DevactionLabs\Zenith\Telemetry\TelemetryRegistration;
+use Illuminate\Console\Events\ScheduledTaskFailed;
+use Illuminate\Console\Events\ScheduledTaskFinished;
+use Illuminate\Console\Events\ScheduledTaskSkipped;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Contracts\Bus\Dispatcher;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
@@ -201,9 +205,10 @@ final class ZenithServiceProvider extends ServiceProvider
     /**
      * @throws BindingResolutionException
      */
-    public function boot(AssetPath $assetPath): void
+    public function boot(AssetPath $assetPath, EventDispatcher $events): void
     {
         $this->excludeHorizonFromSsr($this->app->make(Gateway::class));
+        $this->registerScheduleHistoryListeners($events);
 
         $this->loadMigrationsFrom(dirname(__DIR__).'/database/migrations');
         $this->loadViewsFrom(__DIR__.'/../resources/views', 'zenith');
@@ -238,6 +243,13 @@ final class ZenithServiceProvider extends ServiceProvider
         Event::listen(QueueJobProcessing::class, [JobHistoryRecorder::class, 'handleProcessing']);
         Event::listen(QueueJobProcessed::class, [JobHistoryRecorder::class, 'handleProcessed']);
         Event::listen(QueueJobFailed::class, [JobHistoryRecorder::class, 'handleFailed']);
+    }
+
+    private function registerScheduleHistoryListeners(EventDispatcher $events): void
+    {
+        $events->listen(ScheduledTaskFinished::class, [ScheduleHistoryRecorder::class, 'finished']);
+        $events->listen(ScheduledTaskFailed::class, [ScheduleHistoryRecorder::class, 'failed']);
+        $events->listen(ScheduledTaskSkipped::class, [ScheduleHistoryRecorder::class, 'skipped']);
     }
 
     private function registerScheduledEvents(Schedule $schedule): void

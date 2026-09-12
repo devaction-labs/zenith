@@ -1,1 +1,0 @@
-function e(e,t){return e?.columns.includes(t)?{columnKey:t,direction:e.key===t?e.direction:void 0,onSort:e.onSort}:{}}export{e as t};

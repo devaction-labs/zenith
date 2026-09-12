@@ -1,9 +1,18 @@
 import { Head, Link, router } from "@inertiajs/react";
+import { useState } from "react";
 
 import { DetailList, DetailListItem } from "@/components/detail-list";
+import { JsonPayload } from "@/components/payload/json-payload";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import {
   Table,
   TableBody,
@@ -12,6 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { show as workflowShow } from "@/generated/routes/zenith/workflows";
 import { store as cancelWorkflow } from "@/generated/routes/zenith/workflows/cancel";
 import { store as retryWorkflow } from "@/generated/routes/zenith/workflows/retry";
@@ -20,8 +30,9 @@ import { usePageRefresh } from "@/hooks/use-dashboard-refresh";
 import { useAutoLoadPreference } from "@/layouts/horizon-layout";
 import { resolveHorizonRoute } from "@/lib/horizon-route";
 import { workflowStatusVariant } from "@/pages/workflows/status";
+import { WorkflowGraph } from "@/pages/workflows/workflow-graph";
 import type { HorizonPageProps } from "@/types/page";
-import type { WorkflowDetailPageProps } from "@/types/workflows";
+import type { WorkflowDetailPageProps, WorkflowStep } from "@/types/workflows";
 
 const dateFormatter = new Intl.DateTimeFormat("sv-SE", {
   year: "numeric",
@@ -38,6 +49,7 @@ const linkClassName = "underline decoration-foreground/40 underline-offset-4";
 function WorkflowShow({ horizon, workflow }: HorizonPageProps & WorkflowDetailPageProps) {
   const { autoLoad } = useAutoLoadPreference();
   const abilities = useHorizonAbilities();
+  const [selectedStep, setSelectedStep] = useState<WorkflowStep | null>(null);
 
   usePageRefresh(horizon.pollInterval, ["workflow"], autoLoad);
 
@@ -116,50 +128,61 @@ function WorkflowShow({ horizon, workflow }: HorizonPageProps & WorkflowDetailPa
             <CardTitle>Steps</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Step</TableHead>
-                  <TableHead>Depends on</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Attempts</TableHead>
-                  <TableHead>Output</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {workflow.steps.map((step) => (
-                  <TableRow key={step.name}>
-                    <TableCell>
-                      <div className="flex flex-col gap-1">
-                        <span>{step.name}</span>
-                        {step.nested && step.childId ? (
-                          <Link
-                            className={`text-muted-foreground text-xs ${linkClassName}`}
-                            href={workflowUrl(step.childId)}
-                            prefetch
-                          >
-                            Nested workflow
-                          </Link>
-                        ) : (
-                          <span className="break-all text-muted-foreground text-xs">
-                            {step.jobClass}
-                          </span>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>{step.deps.length > 0 ? step.deps.join(", ") : "—"}</TableCell>
-                    <TableCell>
-                      <Badge variant={workflowStatusVariant(step.status)}>{step.status}</Badge>
-                      {step.cascade ? <Badge className="ml-1">Cascade</Badge> : null}
-                    </TableCell>
-                    <TableCell className="tabular-nums">{step.attempts}</TableCell>
-                    <TableCell className="max-w-xs break-all text-xs">
-                      {step.error ?? (step.output ? JSON.stringify(step.output) : "—")}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <Tabs defaultValue="graph">
+              <TabsList className="mx-4 mb-2 sm:mx-6">
+                <TabsTrigger value="graph">Graph</TabsTrigger>
+                <TabsTrigger value="table">Table</TabsTrigger>
+              </TabsList>
+              <TabsContent value="graph">
+                <WorkflowGraph steps={workflow.steps} onSelectStep={setSelectedStep} />
+              </TabsContent>
+              <TabsContent value="table">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Step</TableHead>
+                      <TableHead>Depends on</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Attempts</TableHead>
+                      <TableHead>Output</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {workflow.steps.map((step) => (
+                      <TableRow key={step.name}>
+                        <TableCell>
+                          <div className="flex flex-col gap-1">
+                            <span>{step.name}</span>
+                            {step.nested && step.childId ? (
+                              <Link
+                                className={`text-muted-foreground text-xs ${linkClassName}`}
+                                href={workflowUrl(step.childId)}
+                                prefetch
+                              >
+                                Nested workflow
+                              </Link>
+                            ) : (
+                              <span className="break-all text-muted-foreground text-xs">
+                                {step.jobClass}
+                              </span>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>{step.deps.length > 0 ? step.deps.join(", ") : "—"}</TableCell>
+                        <TableCell>
+                          <Badge variant={workflowStatusVariant(step.status)}>{step.status}</Badge>
+                          {step.cascade ? <Badge className="ml-1">Cascade</Badge> : null}
+                        </TableCell>
+                        <TableCell className="tabular-nums">{step.attempts}</TableCell>
+                        <TableCell className="max-w-xs break-all text-xs">
+                          {step.error ?? (step.output ? JSON.stringify(step.output) : "—")}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TabsContent>
+            </Tabs>
           </CardContent>
         </Card>
 
@@ -199,6 +222,46 @@ function WorkflowShow({ horizon, workflow }: HorizonPageProps & WorkflowDetailPa
           </Card>
         ) : null}
       </div>
+
+      <Sheet open={selectedStep !== null} onOpenChange={(open) => !open && setSelectedStep(null)}>
+        <SheetContent side="right">
+          {selectedStep ? (
+            <>
+              <SheetHeader>
+                <SheetTitle>{selectedStep.name}</SheetTitle>
+                <SheetDescription className="break-all">{selectedStep.jobClass}</SheetDescription>
+              </SheetHeader>
+              <div className="overflow-y-auto">
+                <DetailList>
+                  <DetailListItem label="Status">
+                    <Badge variant={workflowStatusVariant(selectedStep.status)}>
+                      {selectedStep.status}
+                    </Badge>
+                    {selectedStep.cascade ? <Badge className="ml-1">Cascade</Badge> : null}
+                  </DetailListItem>
+                  <DetailListItem label="Depends on">
+                    {selectedStep.deps.length > 0 ? selectedStep.deps.join(", ") : "—"}
+                  </DetailListItem>
+                  <DetailListItem label="Attempts">{selectedStep.attempts}</DetailListItem>
+                </DetailList>
+                {selectedStep.error ? (
+                  <p className="px-4 pb-4 text-xs break-all whitespace-pre-wrap text-destructive sm:px-6">
+                    {selectedStep.error}
+                  </p>
+                ) : selectedStep.output ? (
+                  <div className="px-4 pb-4 sm:px-6">
+                    <JsonPayload value={selectedStep.output} copyLabel="step output" />
+                  </div>
+                ) : (
+                  <p className="px-4 pb-4 text-xs text-muted-foreground sm:px-6">
+                    No output recorded.
+                  </p>
+                )}
+              </div>
+            </>
+          ) : null}
+        </SheetContent>
+      </Sheet>
     </>
   );
 }

@@ -10,6 +10,8 @@ use DevactionLabs\Zenith\Http\Controllers\BatchFailedJobClearController;
 use DevactionLabs\Zenith\Http\Controllers\BatchRetryController;
 use DevactionLabs\Zenith\Http\Controllers\DashboardController;
 use DevactionLabs\Zenith\Http\Controllers\DelayedJobReleaseController;
+use DevactionLabs\Zenith\Http\Controllers\DynamicCronController;
+use DevactionLabs\Zenith\Http\Controllers\DynamicCronPauseController;
 use DevactionLabs\Zenith\Http\Controllers\ExecutingJobController;
 use DevactionLabs\Zenith\Http\Controllers\FailedJobClearAllController;
 use DevactionLabs\Zenith\Http\Controllers\FailedJobController;
@@ -36,6 +38,7 @@ use DevactionLabs\Zenith\Http\Controllers\QueuePauseAllController;
 use DevactionLabs\Zenith\Http\Controllers\QueuePauseController;
 use DevactionLabs\Zenith\Http\Controllers\RunningInstanceController;
 use DevactionLabs\Zenith\Http\Controllers\ScheduleController;
+use DevactionLabs\Zenith\Http\Controllers\SchedulePauseController;
 use DevactionLabs\Zenith\Http\Controllers\ScheduleRunController;
 use DevactionLabs\Zenith\Http\Controllers\SupervisorController;
 use DevactionLabs\Zenith\Http\Controllers\SupervisorPauseController;
@@ -195,9 +198,34 @@ Route::post('/failed/{job}/retry', [FailedJobRetryController::class, 'store'])
     ->name('failed-jobs.retry.store');
 Route::get('/audit', [AuditController::class, 'index'])->name('audit.index');
 Route::get('/schedule', [ScheduleController::class, 'index'])->name('schedule.index');
+Route::post('/schedule/pause', [SchedulePauseController::class, 'store'])
+    ->middleware(horizonAbility('manageSchedule'))
+    ->name('schedule.pause.store');
+Route::delete('/schedule/pause', [SchedulePauseController::class, 'destroy'])
+    ->middleware(horizonAbility('manageSchedule'))
+    ->name('schedule.pause.destroy');
 Route::post('/schedule/{event}/run', [ScheduleRunController::class, 'store'])
     ->middleware(horizonAbility('manageSchedule'))
     ->name('schedule.run.store');
+Route::post('/schedule/dynamic-crons', [DynamicCronController::class, 'store'])
+    ->middleware(horizonAbility('manageSchedule'))
+    ->name('schedule.dynamic-crons.store');
+Route::put('/schedule/dynamic-crons/{cron}', [DynamicCronController::class, 'update'])
+    ->middleware(horizonAbility('manageSchedule'))
+    ->whereNumber('cron')
+    ->name('schedule.dynamic-crons.update');
+Route::delete('/schedule/dynamic-crons/{cron}', [DynamicCronController::class, 'destroy'])
+    ->middleware(horizonAbility('manageSchedule'))
+    ->whereNumber('cron')
+    ->name('schedule.dynamic-crons.destroy');
+Route::post('/schedule/dynamic-crons/{cron}/pause', [DynamicCronPauseController::class, 'store'])
+    ->middleware(horizonAbility('manageSchedule'))
+    ->whereNumber('cron')
+    ->name('schedule.dynamic-crons.pause.store');
+Route::delete('/schedule/dynamic-crons/{cron}/pause', [DynamicCronPauseController::class, 'destroy'])
+    ->middleware(horizonAbility('manageSchedule'))
+    ->whereNumber('cron')
+    ->name('schedule.dynamic-crons.pause.destroy');
 Route::get('/workflows', [WorkflowController::class, 'index'])->name('workflows.index');
 Route::get('/workflows/{workflow}', [WorkflowController::class, 'show'])->name('workflows.show');
 Route::post('/workflows/{workflow}/cancel', [WorkflowCancelController::class, 'store'])

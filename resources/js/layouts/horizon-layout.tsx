@@ -216,6 +216,15 @@ export function HorizonLayout({ children }: { children: ReactNode }) {
                   </AlertDescription>
                 </Alert>
               ) : null}
+              {horizon.schedulePaused ? (
+                <Alert variant="warning" className="mb-4">
+                  <TriangleAlertIcon aria-hidden="true" />
+                  <AlertTitle>Scheduler is paused</AlertTitle>
+                  <AlertDescription>
+                    Scheduled events will not run until the scheduler is resumed.
+                  </AlertDescription>
+                </Alert>
+              ) : null}
               {children}
             </div>
           </SidebarInset>

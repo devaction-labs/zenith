@@ -78,4 +78,10 @@ return [
             'ttl_seconds' => 604800,
         ],
     ],
+    'schedule_history' => [
+        'store' => null,
+        'ttl' => 604800,
+        'limit' => 10,
+    ],
+    'dynamic_cron_allowed_classes' => [],
 ];

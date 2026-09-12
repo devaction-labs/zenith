@@ -30,6 +30,7 @@ use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Queue\QueueManager;
 use Illuminate\Redis\Connections\Connection;
 use Illuminate\Support\Env;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Route;
 use Inertia\Testing\AssertableInertia;
@@ -309,6 +310,22 @@ describe('Horizon controller replacement', function (): void {
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
                 ->where('horizon.allQueuesPaused', true));
+    });
+
+    it('shares the scheduler pause state with the interface', function (): void {
+        Artisan::call('schedule:pause');
+
+        get('/horizon')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
+                ->where('horizon.schedulePaused', true));
+
+        Artisan::call('schedule:resume');
+
+        get('/horizon')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
+                ->where('horizon.schedulePaused', false));
     });
 
     it('shares the enabled job navigation breakdown with the interface', function (): void {
