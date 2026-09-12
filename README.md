@@ -46,7 +46,7 @@ described; check the linked issues before relying on them:
 
 ## Roadmap
 
-Zenith is working toward parity with [Oban Pro and Oban Web](https://oban.pro): live metrics, durable workflows, dynamic crons, and cluster-wide concurrency control, built on Horizon and Laravel 13 primitives. Planned work is tracked as [GitHub issues](https://github.com/devaction-labs/zenith/issues) in four milestones; [#43](https://github.com/devaction-labs/zenith/issues/43) is the overview.
+Zenith is working toward parity with [Oban Pro and Oban Web](https://oban.pro): live metrics, durable workflows, dynamic crons, and cluster-wide concurrency control, built on Horizon and Laravel 13 primitives. Planned work is tracked as [GitHub issues](https://github.com/devaction-labs/zenith/issues) in four milestones; [#44](https://github.com/devaction-labs/zenith/issues/44) is the overview.
 
 | Milestone | Focus |
 | --- | --- |
