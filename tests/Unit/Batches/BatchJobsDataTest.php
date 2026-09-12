@@ -307,7 +307,6 @@ describe('BatchJobsData', function (): void {
 
     it('uses stored sidecar attribution for the live pending queue target', function (): void {
         $repository = mockDashboardContract(JobRepository::class);
-        // Options omit destination so only the sidecar can resolve the historical queue.
         $batch = new Batch(
             queue: mockDashboardContract(QueueFactory::class),
             repository: mockDashboardContract(BatchRepository::class),

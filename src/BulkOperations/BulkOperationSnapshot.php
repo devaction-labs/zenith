@@ -44,8 +44,6 @@ final class BulkOperationSnapshot
         $connection = $this->connection();
         $targetsKey = $this->targetsKey($operationId);
 
-        // Prefer prefix-aware commands. Raw zrangestore bypasses Predis/PhpRedis
-        // key prefixes, so Horizon-prefixed sources like failed_jobs copy empty.
         $members = $connection->zrange($sourceKey, 0, -1, ['withscores' => true]);
 
         if (is_array($members) && $members !== []) {

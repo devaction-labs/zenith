@@ -708,8 +708,6 @@ describe('automatic refresh', function (): void {
     });
 
     it('shows a restrained failed auto-refresh state until the next successful poll', function (): void {
-        // Slow interval so the script can disable any default-enabled polling and attach
-        // the observer before the enable-time reload consumes the one-shot 503.
         config()->set('zenith.poll_interval', 1000);
         config()->set('zenith.testing.fail_next_tracked_list_refresh', true);
         app(Kernel::class)->pushMiddleware(FailNextTrackedListRefreshOnce::class);

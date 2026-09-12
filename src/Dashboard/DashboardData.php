@@ -610,10 +610,6 @@ final readonly class DashboardData
             $processes = $this->processesByDescriptor();
             $queueConnections = [];
 
-            // One authoritative calculate() snapshot keeps connection:queue keys through
-            // row construction. Never reattach connections by index from a second sorted
-            // WorkloadRepository snapshot — wait order can change and queue names collide.
-            // Comma-delimited balance=false pools stay one primary parent with splitQueues.
             foreach ($this->waitTimes->calculate() as $descriptor => $wait) {
                 if (! is_string($descriptor) || (! is_int($wait) && ! is_float($wait))) {
                     continue;
@@ -714,7 +710,6 @@ final readonly class DashboardData
             $queueCount++;
             $partLength = (int) $queue->readyNow($part);
             $length += $partLength;
-            // Priority order: earlier queues in the pool must clear before later ones.
             $cumulativeWait += $this->waitTimes->calculateTimeToClear($connection, $part, $totalProcesses);
             $cumulativeWaitCalculated = $cumulativeWaitCalculated
                 && $this->canCalculateWait($part, $partLength);

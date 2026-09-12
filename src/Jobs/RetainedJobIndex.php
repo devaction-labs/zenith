@@ -449,7 +449,6 @@ final class RetainedJobIndex
             $sourceKey,
         );
 
-        // |coverage - source| = indexed + unresolved + missing - source.
         if (
             $projectionCount + $unresolvedCount + $missingCount
             > $sourceCount
@@ -495,8 +494,6 @@ final class RetainedJobIndex
             );
         }
 
-        // Unfiltered reserved/state membership: score the small ID set against the
-        // live source. Avoids withCandidateKey synchronization under source growth.
         if ($facets === [] && $additionalIds !== null && $search === '') {
             return $this->pageAdditionalIdsFromSource(
                 $type,
@@ -710,8 +707,6 @@ final class RetainedJobIndex
                 $limit,
                 &$temporaryKeys,
             ): array {
-                // Intersect the small delayed-score set with the filtered candidate
-                // so only delayed members pay for the filter path.
                 $filteredKey = $this->temporaryKey('scored-filtered');
                 $temporaryKeys[] = $filteredKey;
                 $this->transaction(function (mixed $transaction) use (
@@ -1159,8 +1154,6 @@ final class RetainedJobIndex
             ];
         }
 
-        // Drop queue-delayed payloads Horizon no longer retains. Bounded by the
-        // delayed backlog via pipelined source ZSCORE — no candidate ZINTER/ZUNION.
         $scores = $this->retainedScoredIds($type, $scores, $excludeIds);
 
         if ($scores === []) {
@@ -2302,8 +2295,6 @@ final class RetainedJobIndex
             }
         }
 
-        // Snapshot counts before MULTI so catalog cleanup only runs when this
-        // removal emptied a live facet — not when the facet was already missing.
         $facetCountsBefore = [];
 
         if ($facetKeys !== []) {
@@ -2359,8 +2350,6 @@ final class RetainedJobIndex
             }
 
             if (($facetCountsBefore[$facetKey] ?? 0) === 0) {
-                // Facet was already absent (e.g. external delete). Catalog may
-                // still describe projection members; do not truncate it here.
                 continue;
             }
 
@@ -3052,8 +3041,6 @@ final class RetainedJobIndex
         $cursor = $after;
         $currentOffset = $after === null ? 0 : $after->offset;
         $total = $this->sortedSetCount($key);
-        // Each raw page asks only for the remaining included count; exclusions force additional
-        // raw pages, but never more than one extra raw member per excluded id in the window.
         $maxRawPages = $limit + count($excludeIds) + 1;
 
         for ($rawPage = 0; $rawPage < $maxRawPages; $rawPage++) {
@@ -3082,8 +3069,6 @@ final class RetainedJobIndex
                 $collected[] = $id;
 
                 if (count($collected) === $limit) {
-                    // Raw limit equals remaining needed, so filling requires zero exclusions on
-                    // this raw page and the last raw id is the last included id. next is exact.
                     return [
                         'ids' => $collected,
                         'total' => $total,
@@ -3560,7 +3545,6 @@ final class RetainedJobIndex
                 $sourceKey,
             );
         } catch (Throwable) {
-            // Shared metadata is cleaned again when the old slot is reused.
         }
     }
 
@@ -3806,7 +3790,6 @@ final class RetainedJobIndex
                 $token,
             );
         } catch (Throwable) {
-            // The short lock expiry remains the cleanup fallback.
         }
     }
 
@@ -4232,9 +4215,6 @@ final class RetainedJobIndex
 
     private function transaction(Closure $callback): void
     {
-        // MULTI/EXEC shares the connection. Any connection()->get() inside the
-        // callback is queued by Redis but not tracked by Predis MultiExec, which
-        // desynchronizes EXEC response counts. Snapshot generation keys first.
         $this->withAtomicGenerationSnapshot(function () use ($callback): null {
             $connection = $this->connection();
 
@@ -4286,7 +4266,6 @@ final class RetainedJobIndex
         try {
             $this->connection()->del($key);
         } catch (Throwable) {
-            // Temporary keys have a short TTL when deletion is unavailable.
         }
     }
 }

@@ -25,10 +25,8 @@ final readonly class ClearQueue
             throw new RuntimeException("Clearing queues is not supported for {$data->connection}.");
         }
 
-        // Driver clear first. If it throws, Horizon metadata must remain untouched.
         $cleared = $queue->clear($data->queue);
 
-        // Connection-scoped cleanup only — never Horizon's queue-name-only purge().
         $this->metadata->purgePending($data->connection, $data->queue);
 
         return $cleared;

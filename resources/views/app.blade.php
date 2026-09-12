@@ -19,7 +19,6 @@
                     document.documentElement.classList.toggle('dark', dark);
                     document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
                 } catch {
-                    // The application can still render when storage is unavailable.
                 }
             })();
         </script>

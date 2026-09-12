@@ -54,8 +54,6 @@ final class FrameworkCapabilities extends Data
     {
         $reflection = new ReflectionClass(Worker::class);
 
-        // Worker::$pausable exists only on Laravel versions that separate worker
-        // pause polling from queue manager pause APIs.
         if (! $reflection->hasProperty('pausable')) {
             return true;
         }

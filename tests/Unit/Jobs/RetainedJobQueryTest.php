@@ -1136,7 +1136,6 @@ describe('RetainedJobQuery', function (): void {
     });
 
     it('returns every distinct filter option without a materialization ceiling', function (): void {
-        // Former public default was 1000 options; 1001 distinct classes must all materialize.
         $optionCount = 1001;
         $redis = new RetainedJobQueryRedisClient;
         $redis->seedSortedSet('completed_jobs', retainedSource($optionCount, 'completed'));
@@ -1463,8 +1462,6 @@ describe('RetainedJobQuery', function (): void {
     });
 
     it('unions every matching job class without a search class ceiling', function (): void {
-        // Former public default was 1000 matching classes; internal union chunks are 500 keys.
-        // 1001 matching classes plus one non-match prove both ceilings are gone and unions chunk.
         $matchingClassCount = 1001;
         $totalJobs = $matchingClassCount + 1;
         $redis = new RetainedJobQueryRedisClient;
@@ -1497,7 +1494,6 @@ describe('RetainedJobQuery', function (): void {
             ->and(collect($page->items)->pluck('id')->all())->toHaveCount(50)
             ->and(collect($page->items)->pluck('id')->first())->toBe('completed-1000')
             ->and(collect($page->items)->pluck('id')->last())->toBe('completed-951')
-            // 1001 keys → chunks of 500 + 500 + 1, then one reduction over 3 intermediates.
             ->and($redis->searchUnionWrites)->toBe(3);
     });
 
@@ -2014,7 +2010,6 @@ describe('RetainedJobQuery', function (): void {
         $horizonRedis = new RetainedJobQueryRedisClient;
         $horizonRedis->seedSortedSet('pending_jobs', retainedSource(60, 'pending'));
         $queueRedis = new RetainedJobQueryRedisClient;
-        // Live reserved jobs sit near the end of retained order, so a plain first page misses them.
         $queueRedis->seedSortedSet('queues:default:reserved', [
             json_encode(['uuid' => 'pending-55'], JSON_THROW_ON_ERROR) => 200,
             json_encode(['uuid' => 'pending-58'], JSON_THROW_ON_ERROR) => 100,
@@ -2050,7 +2045,7 @@ describe('RetainedJobQuery', function (): void {
         expect($first->total)->toBe(60)
             ->and(array_slice($firstIds, 0, 2))->toBe(['pending-55', 'pending-58'])
             ->and($firstIds)->toHaveCount(50)
-            ->and($firstIds)->not->toContain('pending-56') // still later in retained order fill
+            ->and($firstIds)->not->toContain('pending-56')
             ->and(array_intersect($firstIds, $secondIds))->toBe([])
             ->and($secondIds)->not->toContain('pending-55')
             ->and($secondIds)->not->toContain('pending-58')
@@ -2151,10 +2146,8 @@ describe('RetainedJobQuery', function (): void {
     it('orders actively delayed pending jobs by delayed availability among the non-reserved rest', function (): void {
         Date::setTestNow(Date::createFromTimestamp(0));
         $horizonRedis = new RetainedJobQueryRedisClient;
-        // pending-0..59 scores -1..-60 (reverse: pending-0 first).
         $horizonRedis->seedSortedSet('pending_jobs', retainedSource(60, 'pending'));
         $queueRedis = new RetainedJobQueryRedisClient;
-        // Early-enqueued delayed job becomes available at score -60 (past the first page).
         $queueRedis->seedSortedSet('queues:default:delayed', [
             json_encode(['uuid' => 'pending-5'], JSON_THROW_ON_ERROR) => 60.0,
         ]);
@@ -2283,7 +2276,6 @@ describe('RetainedJobQuery', function (): void {
         $liveIds = $live->jobs->pluck('id')->all();
         $publishedIds = $published->jobs->pluck('id')->all();
 
-        // pending-3 moves from index 3 to after scores better than -20 (pending-0..18 except self).
         expect($liveIds[18])->toBe('pending-3')
             ->and($publishedIds)->toBe($liveIds);
     });
@@ -2334,9 +2326,6 @@ describe('RetainedJobQuery', function (): void {
     it('does not materialize a full candidate set when ordering delayed jobs on the unfiltered path', function (): void {
         Date::setTestNow(Date::createFromTimestamp(0));
         $horizonRedis = new RetainedJobQueryRedisClient;
-        // Publish a tiny warm generation first so pending target discovery can use the
-        // published catalog without rebuilding a 100k projection in this test process.
-        // Serving the unfiltered page must still page the large live source directly.
         $horizonRedis->seedSortedSet('pending_jobs', retainedSource(1, 'pending'));
         $queueRedis = new RetainedJobQueryRedisClient;
         $queueRedis->seedSortedSet('queues:default:delayed', [
@@ -2357,8 +2346,6 @@ describe('RetainedJobQuery', function (): void {
             },
         );
         $fixture['index']->synchronize(RetainedJobType::Pending);
-        // Grow the retained source after publish. Large enough that copying it into a
-        // temporary candidate set would exhaust the package suite's 128 MB budget.
         $horizonRedis->seedSortedSet('pending_jobs', retainedSource(100_000, 'pending'));
         $horizonRedis->intersectionWrites = 0;
         $horizonRedis->unionWrites = 0;
@@ -2413,10 +2400,6 @@ describe('RetainedJobQuery', function (): void {
         expect($fixture['index']->publishedRevision(RetainedJobType::Pending))
             ->toBeString();
 
-        // Post-publish: new retained pending job that is natively reserved.
-        // Score -0.5 leads source order (pending reverse: highest score first).
-        // A stale published membership read would omit it from the reserved lead
-        // while still excluding it from the rest via live reservedIds.
         $horizonRedis->zadd('pending_jobs', -0.5, 'pending-new-reserved');
         $queueRedis->zadd(
             'queues:default:reserved',
@@ -2449,7 +2432,6 @@ describe('RetainedJobQuery', function (): void {
             );
         };
 
-        // Filtered membership still requires a candidate key and must fail closed.
         expect(fn () => $fixture['index']->pageIds(
             RetainedJobType::Pending,
             ['queue' => 'default'],
@@ -2468,8 +2450,6 @@ describe('RetainedJobQuery', function (): void {
         );
         $ids = $page->jobs->pluck('id')->all();
 
-        // Live source-score reserved lead (not stale published membership):
-        // total includes post-publish members; reserved lead is source-ordered.
         expect($page->total)->toBe(26)
             ->and(array_slice($ids, 0, 2))->toBe([
                 'pending-new-reserved',
@@ -2485,7 +2465,6 @@ describe('RetainedJobQuery', function (): void {
         $horizonRedis = new RetainedJobQueryRedisClient;
         $horizonRedis->seedSortedSet('pending_jobs', retainedSource(10, 'pending'));
         $queueRedis = new RetainedJobQueryRedisClient;
-        // Enqueue order is pending-0..9; availability order should reverse the delayed pair.
         $queueRedis->seedSortedSet('queues:default:delayed', [
             json_encode(['uuid' => 'pending-1'], JSON_THROW_ON_ERROR) => 30.0,
             json_encode(['uuid' => 'pending-8'], JSON_THROW_ON_ERROR) => 10.0,
@@ -2519,7 +2498,6 @@ describe('RetainedJobQuery', function (): void {
             -1,
         );
 
-        // Reverse on -availability: -10, -20, -30 => pending-8, pending-3, pending-1.
         expect($page->total)->toBe(3)
             ->and($page->jobs->pluck('id')->all())->toBe([
                 'pending-8',
@@ -2537,7 +2515,6 @@ describe('RetainedJobQuery', function (): void {
         $queueRedis = new RetainedJobQueryRedisClient;
         $queueRedis->seedSortedSet('queues:default:delayed', [
             json_encode(['uuid' => 'pending-1'], JSON_THROW_ON_ERROR) => 20.0,
-            // Still in the queue delayed zset, but not in Horizon pending_jobs.
             json_encode(['uuid' => 'ghost-delayed'], JSON_THROW_ON_ERROR) => 5.0,
             json_encode(['uuid' => 'pending-3'], JSON_THROW_ON_ERROR) => 10.0,
         ]);

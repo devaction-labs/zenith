@@ -16,11 +16,6 @@ abstract class BrowserTestCase extends TestCase
 
     public static function setUpBeforeClass(): void
     {
-        // Create database.sqlite before Testbench boots so LoadConfiguration keeps
-        // database.default on the named sqlite connection. Otherwise the first
-        // browser test falls back to in-memory "testing" while package migrations
-        // still write through queue.batching.database (sqlite file), and later
-        // tests re-migrate into a file that already has tables.
         self::initializeSqliteDatabaseFile();
 
         parent::setUpBeforeClass();

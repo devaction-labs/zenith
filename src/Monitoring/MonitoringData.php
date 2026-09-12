@@ -113,8 +113,6 @@ final readonly class MonitoringData
 
             return $tags;
         } catch (Throwable) {
-            // Shared shell chrome must fail closed without reporting when Redis is
-            // unavailable — package page requests remain usable without live storage.
             return [];
         }
     }

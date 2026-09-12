@@ -58,7 +58,6 @@ LUA;
                     $token,
                 );
             } catch (Throwable) {
-                // The short expiry remains the cleanup fallback.
             }
         }
     }

@@ -294,7 +294,6 @@ it('falls back to a repository-built catalog when the cache store fails', functi
 
 it('returns every queue and connection from a multipage retained scan', function (): void {
     config()->set('zenith.poll_interval', 0);
-    // Former public default was 1000; page size is 100, so this forces a page past the ceiling.
     config()->set('zenith.retained_batch_scan_limit', 1000);
 
     $calls = 0;

@@ -164,7 +164,6 @@ it('bypasses batch repository overview caching for subsecond poll intervals', fu
 
 it('counts every retained batch across repository pages', function (): void {
     config()->set('zenith.poll_interval', 0);
-    // Former public default was 1000; page size is 100, so this forces 11 repository pages.
     config()->set('zenith.retained_batch_scan_limit', 1000);
 
     $calls = 0;
@@ -215,7 +214,6 @@ it('counts every retained batch across repository pages', function (): void {
             ['id' => 'batch-1001', 'name' => 'Active import', 'progress' => 75],
             ['id' => 'batch-0001', 'name' => 'Oldest active', 'progress' => 50],
         ])
-        // 10 full pages of 100 + 1 trailing page + 1 empty terminator.
         ->and($calls)->toBe(12);
 });
 

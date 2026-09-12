@@ -48,7 +48,6 @@ it('keeps later active retry batches out of clearable ids despite stale earlier 
 });
 
 it('classifies every retained batch across repository pages', function (): void {
-    // Former public default was 1000 retained batches; scans must continue onto the next page.
     config()->set('zenith.retained_batch_scan_limit', 1000);
 
     $calls = 0;

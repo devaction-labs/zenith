@@ -139,7 +139,6 @@ describe("WorkloadTable", () => {
     expect(rows).toHaveLength(4);
     expect(rows[0]).toHaveTextContent("zeta");
     expect(rows[1]).toHaveTextContent("alpha, beta");
-    // Split children inherit the parent Ready Jobs ascending sort.
     expect(rows[2]).toHaveTextContent("beta");
     expect(rows[3]).toHaveTextContent("alpha");
     expect(screen.getAllByRole("button", { name: /queue actions/i })).toHaveLength(3);

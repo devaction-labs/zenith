@@ -54,9 +54,6 @@ function bindBrowserPageFixtures(
     int $silencedJobCount = 1,
 ): void {
     Horizon::auth(static fn (): bool => true);
-    // Browser suites must not require live Redis or execute bulk workers. Fake the
-    // bus and use an async bulk connection name so BulkOperationDispatcher accepts
-    // the queue while Bus::fake() records the coordinator job for toast success.
     Bus::fake();
     config()->set('zenith.poll_interval', 0);
     config()->set('zenith.bulk_operations.connection', 'operations');
@@ -65,7 +62,6 @@ function bindBrowserPageFixtures(
     $capabilities = new FrameworkCapabilities(queuePausing: false, timedQueuePausing: false);
     app()->instance(FrameworkCapabilities::class, $capabilities);
 
-    // LocalInstanceName requires basename + '-' + exactly four alphanumerics.
     $instanceName = MasterSupervisor::basename().'-br01';
     $masters = mockDashboardContract(MasterSupervisorRepository::class);
     dashboardReturns($masters, 'all', [
@@ -76,8 +72,6 @@ function bindBrowserPageFixtures(
             'status' => 'running',
         ],
     ]);
-    // DashboardData resolves these contracts from the container — binding is
-    // required (see bindBrowserSupervisorScalingFixtures), not only constructing mocks.
     app()->instance(MasterSupervisorRepository::class, $masters);
     app()->instance(HorizonRuntime::class, new HorizonRuntime($masters));
 
@@ -252,8 +246,6 @@ function bindBrowserPageFixtures(
     dashboardReturns($waitTimes, 'calculateTimeToClear', 0);
     app()->instance(WaitTimeCalculator::class, $waitTimes);
 
-    // Dashboard summary reads failed-job windows and snapshot leaders from the
-    // horizon Redis connection; stub it so the no-Redis CI tests job stays offline.
     $horizonConnection = mockDashboardContract(Connection::class);
     dashboardReturns($horizonConnection, 'zcount', 0);
     dashboardReturns($horizonConnection, 'zrange', []);
@@ -263,8 +255,6 @@ function bindBrowserPageFixtures(
     app()->instance(RedisFactory::class, $redis);
     app()->instance(SnapshotJobsPerMinute::class, new SnapshotJobsPerMinute($redis));
 
-    // Async bulk connection for BulkOperationDispatcher (must not be Sync/Null).
-    // Bus::fake() above records coordinator jobs without executing Redis workers.
     app()->instance(QueueManager::class, new BrowserPendingJobQueueManager(
         app(),
         new BrowserPendingJobRedisQueue(new BrowserPendingJobRedisConnection),
@@ -629,9 +619,6 @@ function bindBrowserInfiniteScrollRefreshFixtures(bool $emptyOnRefresh = false):
     $refreshedFirstPage = $emptyOnRefresh
         ? []
         : [$newJob, $updatedJob, ...array_slice($initialFirstPage, 1, 48)];
-    // Full document loads call getFailed('-1') more than once (list page + bulk
-    // retry scan). Only Inertia partials that include jobs should advance to the
-    // refreshed first-page snapshot used by automatic refresh tests.
     $useRefreshedFirstPage = false;
 
     $jobs = mockDashboardContract(JobRepository::class);

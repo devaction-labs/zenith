@@ -226,10 +226,7 @@ final class ClearQueueMetadataPhpRedisStub extends PhpRedisConnection
     /**
      * @param  array<int, EvalResult>  $responses
      */
-    public function __construct(private array $responses)
-    {
-        // Client is unused: command() is fully overridden for packing assertions.
-    }
+    public function __construct(private array $responses) {}
 
     /**
      * @param  array<int, mixed>  $parameters

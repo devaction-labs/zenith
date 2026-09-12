@@ -112,7 +112,6 @@ export function trackBackgroundRefresh(options: VisitOptions): VisitOptions {
         return options.onNetworkError(error);
       }
 
-      // Prevent Inertia's default network-error rejection for automatic refreshes.
       return false;
     },
     onHttpException: (response) => {
@@ -122,7 +121,6 @@ export function trackBackgroundRefresh(options: VisitOptions): VisitOptions {
         return options.onHttpException(response);
       }
 
-      // Keep automatic refresh failures restrained; the control shows the status.
       return false;
     },
     onCancel: () => {

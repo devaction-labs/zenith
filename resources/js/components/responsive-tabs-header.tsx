@@ -65,8 +65,6 @@ export function ResponsiveTabsHeader<Value extends string>({
   }, []);
 
   const selectTab = (nextValue: Value | null) => {
-    // Capture before the tab switch; Base UI may still scroll to top while the
-    // popup closes after the value commit.
     pendingSelectScroll.current = {
       scrollX: window.scrollX,
       scrollY: window.scrollY,

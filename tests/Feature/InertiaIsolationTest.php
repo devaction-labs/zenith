@@ -151,7 +151,6 @@ describe('Inertia isolation', function (): void {
             ->and($content)->toContain('/vendor/zenith/build/assets/')
             ->and($content)->toContain('data-horizon-favicon')
             ->and($content)->toContain('nonce="zenith-csp-nonce"')
-            // Theme bootstrap plus package Vite tags (module, styles, preloads).
             ->and(substr_count($content, 'nonce="zenith-csp-nonce"'))->toBeGreaterThanOrEqual(2)
             ->and(preg_match(
                 '/<script[^>]*type="module"[^>]*nonce="zenith-csp-nonce"|<script[^>]*nonce="zenith-csp-nonce"[^>]*type="module"/',

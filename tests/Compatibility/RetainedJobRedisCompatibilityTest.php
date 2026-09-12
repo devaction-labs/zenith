@@ -69,7 +69,6 @@ final class PendingSnapshotObservingConnection extends Connection
         );
 
         if (str_contains($script, "local timestamp = redis.call('time')")) {
-            // Per-state snapshots use 5 keys; consolidated pendingQueueEntries uses 8.
             if (count($keys) === 5) {
                 $snapshotKeys = [$keys[0], $keys[3], $keys[4]];
                 $namespace = ':zenith:pending-snapshot:';
@@ -228,7 +227,6 @@ it('queries retained jobs through the configured real Redis client', function ()
         );
         $firstPageIds = $firstPage->jobs->pluck('id')->all();
 
-        // A missing facet forces a generation publish; resolve the live key after page.
         $rebuiltJobFacet = $index->facetKey(
             RetainedJobType::Completed,
             'job',
@@ -994,9 +992,6 @@ function seedRetainedJobCompatibilityJobs(Connection $redis): array
         $queue = $matches ? 'retained-reports' : 'maintenance';
         $connection = $matches ? 'redis-analytics' : 'redis';
 
-        // Horizon completed_jobs scores are -timestamp: lower scores are newer and
-        // appear first via zrange. Keep lower positions newest so matchingIds order
-        // matches first-page results after filters.
         $redis->zadd(
             RetainedJobType::Completed->sourceKey(),
             -($retainedAt + ((121 - $position) / 1000)),

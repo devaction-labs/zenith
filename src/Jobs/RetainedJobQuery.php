@@ -313,9 +313,6 @@ final readonly class RetainedJobQuery
         $cursorState = $cursors->decodeState($cursor, $type, $querySignature);
         $reservedIds = $this->reservedIds($filters);
         $facets = $this->facets($type, $filters, null);
-        // Unfiltered total and rest read Horizon source directly. Unfiltered
-        // reserved membership uses pageAdditionalIdsFromSource (source ZSCORE)
-        // so live withCandidateKey synchronization is never required mid-request.
         $total = $this->pageIds(
             type: $type,
             facets: $facets,
@@ -419,9 +416,6 @@ final readonly class RetainedJobQuery
         int|string|null $currentCursor,
     ): RetainedJobQueryPage {
         $cursors = $this->cursors ?? new RetainedJobCursor;
-        // Live unfiltered reserved membership pages source scores only
-        // (pageAdditionalIdsFromSource). Published membership is used only when
-        // the caller explicitly sets $published (pageFromPublishedIndex).
         $reservedPage = $this->pageIds(
             type: $type,
             facets: $facets,
@@ -603,7 +597,6 @@ final readonly class RetainedJobQuery
                 continue;
             }
 
-            // Horizon pending scores are -microtime; map availability into that space.
             $scores[$id] = -$availabilityAt;
         }
 

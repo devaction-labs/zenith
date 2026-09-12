@@ -195,8 +195,6 @@ it('retries unacknowledged targets after a mutation throws mid-chunk', function 
     expect($operationKeys)->toHaveCount(1);
     $operationId = substr($operationKeys[0], strlen("\x1fzenith:v1:bulk-op:"), 32);
 
-    // Score order peels highest-magnitude negative first: failed-4, failed-3,
-    // failed-2 throws after two successes. Resume must still process failed-2+.
     $resume = $action->processChunk($operationId);
 
     expect($resume->complete)->toBeTrue()
@@ -215,7 +213,6 @@ it('does not reschedule after a crash between successful dispatch and acknowledg
             ->and($command->id)->toBe('failed-0');
 
         $dispatches++;
-        // Establish the retry reference so bulk eligibility blocks a second schedule.
         $job->retried_by = json_encode([
             ['id' => 'retry-child', 'status' => 'pending'],
         ], JSON_THROW_ON_ERROR);

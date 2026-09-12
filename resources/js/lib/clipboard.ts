@@ -4,9 +4,7 @@ export async function copyToClipboard(value: string): Promise<boolean> {
       await navigator.clipboard.writeText(value);
 
       return true;
-    } catch {
-      // Browsers can expose the Clipboard API while denying the write.
-    }
+    } catch {}
   }
 
   const input = document.createElement("textarea");

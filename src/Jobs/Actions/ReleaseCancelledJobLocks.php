@@ -98,7 +98,6 @@ final readonly class ReleaseCancelledJobLocks
                 return $command;
             }
         } catch (Throwable) {
-            // The payload may contain an encrypted command.
         }
 
         try {

@@ -218,8 +218,6 @@ final readonly class JobsData
             $pushedAt,
             $delay,
         );
-        // Reserved ZSET scores are reservation expiry (retry_after), not reserved_at.
-        // Delayed/released delayed scores are availability timestamps and are safe to use.
         $score = $this->timestamp($entry['score'] ?? null);
         $scheduledAt = match ($state) {
             'delayed', 'released' => $score ?? $originalScheduledAt,

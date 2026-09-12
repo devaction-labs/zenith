@@ -114,7 +114,6 @@ function summaryDashboardData(array $masters): DashboardData
         ['snapshot:queue:exports', -1, -1],
         [json_encode(['runtime' => 1_200, 'throughput' => 70], JSON_THROW_ON_ERROR)],
     );
-    // 250 throughput over 20 fractional minutes → 12.5 jobs/min (not Horizon's floor of 1 minute).
     dashboardReturnsFor(
         $connection,
         'get',
@@ -275,7 +274,6 @@ describe('DashboardData', function (): void {
 
         $connection = mockDashboardContract(Connection::class);
         dashboardReturns($connection, 'zcount', 0);
-        // 30 seconds elapsed — Horizon would clamp to 1 minute and report 100.
         dashboardReturnsFor(
             $connection,
             'get',
@@ -587,7 +585,6 @@ describe('DashboardData', function (): void {
                         [
                             'name' => 'exports',
                             'length' => 2,
-                            // Cumulative: reports (2) + exports own TTC (1) under pool priority order.
                             'wait' => 3,
                             'paused' => true,
                             'pausedUntil' => 1784577600,
@@ -817,8 +814,6 @@ describe('DashboardData', function (): void {
 
         CarbonImmutable::setTestNow('2026-07-20 18:00:00 UTC');
 
-        // One authoritative calculate() snapshot retains connection:queue keys. The same
-        // queue name on two connections must keep independent pause targeting.
         $waitTimes = mockDashboardContract(WaitTimeCalculator::class);
         dashboardReturns($waitTimes, 'calculate', [
             'redis-b:shared' => 100,

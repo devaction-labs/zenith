@@ -55,8 +55,6 @@ describe('Horizon interface interactions', function (): void {
             ->assertMissing('[data-test="retry-all-failed-jobs"][aria-disabled="true"]')
             ->assertMissing('[data-test="clear-all-failed-jobs"][aria-disabled="true"]');
 
-        // Axe color-contrast samples painted pixels; wait until the open-menu
-        // fade finishes so semi-transparent frames are not measured.
         $page->script(<<<'JS'
             () => new Promise((resolve) => {
                 requestAnimationFrame(() => {
