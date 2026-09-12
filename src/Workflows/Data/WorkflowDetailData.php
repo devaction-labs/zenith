@@ -11,6 +11,7 @@ final class WorkflowDetailData extends Data
     /**
      * @param  list<WorkflowStepData>  $steps
      * @param  array<string, mixed>  $context
+     * @param  list<WorkflowRowData>  $children
      */
     public function __construct(
         public readonly string $id,
@@ -22,5 +23,7 @@ final class WorkflowDetailData extends Data
         public readonly ?float $finishedAt,
         public readonly bool $cancellable,
         public readonly bool $retryable,
+        public readonly ?string $parentId,
+        public readonly array $children,
     ) {}
 }

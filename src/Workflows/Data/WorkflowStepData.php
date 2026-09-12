@@ -22,5 +22,7 @@ final class WorkflowStepData extends Data
         public readonly ?string $error,
         public readonly int $attempts,
         public readonly ?float $finishedAt,
+        public readonly bool $nested,
+        public readonly ?string $childId,
     ) {}
 }

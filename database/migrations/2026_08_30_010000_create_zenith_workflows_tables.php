@@ -30,6 +30,7 @@ return new class extends Migration
             $table->json('payload')->nullable();
             $table->json('deps')->nullable();
             $table->boolean('cascade')->default(false);
+            $table->string('compensate_job')->nullable();
             $table->string('status', 32)->index();
             $table->json('output')->nullable();
             $table->text('error')->nullable();

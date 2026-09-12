@@ -12,6 +12,34 @@ enum WorkflowStatus: string
     case Failed = 'failed';
     case Cancelled = 'cancelled';
     case Dispatched = 'dispatched';
+    case Retrying = 'retrying';
+    case Compensating = 'compensating';
+    case Compensated = 'compensated';
+    case CompensationFailed = 'compensation_failed';
+
+    /**
+     * @return list<string>
+     */
+    public static function finishedValues(): array
+    {
+        return array_values(array_map(
+            static fn (self $status): string => $status->value,
+            array_filter(self::cases(), static fn (self $status): bool => $status->finished()),
+        ));
+    }
+
+    /**
+     * @return list<string>
+     */
+    public static function activeStepValues(): array
+    {
+        return [
+            self::Pending->value,
+            self::Dispatched->value,
+            self::Running->value,
+            self::Retrying->value,
+        ];
+    }
 
     public function finished(): bool
     {

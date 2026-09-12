@@ -117,7 +117,7 @@ it('fails the parent when a nested workflow fails', function (): void {
         ->and($workflow->steps()->where('name', 'after')->value('status'))
         ->toBe(WorkflowStatus::Cancelled->value)
         ->and(Workflow::query()->where('parent_id', $workflow->id)->value('status'))
-        ->toBe(WorkflowStatus::Failed->value);
+        ->toBe(WorkflowStatus::Failed);
 });
 
 it('cancels nested workflows with the parent', function (): void {

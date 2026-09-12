@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace DevactionLabs\Zenith\Workflows;
 
+use DevactionLabs\Zenith\Workflows\Concerns\TransitionsConditionally;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Str;
 
 /**
@@ -24,6 +24,8 @@ use Illuminate\Support\Str;
  */
 final class Workflow extends Model
 {
+    use TransitionsConditionally;
+
     public $incrementing = false;
 
     protected $keyType = 'string';
@@ -68,30 +70,20 @@ final class Workflow extends Model
         return $this->hasMany(WorkflowStep::class, 'workflow_id')->orderBy('id');
     }
 
-    public function cancel(): void
+    /**
+     * @return HasMany<Workflow, $this>
+     */
+    public function children(): HasMany
     {
-        if ($this->status->finished()) {
-            return;
-        }
-
-        $this->forceFill([
-            'status' => WorkflowStatus::Cancelled,
-            'finished_at' => Date::now(),
-        ])->save();
-
-        $this->steps()
-            ->whereNotIn('status', [
-                WorkflowStatus::Completed->value,
-                WorkflowStatus::Failed->value,
-                WorkflowStatus::Cancelled->value,
-            ])
-            ->update([
-                'status' => WorkflowStatus::Cancelled->value,
-                'finished_at' => Date::now(),
-            ]);
+        return $this->hasMany(self::class, 'parent_id');
     }
 
-    public function retryFrom(string $step): void
+    public function cancel(): void
+    {
+        app(AdvanceWorkflow::class)->cancel($this);
+    }
+
+    public function retryFrom(?string $step = null): void
     {
         app(AdvanceWorkflow::class)->retry($this, $step);
     }
