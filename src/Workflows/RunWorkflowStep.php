@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace DevactionLabs\Zenith\Workflows;
 
+use DevactionLabs\Zenith\Signals\ReleaseWhileWaiting;
 use DevactionLabs\Zenith\Signals\SignalWaiting;
 use DevactionLabs\Zenith\Workflows\Concerns\AdoptsStepQueueOptions;
 use Illuminate\Contracts\Queue\Job;
@@ -19,12 +20,6 @@ final class RunWorkflowStep implements ShouldQueue
      * Seconds to wait before a step that reported waiting for a signal runs again.
      */
     public const int SIGNAL_RETRY_SECONDS = 5;
-
-    /**
-     * The signals middleware that binds the queue job so Signal::await can release it
-     * while a step waits. It is only present once the signals module ships it.
-     */
-    private const string RELEASE_WHILE_WAITING = 'DevactionLabs\Zenith\Signals\ReleaseWhileWaiting';
 
     /**
      * @param  string  $token  The claim token stored on the step when this job was dispatched.
@@ -44,19 +39,11 @@ final class RunWorkflowStep implements ShouldQueue
     }
 
     /**
-     * @return list<object>
+     * @return list<ReleaseWhileWaiting>
      */
     public function middleware(): array
     {
-        $middleware = self::RELEASE_WHILE_WAITING;
-
-        if (! class_exists($middleware)) {
-            return [];
-        }
-
-        $instance = new $middleware;
-
-        return is_object($instance) ? [$instance] : [];
+        return [new ReleaseWhileWaiting];
     }
 
     /**
