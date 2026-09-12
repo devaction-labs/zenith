@@ -16,6 +16,11 @@ final readonly class AuthorizeHorizonAbility
         private HorizonAbilityAuthorizer $authorizer,
     ) {}
 
+    public static function for(string $ability): string
+    {
+        return self::class.':'.$ability;
+    }
+
     /** @param Closure(Request): Response $next */
     public function handle(Request $request, Closure $next, string $ability): Response
     {
