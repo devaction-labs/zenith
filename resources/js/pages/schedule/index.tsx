@@ -4,7 +4,14 @@ import { ListPageHeader } from "@/components/shell/list-page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { TableEmpty } from "@/components/data-table/table-empty";
 import { store as runSchedule } from "@/generated/routes/zenith/schedule/run";
 import { useHorizonAbilities } from "@/hooks/use-horizon-abilities";
@@ -62,7 +69,9 @@ function ScheduleIndex({ horizon, events, canRun }: HorizonPageProps & ScheduleP
                       <div className="flex flex-col gap-1">
                         <span className="break-all">{event.description}</span>
                         {event.command ? (
-                          <span className="break-all text-muted-foreground text-xs">{event.command}</span>
+                          <span className="break-all text-muted-foreground text-xs">
+                            {event.command}
+                          </span>
                         ) : null}
                       </div>
                     </TableCell>

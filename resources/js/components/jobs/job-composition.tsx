@@ -3,7 +3,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { JobComposition } from "@/types/jobs";
 
 export function JobCompositionPanel({ composition }: { composition?: JobComposition }) {
-  if (!composition || (!composition.unique && !composition.encrypted && composition.chain.length === 0)) {
+  if (
+    !composition ||
+    (!composition.unique && !composition.encrypted && composition.chain.length === 0)
+  ) {
     return null;
   }
 

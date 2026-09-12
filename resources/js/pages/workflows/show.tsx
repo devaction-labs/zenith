@@ -4,7 +4,14 @@ import { DetailList, DetailListItem } from "@/components/detail-list";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { store as cancelWorkflow } from "@/generated/routes/zenith/workflows/cancel";
 import { store as retryWorkflow } from "@/generated/routes/zenith/workflows/retry";
 import { useHorizonAbilities } from "@/hooks/use-horizon-abilities";
@@ -45,7 +52,9 @@ function WorkflowShow({ horizon, workflow }: HorizonPageProps & WorkflowDetailPa
                   size="sm"
                   variant="outline"
                   onClick={() =>
-                    router.post(resolveHorizonRoute(cancelWorkflow(workflow.id), horizon.baseUrl).url)
+                    router.post(
+                      resolveHorizonRoute(cancelWorkflow(workflow.id), horizon.baseUrl).url,
+                    )
                   }
                 >
                   Cancel
@@ -55,9 +64,12 @@ function WorkflowShow({ horizon, workflow }: HorizonPageProps & WorkflowDetailPa
                 <Button
                   size="sm"
                   onClick={() =>
-                    router.post(resolveHorizonRoute(retryWorkflow(workflow.id), horizon.baseUrl).url, {
-                      step: failedStep.name,
-                    })
+                    router.post(
+                      resolveHorizonRoute(retryWorkflow(workflow.id), horizon.baseUrl).url,
+                      {
+                        step: failedStep.name,
+                      },
+                    )
                   }
                 >
                   Retry failed
@@ -103,7 +115,9 @@ function WorkflowShow({ horizon, workflow }: HorizonPageProps & WorkflowDetailPa
                     <TableCell>
                       <div className="flex flex-col gap-1">
                         <span>{step.name}</span>
-                        <span className="break-all text-muted-foreground text-xs">{step.jobClass}</span>
+                        <span className="break-all text-muted-foreground text-xs">
+                          {step.jobClass}
+                        </span>
                       </div>
                     </TableCell>
                     <TableCell>{step.deps.length > 0 ? step.deps.join(", ") : "—"}</TableCell>

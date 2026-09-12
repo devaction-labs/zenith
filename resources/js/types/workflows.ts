@@ -1,4 +1,10 @@
-export type WorkflowStatus = "pending" | "running" | "completed" | "failed" | "cancelled" | "dispatched";
+export type WorkflowStatus =
+  | "pending"
+  | "running"
+  | "completed"
+  | "failed"
+  | "cancelled"
+  | "dispatched";
 
 export type WorkflowStep = {
   name: string;
