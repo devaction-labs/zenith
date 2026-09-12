@@ -96,7 +96,7 @@ function WorkflowShow({ horizon, workflow }: HorizonPageProps & WorkflowDetailPa
               </DetailListItem>
               {workflow.parentId ? (
                 <DetailListItem label="Parent workflow" scrollable>
-                  <Link className={linkClassName} href={workflowUrl(workflow.parentId)}>
+                  <Link className={linkClassName} href={workflowUrl(workflow.parentId)} prefetch>
                     {workflow.parentId}
                   </Link>
                 </DetailListItem>
@@ -136,6 +136,7 @@ function WorkflowShow({ horizon, workflow }: HorizonPageProps & WorkflowDetailPa
                           <Link
                             className={`text-muted-foreground text-xs ${linkClassName}`}
                             href={workflowUrl(step.childId)}
+                            prefetch
                           >
                             Nested workflow
                           </Link>
@@ -180,7 +181,7 @@ function WorkflowShow({ horizon, workflow }: HorizonPageProps & WorkflowDetailPa
                   {workflow.children.map((child) => (
                     <TableRow key={child.id}>
                       <TableCell>
-                        <Link className={linkClassName} href={workflowUrl(child.id)}>
+                        <Link className={linkClassName} href={workflowUrl(child.id)} prefetch>
                           {child.name ?? child.id}
                         </Link>
                       </TableCell>
