@@ -22,5 +22,7 @@ final class ScheduleEventData extends Data
         public readonly bool $overlapping,
         public readonly bool $runtimeEditable,
         public readonly bool $paused,
+        /** @var list<ScheduleRunData> */
+        public readonly array $history,
     ) {}
 }

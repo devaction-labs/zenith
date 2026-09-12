@@ -1,4 +1,5 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition } from './../../../wayfinder'
+import pause from './pause'
 import run from './run'
 /**
 * @see \DevactionLabs\Zenith\Http\Controllers\ScheduleController::index
@@ -46,6 +47,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
 const schedule = {
     index: Object.assign(index, index),
+    pause: Object.assign(pause, pause),
     run: Object.assign(run, run),
 }
 

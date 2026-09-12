@@ -12,4 +12,13 @@ enum InternalScheduledEvent: string
 {
     case DynamicCrons = 'zenith:dynamic-crons';
     case ChunkFlush = 'zenith:chunk-flush';
+
+    /**
+     * Whether a scheduled event's description names one of Zenith's own
+     * maintenance ticks.
+     */
+    public static function matches(?string $description): bool
+    {
+        return self::tryFrom($description ?? '') !== null;
+    }
 }

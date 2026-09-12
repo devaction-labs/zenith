@@ -5,6 +5,7 @@ declare(strict_types=1);
 use DevactionLabs\Zenith\Assets\AssetPath;
 use DevactionLabs\Zenith\Http\Middleware\HandleInertiaRequests;
 use DevactionLabs\Zenith\ZenithServiceProvider;
+use Illuminate\Contracts\Events\Dispatcher as EventDispatcher;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
@@ -46,7 +47,7 @@ describe('Inertia isolation', function (): void {
         config()->set('inertia.ssr.enabled', true);
         config()->set('inertia.ssr.ensure_bundle_exists', false);
 
-        (new ZenithServiceProvider(app()))->boot(app(AssetPath::class));
+        (new ZenithServiceProvider(app()))->boot(app(AssetPath::class), app(EventDispatcher::class));
 
         Http::fake([
             '*' => Http::response([
@@ -82,7 +83,7 @@ describe('Inertia isolation', function (): void {
         config()->set('inertia.ssr.enabled', true);
         config()->set('inertia.ssr.ensure_bundle_exists', false);
 
-        (new ZenithServiceProvider(app()))->boot(app(AssetPath::class));
+        (new ZenithServiceProvider(app()))->boot(app(AssetPath::class), app(EventDispatcher::class));
 
         Http::fake([
             '*' => Http::response([
@@ -124,7 +125,7 @@ describe('Inertia isolation', function (): void {
 
         app()->instance(Gateway::class, $gateway);
 
-        (new ZenithServiceProvider(app()))->boot(app(AssetPath::class));
+        (new ZenithServiceProvider(app()))->boot(app(AssetPath::class), app(EventDispatcher::class));
 
         expect(app(Gateway::class))->toBe($gateway);
     });

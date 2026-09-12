@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use DevactionLabs\Zenith\Assets\AssetPath;
 use DevactionLabs\Zenith\ZenithServiceProvider;
+use Illuminate\Contracts\Events\Dispatcher as EventDispatcher;
 use Illuminate\Database\Migrations\Migrator;
 
 describe('package boot', function (): void {
@@ -20,7 +21,7 @@ describe('package boot', function (): void {
     it('boots when cached configuration predates the package', function (): void {
         config()->set('zenith', []);
 
-        (new ZenithServiceProvider(app()))->boot(app(AssetPath::class));
+        (new ZenithServiceProvider(app()))->boot(app(AssetPath::class), app(EventDispatcher::class));
 
         expect(app(AssetPath::class)->relative())->toBe('vendor/zenith/build');
     });

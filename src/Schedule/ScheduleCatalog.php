@@ -17,6 +17,7 @@ final readonly class ScheduleCatalog
     public function __construct(
         private Schedule $schedule,
         private DynamicSchedule $dynamic,
+        private ScheduleRunHistory $history,
     ) {}
 
     /**
@@ -40,7 +41,7 @@ final readonly class ScheduleCatalog
     public function event(string $id): ?Event
     {
         foreach ($this->applicationEvents() as $event) {
-            if ($this->id($event) === $id) {
+            if (self::identify($event) === $id) {
                 return $event;
             }
         }
@@ -66,7 +67,7 @@ final readonly class ScheduleCatalog
     {
         return array_values(array_filter(
             $this->schedule->events(),
-            static fn (Event $event): bool => InternalScheduledEvent::tryFrom($event->description ?? '') === null,
+            static fn (Event $event): bool => ! InternalScheduledEvent::matches($event->description),
         ));
     }
 
@@ -80,10 +81,11 @@ final readonly class ScheduleCatalog
             $nextRunAt = null;
         }
 
-        $timezone = $this->timezone($event->timezone);
+        $timezone = self::timezone($event->timezone);
+        $id = self::identify($event);
 
         return new ScheduleEventData(
-            id: $this->id($event),
+            id: $id,
             expression: $event->getExpression(),
             description: $event->getSummaryForDisplay(),
             command: is_string($event->command) && $event->command !== '' ? $event->command : null,
@@ -96,6 +98,7 @@ final readonly class ScheduleCatalog
             overlapping: $this->overlapping($event),
             runtimeEditable: false,
             paused: false,
+            history: $this->history->for($id),
         );
     }
 
@@ -117,18 +120,24 @@ final readonly class ScheduleCatalog
             overlapping: false,
             runtimeEditable: true,
             paused: $cron->paused,
+            history: [],
         );
     }
 
-    private function id(Event $event): string
+    /**
+     * A stable id for a scheduled event, shared with the run-history
+     * recorder so runs recorded from `schedule:run` line up with the row
+     * shown on the Schedule page.
+     */
+    public static function identify(Event $event): string
     {
         return hash(
             'xxh3',
-            $event->getExpression()."\0".$event->getSummaryForDisplay()."\0".($this->timezone($event->timezone) ?? ''),
+            $event->getExpression()."\0".$event->getSummaryForDisplay()."\0".(self::timezone($event->timezone) ?? ''),
         );
     }
 
-    private function timezone(mixed $timezone): ?string
+    private static function timezone(mixed $timezone): ?string
     {
         if ($timezone instanceof \DateTimeZone) {
             return $timezone->getName();

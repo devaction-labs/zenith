@@ -22,4 +22,9 @@ return [
         'store' => null,
         'ttl' => 86400,
     ],
+    'schedule_history' => [
+        'store' => null,
+        'ttl' => 604800,
+        'limit' => 10,
+    ],
 ];

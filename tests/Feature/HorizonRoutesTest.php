@@ -50,6 +50,8 @@ describe('Zenith routes', function (): void {
             'zenith.failed-jobs.retry.store' => ['POST', 'horizon/failed/{job}/retry'],
             'zenith.audit.index' => ['GET', 'horizon/audit'],
             'zenith.schedule.index' => ['GET', 'horizon/schedule'],
+            'zenith.schedule.pause.store' => ['POST', 'horizon/schedule/pause'],
+            'zenith.schedule.pause.destroy' => ['DELETE', 'horizon/schedule/pause'],
             'zenith.schedule.run.store' => ['POST', 'horizon/schedule/{event}/run'],
             'zenith.workflows.index' => ['GET', 'horizon/workflows'],
             'zenith.workflows.show' => ['GET', 'horizon/workflows/{workflow}'],

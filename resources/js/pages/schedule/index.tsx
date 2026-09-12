@@ -1,5 +1,8 @@
 import { Head, router } from "@inertiajs/react";
+import { LoaderCircleIcon, PauseIcon, PlayIcon } from "lucide-react";
+import { useState } from "react";
 
+import { RunHistorySparkline } from "@/components/schedule/run-history-sparkline";
 import { ListPageHeader } from "@/components/shell/list-page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,6 +16,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { TableEmpty } from "@/components/data-table/table-empty";
+import {
+  destroy as resumeSchedule,
+  store as pauseSchedule,
+} from "@/generated/routes/zenith/schedule/pause";
 import { store as runSchedule } from "@/generated/routes/zenith/schedule/run";
 import { useHorizonAbilities } from "@/hooks/use-horizon-abilities";
 import { usePageRefresh } from "@/hooks/use-dashboard-refresh";
@@ -31,6 +38,51 @@ const dateFormatter = new Intl.DateTimeFormat("sv-SE", {
   hour12: false,
 });
 
+function SchedulePauseControl({
+  horizonBaseUrl,
+  schedulePaused,
+}: {
+  horizonBaseUrl: string;
+  schedulePaused: boolean;
+}) {
+  const [working, setWorking] = useState(false);
+  const options = {
+    preserveScroll: true,
+    onStart: () => setWorking(true),
+    onFinish: () => setWorking(false),
+  };
+
+  if (schedulePaused) {
+    return (
+      <Button
+        size="sm"
+        variant="outline"
+        disabled={working}
+        onClick={() =>
+          router.delete(resolveHorizonRoute(resumeSchedule(), horizonBaseUrl).url, options)
+        }
+      >
+        {working ? <LoaderCircleIcon className="animate-spin" /> : <PlayIcon />}
+        Resume scheduler
+      </Button>
+    );
+  }
+
+  return (
+    <Button
+      size="sm"
+      variant="outline"
+      disabled={working}
+      onClick={() =>
+        router.post(resolveHorizonRoute(pauseSchedule(), horizonBaseUrl).url, {}, options)
+      }
+    >
+      {working ? <LoaderCircleIcon className="animate-spin" /> : <PauseIcon />}
+      Pause scheduler
+    </Button>
+  );
+}
+
 function ScheduleIndex({ horizon, events, canRun }: HorizonPageProps & SchedulePageProps) {
   const { autoLoad } = useAutoLoadPreference();
   const abilities = useHorizonAbilities();
@@ -42,7 +94,18 @@ function ScheduleIndex({ horizon, events, canRun }: HorizonPageProps & ScheduleP
     <>
       <Head title="Schedule" />
       <Card>
-        <ListPageHeader title="Schedule" separated={false} />
+        <ListPageHeader
+          title="Schedule"
+          separated={false}
+          actions={
+            abilities.manageSchedule ? (
+              <SchedulePauseControl
+                horizonBaseUrl={horizon.baseUrl}
+                schedulePaused={horizon.schedulePaused === true}
+              />
+            ) : null
+          }
+        />
         <CardContent className="p-0">
           <Table>
             <TableHeader>
@@ -51,13 +114,14 @@ function ScheduleIndex({ horizon, events, canRun }: HorizonPageProps & ScheduleP
                 <TableHead>Event</TableHead>
                 <TableHead>Next run</TableHead>
                 <TableHead>Flags</TableHead>
+                <TableHead>History</TableHead>
                 {allowRun ? <TableHead className="text-right">Actions</TableHead> : null}
               </TableRow>
             </TableHeader>
             <TableBody>
               {events.length === 0 ? (
                 <TableEmpty
-                  columns={allowRun ? 5 : 4}
+                  columns={allowRun ? 6 : 5}
                   title="No scheduled events"
                   description="Register events on the Laravel scheduler or create dynamic crons to see them here."
                 />
@@ -91,6 +155,9 @@ function ScheduleIndex({ horizon, events, canRun }: HorizonPageProps & ScheduleP
                         {event.evenInMaintenanceMode ? <Badge>Maintenance</Badge> : null}
                         {event.runInBackground ? <Badge>Background</Badge> : null}
                       </div>
+                    </TableCell>
+                    <TableCell>
+                      <RunHistorySparkline history={event.history} />
                     </TableCell>
                     {allowRun ? (
                       <TableCell className="text-right">
