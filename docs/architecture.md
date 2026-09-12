@@ -320,6 +320,16 @@ New routes must:
 - avoid exposing raw job payloads, exception bodies, or Redis details;
 - avoid modifying or shadowing Horizon API routes unless the change is intentional and documented.
 
+## Design decisions
+
+Some capabilities on the [Oban parity roadmap](https://github.com/devaction-labs/zenith/issues/44) were opened as RFCs rather than issues with a settled design. This section records the decision each one reached.
+
+### Fetch-time gating for limits (issue #38): no-go for now
+
+Oban applies concurrency and rate limits when a worker fetches a job, so a saturated limit or partition never leaves the queue. Horizon's fetch path is a Lua script internal to the package (`RedisQueue`'s pop scripts), not a published extension point: reproducing fetch-time gating means forking that script and re-patching it on every Horizon release, with no upstream contract protecting the fork from silently breaking. `EnforceQueueBudget` and `EnforceQueueConcurrency` (issue #31) apply limits after the pop instead, which costs a release-and-redeliver cycle per throttled job but stays entirely within Horizon's supported surface.
+
+Decision: stay with after-pop gating. Revisit only if Horizon publishes a documented fetch-time extension point, or if release churn measured through the telemetry recorder (issue #14) proves costly enough for a specific workload to justify maintaining a fork.
+
 ## Development environment
 
 Orchestra Testbench verifies package behavior in isolation. The Workbench application provides deterministic successful and failing jobs for live dashboard development.
