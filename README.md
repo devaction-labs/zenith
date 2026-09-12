@@ -32,6 +32,18 @@ Compared with Horizon's bundled interface, Zenith adds:
 - bulk and scoped failure recovery, with controls to retry or remove one failed job, retry or clear all failures, and retry failures by queue, monitored tag, or batch;
 - batch management, including cancelling active batches, retrying failed batch jobs, clearing retained failures, and clearing finished batches.
 
+### Experimental
+
+These modules are under active development and tracked in the
+[P0 · Correctness](https://github.com/devaction-labs/zenith/milestone/1)
+milestone. Their APIs and storage may change, and several do not yet behave as
+described; check the linked issues before relying on them:
+
+- a Schedule page for Laravel scheduler events, with next-run times, overlap flags, and on-demand runs (schedules still live in application code);
+- unique and encrypted job contracts plus downstream Bus chain steps on job detail;
+- workflow DAGs with named steps, dependencies, cascade outputs, unique names, and cancel/retry from the dashboard;
+- Signals, Relay (dispatch and await a result), Chunks, Backfills, queue budgets, and runtime dynamic cron rows. These run as Horizon jobs or cache/database state; they do not replace Horizon workers.
+
 ## Roadmap
 
 Zenith is working toward parity with [Oban Pro and Oban Web](https://oban.pro): live metrics, durable workflows, dynamic crons, and cluster-wide concurrency control, built on Horizon and Laravel 13 primitives. Planned work is tracked as [GitHub issues](https://github.com/devaction-labs/zenith/issues) in four milestones; [#43](https://github.com/devaction-labs/zenith/issues/43) is the overview.

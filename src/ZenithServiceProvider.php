@@ -86,6 +86,10 @@ final class ZenithServiceProvider extends ServiceProvider
         'failed/*',
         'audit',
         'audit/*',
+        'schedule',
+        'schedule/*',
+        'workflows',
+        'workflows/*',
     ];
 
     public function register(): void

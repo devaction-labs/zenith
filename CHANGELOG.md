@@ -15,6 +15,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- **Experimental:** a Schedule page that lists Laravel scheduler events (expression, next run, overlap flags) and can run an event on demand. Runtime cron editing is not available because Laravel schedules live in code.
+- **Experimental:** job composition on job detail: unique and encrypted contracts plus downstream Bus chain steps from the retained payload.
+- **Experimental:** workflow DAGs (`WorkflowDefinition`) with cascade outputs, unique names, cancel/retry, and a Workflows page. Steps run as Horizon jobs. Known gaps are tracked in the P0 milestone.
+- **Experimental:** Signals, Relay, Chunks, Backfills, queue budgets, and persisted dynamic cron rows. Known gaps are tracked in the P0 milestone.
 - Rebranded the fork to DevAction Labs (`devaction-labs/zenith`, `DevactionLabs\Zenith`).
 - Added Laravel 13.25 global queue pause and resume (`Queue::pauseAll()` / `resumeAll()`), gated when the framework methods are missing, with a shell banner and Queues actions that leave individually paused queues paused after a global resume.
 - Warned at install time when Redis Cluster connections are configured.

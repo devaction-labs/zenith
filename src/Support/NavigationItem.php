@@ -17,4 +17,6 @@ enum NavigationItem: string
     case Silenced = 'silenced';
     case Failed = 'failed';
     case Audit = 'audit';
+    case Schedule = 'schedule';
+    case Workflows = 'workflows';
 }

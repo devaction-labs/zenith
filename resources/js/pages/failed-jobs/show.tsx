@@ -10,6 +10,7 @@ import { useState } from "react";
 
 import { DetailList, DetailListItem } from "@/components/detail-list";
 import { Duration } from "@/components/duration";
+import { JobCompositionPanel } from "@/components/jobs/job-composition";
 import { FailedJobActionsMenu } from "@/components/jobs/failed-job-actions";
 import { JobStatus } from "@/components/jobs/job-status";
 import { JobTags } from "@/components/jobs/job-tags";
@@ -214,6 +215,7 @@ function FailedJobShow({ horizon, job }: FailedJobDetailPageProps) {
           </CardContent>
         </Card>
 
+        <JobCompositionPanel composition={job.composition} />
         <FailedJobDataTabs job={job} horizonBaseUrl={horizon.baseUrl} />
       </div>
     </>

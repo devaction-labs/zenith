@@ -5,6 +5,7 @@ import { DetailList, DetailListItem } from "@/components/detail-list";
 import { Duration } from "@/components/duration";
 import { JobStatus, type JobStatusValue } from "@/components/jobs/job-status";
 import { PendingJobActionsMenu } from "@/components/jobs/pending-job-actions";
+import { JobCompositionPanel } from "@/components/jobs/job-composition";
 import { JobTags } from "@/components/jobs/job-tags";
 import { JsonPayload } from "@/components/payload/json-payload";
 import { ResponsiveTabsHeader, type ResponsiveTabItem } from "@/components/responsive-tabs-header";
@@ -173,6 +174,8 @@ function JobShow({ horizon, type, job }: JobDetailPageProps) {
                 {job.name}
               </span>
               {job.retryOf ? <Badge variant="retry">Retry</Badge> : null}
+              {job.composition?.unique ? <Badge>Unique</Badge> : null}
+              {job.composition?.encrypted ? <Badge>Encrypted</Badge> : null}
             </CardTitle>
             {type === "pending" && job.status === "pending" && job.batchId === null ? (
               <CardAction className="flex shrink-0 items-center self-center">
@@ -208,6 +211,7 @@ function JobShow({ horizon, type, job }: JobDetailPageProps) {
           </CardContent>
         </Card>
 
+        <JobCompositionPanel composition={job.composition} />
         <JobDataTabs payload={job.payload} tags={job.tags} />
       </div>
     </>

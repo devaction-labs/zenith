@@ -9,6 +9,8 @@ import {
   MonitoringNavigationIcon,
   QueueNavigationIcon,
   RunningInstancesNavigationIcon,
+  ScheduleNavigationIcon,
+  WorkflowsNavigationIcon,
 } from "@/components/navigation-icons";
 import { HorizonStatus } from "@/components/shell/horizon-status";
 import { SidebarFooterControls } from "@/components/shell/page-header";
@@ -31,6 +33,8 @@ import {
 } from "@/components/ui/sidebar";
 import { dashboard } from "@/generated/routes/zenith";
 import { index as auditIndex } from "@/generated/routes/zenith/audit";
+import { index as scheduleIndex } from "@/generated/routes/zenith/schedule";
+import { index as workflowsIndex } from "@/generated/routes/zenith/workflows";
 import { index as batchesIndex } from "@/generated/routes/zenith/batches";
 import { index as failedJobsIndex } from "@/generated/routes/zenith/failed-jobs";
 import { index as jobsIndex } from "@/generated/routes/zenith/jobs";
@@ -108,6 +112,20 @@ const navigation: NavigationEntry[] = [
     icon: AuditNavigationIcon,
     count: null,
     route: () => auditIndex(),
+  },
+  {
+    label: "Schedule",
+    active: ["schedule"],
+    icon: ScheduleNavigationIcon,
+    count: null,
+    route: () => scheduleIndex(),
+  },
+  {
+    label: "Workflows",
+    active: ["workflows"],
+    icon: WorkflowsNavigationIcon,
+    count: null,
+    route: () => workflowsIndex(),
   },
   {
     label: "Jobs",
