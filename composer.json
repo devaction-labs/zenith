@@ -1,11 +1,12 @@
 {
     "name": "devaction-labs/zenith",
-    "description": "A React and Inertia interface for Laravel Horizon.",
+    "description": "The operator console and orchestration layer for Laravel Horizon, built with React and Inertia.",
     "keywords": [
         "dashboard",
         "horizon",
         "inertia",
         "laravel",
+        "monitoring",
         "queues",
         "react"
     ],
