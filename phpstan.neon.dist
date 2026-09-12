@@ -6,7 +6,7 @@ parameters:
     paths:
         - src
         - tests
-    level: 8
+    level: max
     phpVersion: 80500
     tmpDir: .phpstan.cache
     ignoreErrors:
