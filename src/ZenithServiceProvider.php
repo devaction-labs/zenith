@@ -13,8 +13,10 @@ use DevactionLabs\Zenith\Chains\ChainFailureListener;
 use DevactionLabs\Zenith\Chains\ChainPayloadHook;
 use DevactionLabs\Zenith\Chunks\ChunkBuffer;
 use DevactionLabs\Zenith\Console\AssetsCommand;
+use DevactionLabs\Zenith\Console\ExportMetricsCommand;
 use DevactionLabs\Zenith\Console\InstallCommand;
 use DevactionLabs\Zenith\Console\PruneJobHistoryCommand;
+use DevactionLabs\Zenith\Console\RelayOutboxCommand;
 use DevactionLabs\Zenith\Console\RepairWorkflowsCommand;
 use DevactionLabs\Zenith\Console\WarmBatchMetadataCommand;
 use DevactionLabs\Zenith\Console\WarmRetainedJobsCommand;
@@ -238,8 +240,10 @@ final class ZenithServiceProvider extends ServiceProvider
         if ($this->app->runningInConsole()) {
             $this->commands([
                 AssetsCommand::class,
+                ExportMetricsCommand::class,
                 InstallCommand::class,
                 PruneJobHistoryCommand::class,
+                RelayOutboxCommand::class,
                 RepairWorkflowsCommand::class,
                 WarmBatchMetadataCommand::class,
                 WarmRetainedJobsCommand::class,
@@ -279,6 +283,11 @@ final class ZenithServiceProvider extends ServiceProvider
         })
             ->everyMinute()
             ->name(InternalScheduledEvent::ChunkFlush->value);
+
+        $schedule->command(RelayOutboxCommand::class)
+            ->everyMinute()
+            ->name(InternalScheduledEvent::RelayOutbox->value)
+            ->withoutOverlapping(10);
     }
 
     private function excludeHorizonFromSsr(Gateway $gateway): void

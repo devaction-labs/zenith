@@ -37,6 +37,7 @@ const props: FailedJobDetailPageProps = {
     context: {},
     exception: "Import failed",
     attemptTimeline: { available: false, attempts: [], message: null },
+    canExplainFailure: false,
   },
 };
 

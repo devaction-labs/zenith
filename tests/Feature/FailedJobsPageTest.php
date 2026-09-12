@@ -599,6 +599,7 @@ describe('failed job pages', function (): void {
         Horizon::auth(static fn (): bool => false);
 
         post('/horizon/failed/failed-1/retry')->assertForbidden();
+        post('/horizon/failed/failed-1/explain')->assertForbidden();
         post('/horizon/failed/retry-all')->assertForbidden();
         delete('/horizon/failed')->assertForbidden();
         delete('/horizon/failed/failed-1')->assertForbidden();

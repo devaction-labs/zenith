@@ -191,6 +191,7 @@ function FailedJobShow({ horizon, job }: FailedJobDetailPageProps) {
                 jobId={job.id}
                 horizonBaseUrl={horizon.baseUrl}
                 canRetry={job.retryEligible}
+                canExplainFailure={job.canExplainFailure}
               />
             </CardAction>
           </CardHeader>

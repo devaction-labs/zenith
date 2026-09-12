@@ -46,5 +46,6 @@ final class FailedJobDetailData extends Data
         public readonly JobAttributesData $attributes = new JobAttributesData(
             null, null, null, false, null, null, null, null, null, null, null, false, false, null, null,
         ),
+        public readonly bool $canExplainFailure = false,
     ) {}
 }

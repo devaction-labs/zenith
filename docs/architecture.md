@@ -634,6 +634,40 @@ overflow queue after it has been starved for a second, longer threshold,
 leaving the original job and its history untouched until the copy
 succeeds.
 
+## Design decisions
+
+Some capabilities on the [Oban parity roadmap](https://github.com/devaction-labs/zenith/issues/44) were opened as RFCs rather than issues with a settled design. This section records the decision each one reached.
+
+### Fetch-time gating for limits (issue #38): no-go for now
+
+Oban applies concurrency and rate limits when a worker fetches a job, so a saturated limit or partition never leaves the queue. Horizon's fetch path is a Lua script internal to the package (`RedisQueue`'s pop scripts), not a published extension point: reproducing fetch-time gating means forking that script and re-patching it on every Horizon release, with no upstream contract protecting the fork from silently breaking. `EnforceQueueBudget` and `EnforceQueueConcurrency` (issue #31) apply limits after the pop instead, which costs a release-and-redeliver cycle per throttled job but stays entirely within Horizon's supported surface.
+
+Decision: stay with after-pop gating. Revisit only if Horizon publishes a documented fetch-time extension point, or if release churn measured through the telemetry recorder (issue #14) proves costly enough for a specific workload to justify maintaining a fork.
+
+### Autoscaling signals for external schedulers (issue #39): go, via a CLI export, not a new HTTP endpoint
+
+Oban Pro's Dynamic Scaler scales worker nodes horizontally from queue depth, wait time, and throughput. Horizon's own auto-balancing only scales processes within a node. Exposing those numbers so KEDA or the Kubernetes HPA can scale nodes is worth doing, but Zenith's design goals rule out adding a second general browser-facing API surface, and a scraped HTTP endpoint would be exactly that: a new, generally reachable route outside Horizon's existing read/write contract.
+
+Decision: `php artisan zenith:export-metrics` prints Prometheus text-format samples for queue depth, wait time, and throughput to stdout, reusing the same `QueuesData`/`MetricsRepository` sources the dashboard already reads. It opens no route. Recipes:
+
+- **Textfile collector**: a cron writes the command's output to `node_exporter`'s textfile collector directory; Prometheus scrapes it from there.
+- **Pushgateway**: pipe the output through `curl --data-binary @- http://pushgateway:9091/metrics/job/zenith` on a schedule.
+- **KEDA / HPA**: point a `ScaledObject` or the Prometheus custom-metrics adapter at whichever of the above populates Prometheus; Zenith itself stays unaware of the autoscaler.
+
+### AI-assisted failure explanations (issue #40): go, as a hook with no new dependency
+
+Explaining a failure well needs an LLM call, but Zenith has no opinion on which provider a host application uses, and adding one as a package dependency would force that choice (and its cost) on every consumer, including those who never touch the feature.
+
+Decision: `Zenith::explainFailureUsing(callable $callback)` lets the host register `fn (string $jobClass, string $exceptionMessage): ?string` from its own service provider, backed by whatever AI client it already depends on. Zenith never talks to a provider itself. The failed-job detail page shows an "Explain this failure" action only when a callback is registered, gated by the existing `retryJobs` ability, so hosts that skip the hook see no change.
+
+### Transactional outbox for job dispatch (issue #35): go, single delivery path via sweep
+
+Oban's own outbox gives an at-least-once dispatch guarantee: a job enqueued inside the same transaction as the application data it depends on either commits with that data or rolls back with it, closing the gap where a process crashes after committing but before the job reaches the real queue. Horizon has no equivalent — `dispatch()` inside a transaction only pushes once the transaction commits (via `afterCommit`), which still loses the job if the process dies between that commit and the push.
+
+A design with two paths — an immediate push after commit, falling back to a sweep for whatever the fast path missed — was rejected: it means the job can arrive by two different routes, doubles the surface a test has to cover, and the race between "did the fast path already send it" and "is the sweep about to send it too" is exactly the kind of bug this feature exists to prevent.
+
+Decision: `Outbox::dispatch($job, $connection, $queue)` only ever writes a row inside the caller's transaction; delivery happens exclusively through `Outbox::relayDue($graceSeconds)`, scheduled every minute as `zenith:relay-outbox`. A grace period (default 30s) avoids relaying a row whose owning transaction is still open on another connection. This is at-least-once, not exactly-once: a crash between a successful push and deleting the row redelivers it, so jobs dispatched through the outbox should stay idempotent or use `ShouldBeUnique`, the same expectation Oban sets. `Outbox::backlog()` reports the pending row count and the oldest row's age, exported as `zenith_outbox_backlog` and `zenith_outbox_oldest_pending_seconds` alongside the other autoscaling gauges (issue #39) so a stuck sweep is observable the same way a growing queue is.
+
 ## Development environment
 
 Orchestra Testbench verifies package behavior in isolation. The Workbench application provides deterministic successful and failing jobs for live dashboard development.

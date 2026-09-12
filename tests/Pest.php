@@ -20,6 +20,7 @@ require_once __DIR__.'/Support/TelemetryRedis.php';
 require_once __DIR__.'/Support/WorkflowTables.php';
 require_once __DIR__.'/Support/WorkflowSteps.php';
 require_once __DIR__.'/Support/WorkflowDrain.php';
+require_once __DIR__.'/Support/OutboxTable.php';
 
 pest()->extend(TestCase::class)->afterEach(function (): void {
     Workflow::stopFaking();

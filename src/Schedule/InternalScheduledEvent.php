@@ -12,6 +12,7 @@ enum InternalScheduledEvent: string
 {
     case DynamicCrons = 'zenith:dynamic-crons';
     case ChunkFlush = 'zenith:chunk-flush';
+    case RelayOutbox = 'zenith:relay-outbox';
 
     /**
      * Whether a scheduled event's description names one of Zenith's own
