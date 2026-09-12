@@ -11,6 +11,7 @@ use DevactionLabs\Zenith\Jobs\Data\JobFilterCatalogData;
 use DevactionLabs\Zenith\Jobs\Data\JobIndexFiltersData;
 use DevactionLabs\Zenith\Jobs\Data\JobPageData;
 use DevactionLabs\Zenith\Jobs\Data\JobRowData;
+use DevactionLabs\Zenith\Support\PayloadRedactor;
 use DevactionLabs\Zenith\Telemetry\AttemptHistory;
 use DevactionLabs\Zenith\Telemetry\Data\AttemptTimelineData;
 use DevactionLabs\Zenith\Telemetry\TelemetryRegistration;
@@ -68,7 +69,7 @@ final readonly class JobsData
         ?string $search = null,
     ): JobPageData {
         $filters ??= JobIndexFiltersData::none();
-        $search = $this->normalizedSearch($search);
+        [$filters, $search] = $this->resolveSearch($filters, $search);
 
         if ($this->retainedQuery !== null) {
             try {
@@ -163,7 +164,7 @@ final readonly class JobsData
         JobIndexFiltersData $filters,
         ?string $search = null,
     ): string {
-        $search = $this->normalizedSearch($search);
+        [$filters, $search] = $this->resolveSearch($filters, $search);
 
         if ($this->retainedQuery !== null) {
             return $this->retainedQuery->signature(
@@ -185,6 +186,37 @@ final readonly class JobsData
         $search = (string) Str::of($search ?? '')->trim();
 
         return $search === '' ? null : $search;
+    }
+
+    /**
+     * Extract a `tag:` qualifier from the free-text search box and merge it
+     * into the exact tag facet, unless an explicit tag filter is already
+     * active. The remainder of the search string keeps matching by partial
+     * job class or exact retained ID.
+     *
+     * @return array{0: JobIndexFiltersData, 1: string|null}
+     */
+    private function resolveSearch(JobIndexFiltersData $filters, ?string $search): array
+    {
+        $search = $this->normalizedSearch($search);
+
+        if ($search === null) {
+            return [$filters, null];
+        }
+
+        $qualifiers = JobSearchQualifiers::parse($search);
+
+        if ($qualifiers->tag !== null && $filters->tag === null) {
+            $filters = new JobIndexFiltersData(
+                job: $filters->job,
+                queue: $filters->queue,
+                connection: $filters->connection,
+                state: $filters->state,
+                tag: $qualifiers->tag,
+            );
+        }
+
+        return [$filters, $qualifiers->remainder];
     }
 
     public function find(string $id): ?JobDetailData
@@ -579,7 +611,9 @@ final readonly class JobsData
      */
     private function safePayload(array $payload, ?array $decodedCommand): array
     {
-        $data = is_array($payload['data'] ?? null) ? $payload['data'] : [];
+        $data = is_array($payload['data'] ?? null)
+            ? array_filter($payload['data'], is_string(...), ARRAY_FILTER_USE_KEY)
+            : [];
         unset($data['command']);
 
         if ($decodedCommand !== null) {
@@ -592,7 +626,7 @@ final readonly class JobsData
             'uuid' => is_string($payload['uuid'] ?? null) ? $payload['uuid'] : null,
             'maxTries' => is_numeric($payload['maxTries'] ?? null) ? (int) $payload['maxTries'] : null,
             'timeout' => is_numeric($payload['timeout'] ?? null) ? (int) $payload['timeout'] : null,
-            'data' => $data,
+            'data' => PayloadRedactor::redact($data),
         ], static fn (mixed $value): bool => $value !== null);
     }
 

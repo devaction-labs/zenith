@@ -92,6 +92,7 @@ export function useJobQueryControls({
       queue: null,
       connection: null,
       state: null,
+      tag: null,
     };
     selectedFiltersRef.current = nextFilters;
     setSelectedFilters(nextFilters);

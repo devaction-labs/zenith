@@ -451,6 +451,13 @@ return [
     'poll_interval' => 5000,
     'job_navigation_breakdown' => false,
     'job_payload_allowed_classes' => [],
+    'redact_payload_keys' => [
+        'password',
+        'token',
+        'secret',
+        'key',
+        'authorization',
+    ],
     'bulk_operations' => [
         'connection' => null,
         'queue' => null,
@@ -485,6 +492,14 @@ Laravel's serialized queue context and never instantiates arbitrary payload
 classes. PHP deserialization may invoke lifecycle methods such as `__wakeup`
 and `__destruct`, so allow only side-effect-free classes controlled by the
 application.
+
+`redact_payload_keys` masks job argument, failed-job argument, and workflow
+step output and context values before they reach Inertia whenever a key
+contains one of the configured strings, case-insensitively, at any depth. Call
+`DevactionLabs\Zenith\Zenith::redactPayloadUsing(callable $callback)` from your
+own service provider to replace that key-pattern matching entirely with
+application-specific redaction; the callback receives the full payload array
+and its return value is used as-is.
 
 `signals`, `relay`, and `chunks` each choose the cache `store` that backs
 that feature (the default store when `null`) and how long, in seconds, a

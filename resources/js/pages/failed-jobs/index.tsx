@@ -50,6 +50,7 @@ function FailedJobsIndex({
           filter_queue: nextFilters.queue,
           filter_connection: nextFilters.connection,
           filter_state: null,
+          filter_tag: nextFilters.tag,
         },
         ["starting_at"],
       );

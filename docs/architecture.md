@@ -508,6 +508,71 @@ retention rules will grow `zenith_job_history` unbounded until they add rules
 and schedule the prune command; this is intentional so enabling history never
 silently deletes data before an operator has decided a retention policy.
 
+## Search design: tags, arguments, and qualifiers
+
+Every retained job type (pending, completed, silenced, and failed) now
+maintains the same `tag` facet that failed jobs already exposed. Tags were
+already captured once per job in `RetainedJobMetadata` and were already a
+peer of `job`, `queue`, and `connection` in `RetainedJobIndex`'s generic facet
+maintenance; only the type-scoped filter that skipped indexing tags for
+pending and silenced jobs needed to go. Reconciliation, rebuild, and
+structural corruption recovery already loop over every facet dimension
+uniformly, so enabling the dimension for every type added no new code path,
+only more Redis membership per retained job (one sorted-set entry per tag the
+job carries, same shape and cost as the existing job-class facet). `tag` is
+intentionally excluded from `SINGLE_VALUED_CATALOG_DIMENSIONS`: a job can
+carry many tags, so its facet membership cannot be proven an exact disjoint
+partition the way single-valued dimensions are, and it is exposed only as an
+exact-match filter (`JobIndexFiltersData::$tag`), never as a discovered
+options catalog. A minimal `tag:` qualifier in the free-text search box
+(`JobSearchQualifiers`) extracts one leading `tag:value` token and merges it
+into that same facet filter; everything else in the search string still falls
+through to the existing partial job-class or exact-ID search untouched. This
+part of the issue was fully implementable with the existing projection and
+shipped in this pass.
+
+Opt-in per-argument search and a general qualifier parser (`queue:emails
+tag:vip args.order_id:42`) are a different order of problem and were
+deliberately left as a documented decision rather than a partial
+implementation:
+
+- **Cost model.** `job`, `queue`, `connection`, and now `tag` are all
+  low-cardinality, host-controlled facets: a Horizon installation has a
+  bounded number of job classes, queues, connections, and, in practice, tags
+  drawn from a small vocabulary an application chooses (`tenant:*`,
+  `user:*`). Indexing them costs one Redis sorted-set membership per job per
+  dimension, bounded by that installation's actual cardinality. Job
+  *arguments* have none of these properties: an argument value can be
+  arbitrary-cardinality (an order ID, a UUID, a free-text field), arbitrary
+  shape (scalar, array, nested object), and mutable per job class. Projecting
+  even one argument key per job class multiplies retained-history storage by
+  the number of distinct values ever seen, with no natural upper bound, and
+  every additional opted-in key repeats that cost. The existing partial
+  full-text class search already accepts this trade-off for `job`, `queue`,
+  and `connection` catalogs specifically because those are the union of a
+  small, closed set of Redis keys, not a per-record index.
+- **What we would index if we built it.** Per job class, a host would declare
+  a fixed list of argument keys to project (mirroring how `job_navigation_breakdown`
+  and `redact_payload_keys` are already host-configured, closed lists). Each
+  declared key would get its own facet dimension, scoped to that job class,
+  populated the same way `tag` is today: read once from the decoded payload
+  during reconciliation, written into a `facetKey($type, "arg:{class}:{key}", $value)`
+  sorted set. That is additive to the current design and would not require
+  touching the generic facet-maintenance loop again.
+- **Why not now.** The qualifier syntax (`args.order_id:42`) implies parsing
+  and validating an open-ended right-hand side per declared key, choosing
+  between exact and substring matching per value type, and deciding how an
+  argument search composes with the existing partial-class search term in one
+  query box — none of which has a natural, bounded answer without first
+  shipping the opt-in projection and seeing which key types and match modes
+  real job classes actually need. Building the parser before that would mean
+  guessing at a contract this package would then have to keep. The `tag`
+  facet above proves the mechanism scales to a second dimension cleanly;
+  opt-in argument projection is the next candidate for the same mechanism, but
+  belongs in its own change once a job class's declared keys and match
+  semantics are decided with real usage in hand, not speculatively in this
+  pass.
+
 ## Extension boundaries
 
 Use Horizon contracts when a feature already exists in Horizon. Add a focused package service or action when Zenith needs normalization, repository-backed aggregation, or a mutation Horizon does not expose through a suitable contract.

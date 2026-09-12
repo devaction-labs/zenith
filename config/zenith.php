@@ -6,6 +6,13 @@ return [
     'poll_interval' => 5000,
     'job_navigation_breakdown' => false,
     'job_payload_allowed_classes' => [],
+    'redact_payload_keys' => [
+        'password',
+        'token',
+        'secret',
+        'key',
+        'authorization',
+    ],
     'bulk_operations' => [
         'connection' => null,
         'queue' => null,

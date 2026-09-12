@@ -841,6 +841,7 @@ final readonly class RetainedJobQuery
             'job' => $filters->job,
             'queue' => $filters->queue,
             'connection' => $filters->connection,
+            'tag' => $filters->tag,
         ], is_string(...));
         $failedTag = trim($failedTag ?? '');
 
