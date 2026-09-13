@@ -98,6 +98,14 @@ return [
     'queue_failover' => [
         'store' => null,
         'window_minutes' => 60,
+
+        // Connection names to exclude from the "jobs may be bypassing
+        // Horizon" warning and its recent-activity counters, for
+        // connections deliberately configured with a bypass-prone driver
+        // (deferred, failover, background). Leave empty so an unused
+        // stub connection (Laravel 13 ships "deferred" and "failover" by
+        // default) is still surfaced.
+        'ignored_connections' => [],
     ],
     'chains' => [
         'store' => null,
