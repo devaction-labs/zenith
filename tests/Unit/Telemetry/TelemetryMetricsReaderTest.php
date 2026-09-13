@@ -46,14 +46,14 @@ it('groups throughput by outcome across every queue, class, and node', function 
 
     $recorder->record(
         TelemetryOutcome::Processed,
-        new JobIdentity('emails', 'App\\Jobs\\SendEmail'),
+        new JobIdentity('emails', 'App\\Jobs\\SendEmail', 'redis'),
         new WorkerIdentity('node-1', null),
         100,
         10,
     );
     $recorder->record(
         TelemetryOutcome::Failed,
-        new JobIdentity('imports', 'App\\Jobs\\ImportFeed'),
+        new JobIdentity('imports', 'App\\Jobs\\ImportFeed', 'redis'),
         new WorkerIdentity('node-2', null),
         200,
         20,
@@ -72,6 +72,41 @@ it('groups throughput by outcome across every queue, class, and node', function 
     expect(array_sum(array_map(static fn ($point) => $point->count, $failed->points)))->toBe(1);
 });
 
+it('groups throughput by connection, including a bypass-prone driver', function (): void {
+    config()->set('zenith.telemetry.enabled', true);
+    CarbonImmutable::setTestNow('2026-01-01 00:00:00 UTC');
+
+    ['redis' => $redis] = telemetryRedis();
+    $recorder = new TelemetryRecorder($redis);
+
+    $recorder->record(
+        TelemetryOutcome::Processed,
+        new JobIdentity('default', 'App\\Jobs\\SendEmail', 'redis'),
+        new WorkerIdentity('node-1', null),
+        100,
+        10,
+    );
+    $recorder->record(
+        TelemetryOutcome::Processed,
+        new JobIdentity('default', 'App\\Jobs\\ImportFeed', 'deferred'),
+        new WorkerIdentity('node-1', null),
+        50,
+        0,
+    );
+
+    $chart = (new TelemetryMetricsReader($redis))->throughput(TelemetryWindow::OneHour, TelemetryGroupBy::Connection);
+
+    expect($chart->available)->toBeTrue();
+
+    $totals = [];
+
+    foreach ($chart->series as $series) {
+        $totals[$series->label] = array_sum(array_map(static fn ($point) => $point->count, $series->points));
+    }
+
+    expect($totals)->toBe(['redis' => 1, 'deferred' => 1]);
+});
+
 it('groups throughput by the busiest values of the chosen dimension', function (): void {
     config()->set('zenith.telemetry.enabled', true);
     CarbonImmutable::setTestNow('2026-01-01 00:00:00 UTC');
@@ -82,7 +117,7 @@ it('groups throughput by the busiest values of the chosen dimension', function (
     foreach (['emails', 'emails', 'emails', 'imports'] as $queue) {
         $recorder->record(
             TelemetryOutcome::Processed,
-            new JobIdentity($queue, 'App\\Jobs\\Generic'),
+            new JobIdentity($queue, 'App\\Jobs\\Generic', 'redis'),
             new WorkerIdentity('node-1', null),
             10,
             10,
@@ -113,7 +148,7 @@ it('caps dimension based grouping to the busiest five values', function (): void
     foreach (range(1, 7) as $index) {
         $recorder->record(
             TelemetryOutcome::Processed,
-            new JobIdentity("queue-{$index}", 'App\\Jobs\\Generic'),
+            new JobIdentity("queue-{$index}", 'App\\Jobs\\Generic', 'redis'),
             new WorkerIdentity('node-1', null),
             10,
             10,
@@ -135,7 +170,7 @@ it('computes percentiles scoped to a specific dimension value', function (): voi
     foreach ([50, 50, 50, 5_000] as $runtimeMs) {
         $recorder->record(
             TelemetryOutcome::Processed,
-            new JobIdentity('emails', 'App\\Jobs\\SendEmail'),
+            new JobIdentity('emails', 'App\\Jobs\\SendEmail', 'redis'),
             new WorkerIdentity('node-1', null),
             $runtimeMs,
             null,
@@ -145,7 +180,7 @@ it('computes percentiles scoped to a specific dimension value', function (): voi
     // A different queue's runtime must not leak into the "emails" scoped percentile.
     $recorder->record(
         TelemetryOutcome::Processed,
-        new JobIdentity('imports', 'App\\Jobs\\ImportFeed'),
+        new JobIdentity('imports', 'App\\Jobs\\ImportFeed', 'redis'),
         new WorkerIdentity('node-1', null),
         999_999,
         null,

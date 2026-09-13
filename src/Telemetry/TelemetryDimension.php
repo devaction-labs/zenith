@@ -16,6 +16,7 @@ enum TelemetryDimension: string
     case Queue = 'queue';
     case JobClass = 'class';
     case Node = 'node';
+    case Connection = 'connection';
 
     public function label(): string
     {
@@ -23,6 +24,7 @@ enum TelemetryDimension: string
             self::Queue => 'Queue',
             self::JobClass => 'Job class',
             self::Node => 'Node',
+            self::Connection => 'Connection',
         };
     }
 }

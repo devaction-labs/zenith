@@ -22,7 +22,7 @@ it('stores the job details and indexes it by start time', function (): void {
 
     $tracker->start(
         jobId: 'job-uuid-1',
-        job: new JobIdentity(queue: 'default', jobClass: 'App\\Jobs\\ImportFeed'),
+        job: new JobIdentity(queue: 'default', jobClass: 'App\\Jobs\\ImportFeed', connection: 'redis'),
         worker: new WorkerIdentity(node: 'node-1', supervisor: 'supervisor-1'),
         timeoutSeconds: 30,
     );
@@ -49,7 +49,7 @@ it('stores an empty supervisor and timeout when neither is known', function (): 
 
     $tracker->start(
         jobId: 'job-uuid-2',
-        job: new JobIdentity(queue: 'default', jobClass: 'App\\Jobs\\ImportFeed'),
+        job: new JobIdentity(queue: 'default', jobClass: 'App\\Jobs\\ImportFeed', connection: 'redis'),
         worker: new WorkerIdentity(node: 'node-1', supervisor: null),
         timeoutSeconds: null,
     );
@@ -68,7 +68,7 @@ it('removes the job entry and its index member when finished', function (): void
 
     $tracker->start(
         jobId: 'job-uuid-3',
-        job: new JobIdentity(queue: 'default', jobClass: 'App\\Jobs\\ImportFeed'),
+        job: new JobIdentity(queue: 'default', jobClass: 'App\\Jobs\\ImportFeed', connection: 'redis'),
         worker: new WorkerIdentity(node: 'node-1', supervisor: null),
         timeoutSeconds: 30,
     );
