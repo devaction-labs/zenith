@@ -23,7 +23,12 @@ final readonly class QueueBypassWarning
 
     public function summary(): QueueBypassWarningData
     {
-        $recent = $this->failovers->recent();
+        $ignored = $this->ignoredConnections();
+
+        $recent = array_values(array_filter(
+            $this->failovers->recent(),
+            static fn (array $entry): bool => ! in_array($entry['connection'], $ignored, true),
+        ));
         $connections = array_values(array_unique(array_filter(
             array_column($recent, 'connection'),
             is_string(...),
@@ -34,14 +39,15 @@ final readonly class QueueBypassWarning
             recentFailoverCount: count($recent),
             recentFailoverWindowMinutes: $this->failovers->windowMinutes(),
             recentFailoverConnections: $connections,
-            bypassProneConnections: $this->bypassProneConnections(),
+            bypassProneConnections: $this->bypassProneConnections($ignored),
         );
     }
 
     /**
+     * @param  list<string>  $ignored
      * @return list<string>
      */
-    private function bypassProneConnections(): array
+    private function bypassProneConnections(array $ignored): array
     {
         $connections = config('queue.connections');
 
@@ -52,7 +58,7 @@ final readonly class QueueBypassWarning
         $names = [];
 
         foreach ($connections as $name => $connection) {
-            if (! is_string($name) || ! is_array($connection)) {
+            if (! is_string($name) || ! is_array($connection) || in_array($name, $ignored, true)) {
                 continue;
             }
 
@@ -64,5 +70,19 @@ final readonly class QueueBypassWarning
         }
 
         return $names;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function ignoredConnections(): array
+    {
+        $ignored = config('zenith.queue_failover.ignored_connections');
+
+        if (! is_array($ignored)) {
+            return [];
+        }
+
+        return array_values(array_filter($ignored, is_string(...)));
     }
 }
