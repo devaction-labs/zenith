@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-09-13
+
+### Added
+
+- `zenith.queue_failover.ignored_connections` lets an operator acknowledge a connection deliberately configured with a bypass-prone driver (`deferred`, `failover`, `background`), excluding it from the "Jobs may be bypassing Horizon" dashboard banner and its recent-failover counters. Defaults to empty, so an unused stub connection (Laravel 13 ships `deferred` and `failover` by default) still surfaces until acknowledged.
+
 ## [0.4.0] - 2026-09-12
 
 This release closes out the remaining Oban-parity roadmap: event-driven telemetry, durable history, workflow observability and resilience, bulk job actions, an engine layer of job-class attributes, and a transactional outbox all land together.
