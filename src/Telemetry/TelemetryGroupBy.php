@@ -19,6 +19,7 @@ enum TelemetryGroupBy: string
     case Queue = 'queue';
     case JobClass = 'class';
     case Node = 'node';
+    case Connection = 'connection';
 
     public function dimension(): ?TelemetryDimension
     {
@@ -27,6 +28,7 @@ enum TelemetryGroupBy: string
             self::Queue => TelemetryDimension::Queue,
             self::JobClass => TelemetryDimension::JobClass,
             self::Node => TelemetryDimension::Node,
+            self::Connection => TelemetryDimension::Connection,
         };
     }
 
@@ -37,6 +39,7 @@ enum TelemetryGroupBy: string
             self::Queue => 'Queue',
             self::JobClass => 'Job class',
             self::Node => 'Node',
+            self::Connection => 'Connection',
         };
     }
 }
