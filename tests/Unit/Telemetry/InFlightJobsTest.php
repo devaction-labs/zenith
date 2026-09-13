@@ -36,7 +36,7 @@ it('lists running jobs sorted by elapsed time and flags overrunning ones', funct
 
     $tracker->start(
         jobId: 'job-a',
-        job: new JobIdentity(queue: 'default', jobClass: 'App\\Jobs\\Short'),
+        job: new JobIdentity(queue: 'default', jobClass: 'App\\Jobs\\Short', connection: 'redis'),
         worker: new WorkerIdentity(node: 'node-1', supervisor: 'supervisor-1'),
         timeoutSeconds: 120,
     );
@@ -44,7 +44,7 @@ it('lists running jobs sorted by elapsed time and flags overrunning ones', funct
     CarbonImmutable::setTestNow('2026-01-01 00:00:10 UTC');
     $tracker->start(
         jobId: 'job-b',
-        job: new JobIdentity(queue: 'default', jobClass: 'App\\Jobs\\Overrunning'),
+        job: new JobIdentity(queue: 'default', jobClass: 'App\\Jobs\\Overrunning', connection: 'redis'),
         worker: new WorkerIdentity(node: 'node-2', supervisor: null),
         timeoutSeconds: 5,
     );
