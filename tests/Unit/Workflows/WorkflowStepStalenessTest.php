@@ -7,9 +7,15 @@ use DevactionLabs\Zenith\Workflows\WorkflowStatus;
 use DevactionLabs\Zenith\Workflows\WorkflowStep;
 use DevactionLabs\Zenith\Workflows\WorkflowStepStaleness;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Date;
 
 beforeEach(function (): void {
     migrateWorkflowTables();
+    Date::setTestNow('2026-07-20 12:00:00 UTC');
+});
+
+afterEach(function (): void {
+    Date::setTestNow();
 });
 
 function makeStalenessWorkflowStep(string $jobClass, WorkflowStatus $status, ?Carbon $updatedAt = null, ?Carbon $interruptedAt = null): WorkflowStep
