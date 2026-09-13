@@ -1,4 +1,4 @@
-export type TelemetryGroupBy = "state" | "queue" | "class" | "node";
+export type TelemetryGroupBy = "state" | "queue" | "class" | "node" | "connection";
 export type TelemetryWindow = "15m" | "1h" | "6h" | "24h" | "7d";
 
 export const telemetryGroupByOptions: ReadonlyArray<{ value: TelemetryGroupBy; label: string }> = [
@@ -6,6 +6,7 @@ export const telemetryGroupByOptions: ReadonlyArray<{ value: TelemetryGroupBy; l
   { value: "queue", label: "Queue" },
   { value: "class", label: "Job class" },
   { value: "node", label: "Node" },
+  { value: "connection", label: "Connection" },
 ];
 
 export const telemetryWindowOptions: ReadonlyArray<{ value: TelemetryWindow; label: string }> = [

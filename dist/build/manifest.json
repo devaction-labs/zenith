@@ -529,8 +529,8 @@
       "_useCompositeItem-D2lvMMGP.js"
     ]
   },
-  "_telemetry-controls-DNbyGdZu.js": {
-    "file": "assets/telemetry-controls-DNbyGdZu.js",
+  "_telemetry-controls-BCSLs2kL.js": {
+    "file": "assets/telemetry-controls-BCSLs2kL.js",
     "name": "telemetry-controls",
     "imports": [
       "_jsx-runtime-DWRut7C4.js",
@@ -657,7 +657,7 @@
     "src": "resources/images/favicon.svg"
   },
   "resources/js/app.tsx": {
-    "file": "assets/app-D3WkEwiw.js",
+    "file": "assets/app-BD7LnW6Q.js",
     "name": "app",
     "src": "resources/js/app.tsx",
     "isEntry": true,
@@ -779,7 +779,7 @@
     ]
   },
   "resources/js/pages/dashboard.tsx": {
-    "file": "assets/dashboard-Khkfc8Sa.js",
+    "file": "assets/dashboard-CU0cZxbx.js",
     "name": "dashboard",
     "src": "resources/js/pages/dashboard.tsx",
     "isDynamicEntry": true,
@@ -789,7 +789,7 @@
       "_alert-C7anyYzp.js",
       "_navigation-icons-C110a-q5.js",
       "_horizon-layout-BNR-mHWI.js",
-      "_telemetry-controls-DNbyGdZu.js",
+      "_telemetry-controls-BCSLs2kL.js",
       "_empty-SZ-3h6Z0.js",
       "_table-CKShowqV.js",
       "_sortable-table-head-NS-vxcVO.js",
@@ -825,7 +825,7 @@
     ]
   },
   "resources/js/pages/failed-jobs/index.tsx": {
-    "file": "assets/failed-jobs-DnC9o-Pj.js",
+    "file": "assets/failed-jobs-DPGWVcLf.js",
     "name": "failed-jobs",
     "src": "resources/js/pages/failed-jobs/index.tsx",
     "isDynamicEntry": true,
@@ -886,7 +886,7 @@
     ]
   },
   "resources/js/pages/jobs/index.tsx": {
-    "file": "assets/jobs-CZREnCPJ.js",
+    "file": "assets/jobs-DjYTl3_1.js",
     "name": "jobs",
     "src": "resources/js/pages/jobs/index.tsx",
     "isDynamicEntry": true,
@@ -950,7 +950,7 @@
     ]
   },
   "resources/js/pages/metrics/show.tsx": {
-    "file": "assets/show-D6F4DgvD.js",
+    "file": "assets/show-CbZz6GAp.js",
     "name": "show",
     "src": "resources/js/pages/metrics/show.tsx",
     "isDynamicEntry": true,
@@ -960,7 +960,7 @@
       "_alert-C7anyYzp.js",
       "_navigation-icons-C110a-q5.js",
       "_horizon-layout-BNR-mHWI.js",
-      "_telemetry-controls-DNbyGdZu.js",
+      "_telemetry-controls-BCSLs2kL.js",
       "_empty-SZ-3h6Z0.js",
       "_format-duration-Czu5t3Dz.js",
       "resources/js/components/metrics/metric-chart.tsx",
@@ -1053,7 +1053,7 @@
     ]
   },
   "resources/js/pages/queues/show.tsx": {
-    "file": "assets/show-HcUbRZMr.js",
+    "file": "assets/show-C4MMcQvz.js",
     "name": "show",
     "src": "resources/js/pages/queues/show.tsx",
     "isDynamicEntry": true,

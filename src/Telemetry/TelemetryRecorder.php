@@ -36,6 +36,7 @@ final readonly class TelemetryRecorder
             [TelemetryDimension::Queue, $job->queue],
             [TelemetryDimension::JobClass, $job->jobClass],
             [TelemetryDimension::Node, $worker->node],
+            [TelemetryDimension::Connection, $job->connection],
         ];
 
         foreach (TelemetryResolution::cases() as $resolution) {

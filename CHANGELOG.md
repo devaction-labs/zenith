@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-09-13
+
+### Added
+
+- A `connection` dimension on the telemetry recorder (`TelemetryDimension::Connection`, `TelemetryGroupBy::Connection`), so Live Metrics can be grouped or filtered by the queue connection a job ran on. Jobs dispatched through `deferred` and `background` connections — invisible to Horizon's own supervisor pages — are already recorded today, since both drivers fire the same `JobProcessing`/`JobAttempted` events the recorder listens to; this makes that execution data queryable on its own axis instead of blending into the other dimensions.
+
 ## [0.5.0] - 2026-09-13
 
 ### Added

@@ -299,8 +299,8 @@ Within a bucket hash, fields are named with the same unit-separator
 convention:
 
 - `count\x1f<dimension>\x1f<value>\x1f<outcome>` — an attempt counter, where
-  `<dimension>` is `queue`, `class`, or `node`, and `<outcome>` is
-  `processed`, `failed`, `released`, or `timed_out`.
+  `<dimension>` is `queue`, `class`, `node`, or `connection`, and `<outcome>`
+  is `processed`, `failed`, `released`, or `timed_out`.
 - `hist\x1f<metric>\x1f<dimension>\x1f<value>\x1f<bucketIndex>` — a duration
   histogram sample, where `<metric>` is `runtime` or `wait` and
   `<bucketIndex>` is a log2-scaled bucket from `DurationHistogram` (1ms,
@@ -308,14 +308,15 @@ convention:
   bucket).
 
 Every attempt increments exactly one counter field and up to two histogram
-fields per dimension per tier: a fixed 3 to 9 `HINCRBY` calls per tier
+fields per dimension per tier: a fixed 4 to 12 `HINCRBY` calls per tier
 depending on whether timings are available, times three tiers. This bound is
 asserted directly in `TelemetryRecorderTest` (a deterministic proof of
 overhead, since a network-bound micro-benchmark would be flaky in CI) rather
 than measured with a wall clock. There is no dimension value for "all
 queues" or "all classes": since every attempt has exactly one queue, class,
-and node, a global total for any dimension is the sum of that dimension's own
-values, not a separately stored series. Percentiles for a given window are
+node, and connection, a global total for any dimension is the sum of that
+dimension's own values, not a separately stored series. Percentiles for a
+given window are
 derived by summing histogram bucket counts across every open bucket in that
 window and walking the cumulative distribution until it crosses the target
 percentile, then reporting that bucket's upper bound.
@@ -336,6 +337,8 @@ no-op recorder, but one that is never registered.
 ## Queue bypass visibility
 
 Horizon, and therefore Zenith, only see jobs that reach a queue connection Horizon actually supervises. Laravel 13's `failover` driver can silently move a job onto its `database` or `sync` fallback connection when the primary is unreachable, and the `deferred` and `background` connections are designed to run outside Horizon entirely. Jobs that take any of these paths are invisible to both: Horizon never reserves them, so they never appear in retained pending, completed, or failed history. `QueueFailoverActivity` narrows this blind spot to visibility, not coverage: it listens for `Illuminate\Queue\Events\QueueFailedOver` and keeps a short, cache-backed window of recent occurrences (`zenith.queue_failover`), and `QueueBypassWarning` cross-references `config('queue.connections')` for connections configured with a bypass-prone driver. Both feed a dashboard and queues-page banner that tells an operator to look outside Zenith, but the package cannot recover or display the jobs themselves.
+
+This blind spot is narrower than it looks, though: `deferred` and `background` both extend `Illuminate\Queue\SyncQueue`, which dispatches `JobProcessing`/`JobAttempted`/`JobExceptionOccurred` directly from `executeJob()`, independent of any Horizon worker. The telemetry recorder (above) listens to exactly those events, so a job executed through either connection is still recorded — grouped by its `connection` dimension — as long as `zenith.telemetry.enabled` is on. Horizon's supervisor pages stay blind to these jobs (there is still no queue entry for them to sit in), but Live Metrics is not: filtering or grouping by "Connection" surfaces exactly what ran through a bypass-prone connection and how it performed.
 
 Laravel 13's own default `config/queue.php` ships `deferred` and `failover` connections out of the box, so the banner fires for most Laravel 13 apps even when neither is ever dispatched to. `zenith.queue_failover.ignored_connections` lists connection names `QueueBypassWarning` should treat as a deliberate, acknowledged choice rather than something to flag — it drops them from both `bypassProneConnections` and the recent-failover counters. It defaults to empty, so an unused stub connection still surfaces until an operator explicitly acknowledges it.
 

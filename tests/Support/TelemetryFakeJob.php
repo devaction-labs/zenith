@@ -57,7 +57,7 @@ final class TelemetryFakeJob extends Job implements JobContract
 /**
  * @param  array<string, mixed>  $overrides
  */
-function telemetryFakeJob(array $overrides = [], int $attempts = 1): TelemetryFakeJob
+function telemetryFakeJob(array $overrides = [], int $attempts = 1, string $connectionName = 'redis', string $queue = 'default'): TelemetryFakeJob
 {
     $payload = array_merge([
         'uuid' => 'job-uuid-1',
@@ -76,8 +76,8 @@ function telemetryFakeJob(array $overrides = [], int $attempts = 1): TelemetryFa
     ], $overrides);
 
     return new TelemetryFakeJob(
-        connectionName: 'redis',
-        queue: 'default',
+        connectionName: $connectionName,
+        queue: $queue,
         rawBody: json_encode($payload, JSON_THROW_ON_ERROR),
         attempts: $attempts,
     );

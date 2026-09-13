@@ -15,6 +15,14 @@ it('resolves the queue and the underlying application job class', function (): v
     expect($identity->jobClass)->toBe('App\\Jobs\\ImportFeed');
 });
 
+it('resolves the connection the job was dispatched on', function (): void {
+    $job = telemetryFakeJob(connectionName: 'deferred');
+
+    $identity = JobIdentity::fromJob($job);
+
+    expect($identity->connection)->toBe('deferred');
+});
+
 it('falls back to the raw job name when no command class is present', function (): void {
     $job = telemetryFakeJob([
         'displayName' => null,
